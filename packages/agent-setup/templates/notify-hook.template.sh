@@ -284,14 +284,21 @@ if [ "$AGENT_ID" = "claude" ] && [ "$EVENT_TYPE" = "Stop" ]; then
         }
         if (c == "}" || c == "]") {
           if (capture && depth == 3 && c == "}" && (taskType != "" || taskStatus != "")) {
-            if (++count > 200) exit
-            value = value (count > 1 ? "," : "") "{"
-            if (taskType != "") value = value "\"type\":" taskType
-            if (taskStatus != "") value = value (taskType != "" ? "," : "") "\"status\":" taskStatus
-            value = value "}"
+            task = "{"
+            if (taskType != "") task = task "\"type\":" taskType
+            if (taskStatus != "") task = task (taskType != "" ? "," : "") "\"status\":" taskStatus
+            task = task "}"
+            active = (taskType == "\"subagent\"" || taskType == "\"workflow\"") && (taskStatus == "\"running\"" || taskStatus == "\"pending\"")
+            if (count < 200) tasks[++count] = task
+            else if (active && !hasActive) tasks[200] = task
+            if (active) hasActive = 1
           }
           depth--
-          if (capture && depth == 1) { print value "]"; exit }
+          if (capture && depth == 1) {
+            for (j = 1; j <= count; j++) value = value (j > 1 ? "," : "") tasks[j]
+            print value "]"
+            exit
+          }
         }
         previous = c
       }

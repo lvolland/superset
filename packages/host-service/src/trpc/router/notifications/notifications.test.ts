@@ -215,7 +215,7 @@ describe("notificationsRouter.hook", () => {
 			[{ type: "subagent", status: null }],
 			Array.from({ length: 201 }, () => ({
 				type: "subagent",
-				status: "running",
+				status: "completed",
 			})),
 			[{ type: "subagent", status: "completed" }],
 			[{ type: "workflow", status: "failed" }],
@@ -248,6 +248,24 @@ describe("notificationsRouter.hook", () => {
 			backgroundTasks,
 		});
 		expect(terminalAgentStore.get("terminal-1")?.lastEventType).toBe("Stop");
+	});
+
+	it.each([
+		0, 199, 200, 249,
+	])("keeps working for active tasks in oversized lists (index=%s)", async (activeIndex) => {
+		const { ctx, terminalAgentStore, broadcastAgentLifecycle } =
+			createContext("workspace-1");
+		await notificationsRouter.createCaller(ctx).hook({
+			terminalId: "terminal-1",
+			eventType: "Stop",
+			agent: { agentId: "claude" },
+			backgroundTasks: Array.from({ length: 250 }, (_, index) => ({
+				type: "workflow",
+				status: index === activeIndex ? "pending" : "completed",
+			})),
+		});
+		expect(terminalAgentStore.get("terminal-1")?.lastEventType).toBe("Start");
+		expect(broadcastAgentLifecycle.mock.calls[0]?.[0].eventType).toBe("Start");
 	});
 
 	it("ignores malformed entries without losing valid active tasks", async () => {

@@ -106,7 +106,33 @@ function writeHookManifest(home: string, orgId: string, endpoint: string) {
 
 describe("getNotifyScriptContent", () => {
 	it("bumps the notify hook marker when hook semantics change", () => {
-		expect(NOTIFY_SCRIPT_MARKER).toBe("# Superset agent notification hook v22");
+		expect(NOTIFY_SCRIPT_MARKER).toBe("# Superset agent notification hook v23");
+	});
+
+	it.each([
+		0, 199, 200, 249,
+	])("preserves active tasks when bounding oversized task lists (index=%s)", async (activeIndex) => {
+		const host = fakeHostService(false);
+		const tasks = Array.from({ length: 250 }, (_, index) => ({
+			type: "subagent",
+			status: index === activeIndex ? "running" : "completed",
+		}));
+		try {
+			const result = await runNotifyHookAsync(
+				{ hook_event_name: "Stop", background_tasks: tasks },
+				{
+					SUPERSET_AGENT_ID: "claude",
+					SUPERSET_HOST_AGENT_HOOK_URL: `${host.url}/trpc/notifications.hook`,
+				},
+			);
+			expect(result.exitCode).toBe(0);
+			expect(host.requests).toHaveLength(1);
+			const retained = host.requests[0]?.json.backgroundTasks as typeof tasks;
+			expect(retained).toHaveLength(200);
+			expect(retained).toContainEqual({ type: "subagent", status: "running" });
+		} finally {
+			host.stop();
+		}
 	});
 
 	it("forwards background tasks without parsing text inside descriptions as hook fields", async () => {

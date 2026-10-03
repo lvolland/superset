@@ -35,6 +35,17 @@ const subagentInput = z
 	})
 	.optional();
 
+function isActiveBackgroundTask(task: unknown): boolean {
+	return (
+		typeof task === "object" &&
+		task !== null &&
+		"type" in task &&
+		"status" in task &&
+		(task.type === "subagent" || task.type === "workflow") &&
+		(task.status === "running" || task.status === "pending")
+	);
+}
+
 const hookInput = z.object({
 	terminalId: z.string().optional(),
 	eventType: z.string().optional(),
@@ -44,7 +55,17 @@ const hookInput = z.object({
 		.transform((value) => value.slice(0, 4000))
 		.optional(),
 	subagent: subagentInput,
-	backgroundTasks: z.array(z.unknown()).max(200).optional().catch(undefined),
+	backgroundTasks: z
+		.array(z.unknown())
+		.transform((tasks) => {
+			const retained = tasks.slice(0, 200);
+			const activeTask = tasks.find(isActiveBackgroundTask);
+			if (activeTask && !retained.includes(activeTask))
+				retained[199] = activeTask;
+			return retained;
+		})
+		.optional()
+		.catch(undefined),
 	launchId: z.string().max(128).optional(),
 	accountProfile: z.string().max(4096).optional(),
 	apiKey: z.boolean().optional(),
@@ -179,15 +200,7 @@ export const notificationsRouter = router({
 			eventType === "Stop" &&
 			input.eventType === "Stop" &&
 			agent?.agentId === "claude" &&
-			input.backgroundTasks?.some(
-				(task) =>
-					typeof task === "object" &&
-					task !== null &&
-					"type" in task &&
-					"status" in task &&
-					(task.type === "subagent" || task.type === "workflow") &&
-					(task.status === "running" || task.status === "pending"),
-			)
+			input.backgroundTasks?.some(isActiveBackgroundTask)
 		) {
 			if (
 				prior?.agentId === agent.agentId &&
