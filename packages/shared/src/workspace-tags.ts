@@ -14,8 +14,10 @@ export const WORKSPACE_TAGS_MAX_PER_WORKSPACE = 32;
  */
 export const SESSIONS_TAG_SCOPE = "sessions";
 
-/** Router boundary for the only two valid folder owner shapes. */
+export const PROJECTS_TAG_SCOPE = "projects";
+
 export const tagFolderScopeInputSchema = z.union([
+	z.literal(PROJECTS_TAG_SCOPE),
 	z.literal(SESSIONS_TAG_SCOPE),
 	z.string().uuid(),
 ]);
@@ -97,6 +99,8 @@ export interface WorkspaceTagAssignment {
 	tag: string;
 	createdByUserId: string | null;
 }
+
+export type ProjectTagAssignment = WorkspaceTagAssignment;
 
 /**
  * Tags are personal: a tag is shown to the user who applied it, so one

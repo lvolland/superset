@@ -4,6 +4,7 @@ import {
 	parseGitHubRemote,
 } from "@superset/shared/github-remote";
 import { BRANCH_PREFIX_MODES } from "@superset/shared/workspace-launch";
+import { workspaceTagsInputSchema } from "@superset/shared/workspace-tags";
 import { TRPCError } from "@trpc/server";
 import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
@@ -22,6 +23,10 @@ import {
 	restoreProject,
 	softDeleteProject,
 } from "../../../projects/project-deletion";
+import {
+	getProjectTagsByProjectId,
+	setProjectTags,
+} from "../../../projects/project-tags";
 import { createUserSimpleGit } from "../../../runtime/git/simple-git";
 import {
 	deleteTagFolderSetting,
@@ -91,32 +96,56 @@ export const projectRouter = router({
 			settings.push(setting);
 			tagSettingsByProject.set(scope, settings);
 		}
-		return ctx.db
+		const rows = ctx.db
 			.select()
 			.from(projects)
 			.where(isNull(projects.deletedAt))
-			.all()
-			.map((row) => ({
-				id: row.id,
-				// Deprecated wire compatibility for desktops that predate the
-				// tagFolders router. Storage still has one canonical table.
-				tagSettings: tagSettingsByProject.get(row.id) ?? [],
-				// Empty until the backfill sweep fills it; folder name is the
-				// honest fallback (same rule as toProjectSnapshot).
-				name: row.name || basename(row.repoPath),
-				repoPath: row.repoPath,
-				repoOwner: row.repoOwner,
-				repoName: row.repoName,
-				repoUrl: row.repoUrl,
-				worktreeBaseDir: row.worktreeBaseDir,
-				icon: row.icon,
-				color: row.color,
-				createdAt: row.createdAt,
-				updatedAt: row.updatedAt || row.createdAt,
-			}));
+			.all();
+		const tagsByProject = getProjectTagsByProjectId(
+			ctx.db,
+			rows.map((row) => row.id),
+			ctx.userId,
+		);
+		return rows.map((row) => ({
+			id: row.id,
+			tags: tagsByProject.get(row.id) ?? [],
+			// Deprecated wire compatibility for desktops that predate the
+			// tagFolders router. Storage still has one canonical table.
+			tagSettings: tagSettingsByProject.get(row.id) ?? [],
+			// Empty until the backfill sweep fills it; folder name is the
+			// honest fallback (same rule as toProjectSnapshot).
+			name: row.name || basename(row.repoPath),
+			repoPath: row.repoPath,
+			repoOwner: row.repoOwner,
+			repoName: row.repoName,
+			repoUrl: row.repoUrl,
+			worktreeBaseDir: row.worktreeBaseDir,
+			icon: row.icon,
+			color: row.color,
+			createdAt: row.createdAt,
+			updatedAt: row.updatedAt || row.createdAt,
+		}));
 	}),
 
-	/** Rename. Commits locally — projects have no cloud dependency. */
+	setTags: protectedProcedure
+		.input(
+			z.object({
+				projectId: z.string().uuid(),
+				tags: workspaceTagsInputSchema,
+			}),
+		)
+		.mutation(({ ctx, input }) => {
+			const project = setProjectTags(ctx, input.projectId, input.tags);
+			if (!project) {
+				throw new TRPCError({
+					code: "NOT_FOUND",
+					message: "Project is not set up on this host",
+				});
+			}
+			return project;
+		}),
+
+	/** Rename. Commits locally, projects have no cloud dependency. */
 	update: protectedProcedure
 		.input(
 			z.object({

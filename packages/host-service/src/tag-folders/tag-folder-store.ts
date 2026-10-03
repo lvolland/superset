@@ -1,6 +1,7 @@
 import {
 	isWorkspaceTagVisibleTo,
 	normalizeWorkspaceTag,
+	PROJECTS_TAG_SCOPE,
 	SESSIONS_TAG_SCOPE,
 } from "@superset/shared/workspace-tags";
 import { and, eq, inArray } from "drizzle-orm";
@@ -71,9 +72,8 @@ function toSnapshot(row: TagFolderSettingRow): TagSettingSnapshot {
 	};
 }
 
-/** Sessions is virtual; every other accepted scope must be a local project. */
 export function hasTagFolderScope(db: HostDb, scope: string): boolean {
-	if (scope === SESSIONS_TAG_SCOPE) return true;
+	if (scope === SESSIONS_TAG_SCOPE || scope === PROJECTS_TAG_SCOPE) return true;
 	return (
 		db
 			.select({ id: projects.id })
@@ -152,8 +152,7 @@ function broadcast(
  * is what the actor was seeing, so customising again claims it rather than
  * leaving two rows that disagree.
  *
- * The router validates that project scopes exist before calling this store;
- * the Sessions lane is the one valid scope with no project behind it.
+ * The router validates that project scopes exist before calling this store.
  */
 export function upsertTagFolderSetting(
 	ctx: TagFolderStoreContext,

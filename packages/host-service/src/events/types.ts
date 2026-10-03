@@ -1,6 +1,9 @@
 import type { DetectedPort } from "@superset/port-scanner";
 import type { AgentIdentity } from "@superset/shared/agent-identity";
-import type { WorkspaceTagAssignment } from "@superset/shared/workspace-tags";
+import type {
+	ProjectTagAssignment,
+	WorkspaceTagAssignment,
+} from "@superset/shared/workspace-tags";
 import type { FsWatchEvent } from "@superset/workspace-fs/host";
 import type { AgentLifecycleEventType } from "./map-event-type.ts";
 
@@ -183,6 +186,8 @@ export interface ProjectSnapshot {
 	 * router. New consumers read tag-folder presentation from that router.
 	 */
 	tagSettings?: TagSettingSnapshot[];
+	tags?: string[];
+	tagAssignments?: ProjectTagAssignment[];
 }
 
 export interface ProjectChangedMessage {

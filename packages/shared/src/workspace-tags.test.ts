@@ -4,6 +4,7 @@ import {
 	isWorkspaceTagVisibleTo,
 	normalizeWorkspaceTag,
 	normalizeWorkspaceTags,
+	PROJECTS_TAG_SCOPE,
 	SESSIONS_TAG_SCOPE,
 	tagFolderScopeInputSchema,
 	visibleWorkspaceTags,
@@ -14,6 +15,12 @@ import {
 } from "./workspace-tags";
 
 describe("tagFolderScopeInputSchema", () => {
+	test("accepts the Projects sentinel", () => {
+		expect(tagFolderScopeInputSchema.parse(PROJECTS_TAG_SCOPE)).toBe(
+			PROJECTS_TAG_SCOPE,
+		);
+	});
+
 	test("accepts the Sessions sentinel and project UUIDs", () => {
 		expect(tagFolderScopeInputSchema.parse(SESSIONS_TAG_SCOPE)).toBe(
 			SESSIONS_TAG_SCOPE,
