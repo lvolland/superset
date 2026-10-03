@@ -32,9 +32,9 @@
 			"types": "./src/lib/github-user/index.ts",
 			"default": "./src/lib/github-user/index.ts"
 		},
-		"./linear-status-filter": {
-			"types": "./src/router/integration/linear/status-filter.ts",
-			"default": "./src/router/integration/linear/status-filter.ts"
+		"./linear-lookup": {
+			"types": "./src/router/integration/linear/lookup.ts",
+			"default": "./src/router/integration/linear/lookup.ts"
 		},
 		"./page-schema": {
 			"types": "./src/router/page/schema.ts",

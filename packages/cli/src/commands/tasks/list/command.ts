@@ -5,7 +5,7 @@ import {
 	string,
 	table,
 } from "@superset/cli-framework";
-import { linearStatusFilterValues } from "@superset/trpc/linear-status-filter";
+import { linearStatusFilterValues } from "@superset/trpc/linear-lookup";
 import { type CliContext, command } from "../../../lib/command";
 import {
 	linearIssueRow,

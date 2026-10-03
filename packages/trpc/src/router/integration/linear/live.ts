@@ -90,7 +90,7 @@ export const linearLiveRouter = {
 			organizationInput.extend({
 				issueId: z.string().min(1),
 				title: z.string().trim().min(1).optional(),
-				description: z.string().optional(),
+				description: z.string().nullable().optional(),
 				stateId: z.string().optional(),
 				priority: z.enum(taskPriorityValues).optional(),
 				assigneeId: z.string().nullable().optional(),

@@ -243,7 +243,7 @@ export async function updateIssue(
 	id: string,
 	input: {
 		title?: string;
-		description?: string;
+		description?: string | null;
 		stateId?: string;
 		priority?: TaskPriority;
 		assigneeId?: string | null;
@@ -396,12 +396,12 @@ export function isLinearRateLimitError(error: unknown): boolean {
 	);
 }
 
-import type { LinearStatusFilter } from "./status-filter";
+import type { LinearStatusFilter } from "./lookup";
 
 export {
 	type LinearStatusFilter,
 	linearStatusFilterValues,
-} from "./status-filter";
+} from "./lookup";
 
 const STATE_TYPES_BY_FILTER: Record<
 	Exclude<LinearStatusFilter, "all">,
