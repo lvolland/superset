@@ -173,11 +173,18 @@ export const notificationsRouter = router({
 		const agent = normalizeAgentIdentity(input.agent);
 		const preview = trimOrUndefined(input.preview);
 		const prior = ctx.terminalAgentStore.get(input.terminalId);
+		// Ambient tasks may not wake the session; shells and monitors may never end.
 		if (
 			eventType === "Stop" &&
 			input.eventType === "Stop" &&
 			agent?.agentId === "claude" &&
-			input.backgroundTasks?.some((task) => task.status === "running")
+			input.backgroundTasks?.some(
+				(task) =>
+					(task.type === "subagent" ||
+						task.type === "workflow" ||
+						task.type === "teammate") &&
+					(task.status === "running" || task.status === "pending"),
+			)
 		) {
 			if (
 				prior?.agentId === agent.agentId &&
