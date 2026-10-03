@@ -177,6 +177,128 @@ function createDbContext({
 }
 
 describe("notificationsRouter.hook", () => {
+	it.each([
+		"shell",
+		"subagent",
+		"workflow",
+		"monitor",
+		"MCP task",
+	])("keeps the parent working while a %s task runs, then stops when it finishes", async (type) => {
+		const { ctx, terminalAgentStore, broadcastAgentLifecycle } =
+			createContext("workspace-1");
+		const caller = notificationsRouter.createCaller(ctx);
+		const hook = {
+			terminalId: "terminal-1",
+			eventType: "Stop",
+			agent: { agentId: "claude", sessionId: "session-1" },
+		};
+		await caller.hook({
+			...hook,
+			backgroundTasks: [{ id: "task-1", type, status: "running" }],
+		});
+		expect(terminalAgentStore.get("terminal-1")?.lastEventType).toBe("Start");
+		expect(broadcastAgentLifecycle.mock.calls[0]?.[0].eventType).toBe("Start");
+		await caller.hook({ ...hook, backgroundTasks: [] });
+		expect(terminalAgentStore.get("terminal-1")?.lastEventType).toBe("Stop");
+		expect(broadcastAgentLifecycle.mock.calls[1]?.[0].eventType).toBe("Stop");
+	});
+
+	it.each(
+		[
+			undefined,
+			[],
+			[{ status: "completed" }],
+			[{ status: "failed" }],
+			[{ status: "killed" }],
+			[{ status: "pending" }],
+		].map((backgroundTasks) => ({ backgroundTasks })),
+	)("keeps Stop behavior without running tasks (%j)", async ({
+		backgroundTasks,
+	}) => {
+		const { ctx, terminalAgentStore } = createContext("workspace-1");
+		await notificationsRouter.createCaller(ctx).hook({
+			terminalId: "terminal-1",
+			eventType: "Stop",
+			agent: { agentId: "claude" },
+			backgroundTasks,
+		});
+		expect(terminalAgentStore.get("terminal-1")?.lastEventType).toBe("Stop");
+	});
+
+	it.each([
+		"PermissionRequest",
+		"StopFailure",
+	])("does not mask %s with running tasks", async (eventType) => {
+		const { ctx, terminalAgentStore, broadcastAgentLifecycle } =
+			createContext("workspace-1");
+		const caller = notificationsRouter.createCaller(ctx);
+		const hook = {
+			terminalId: "terminal-1",
+			agent: { agentId: "claude", sessionId: "session-1" },
+			backgroundTasks: [{ status: "running" }],
+		};
+		await caller.hook({ ...hook, eventType });
+		const expected =
+			eventType === "StopFailure" ? "Failed" : "PermissionRequest";
+		expect(terminalAgentStore.get("terminal-1")?.lastEventType).toBe(expected);
+		await caller.hook({ ...hook, eventType: "Stop" });
+		expect(terminalAgentStore.get("terminal-1")?.lastEventType).toBe(expected);
+		expect(broadcastAgentLifecycle.mock.calls).toHaveLength(1);
+	});
+
+	it("does not carry a prior session's failure into a new session", async () => {
+		const { ctx, terminalAgentStore } = createContext("workspace-1");
+		const caller = notificationsRouter.createCaller(ctx);
+		await caller.hook({
+			terminalId: "terminal-1",
+			eventType: "StopFailure",
+			agent: { agentId: "claude", sessionId: "old-session" },
+		});
+		await caller.hook({
+			terminalId: "terminal-1",
+			eventType: "Stop",
+			agent: { agentId: "claude", sessionId: "new-session" },
+			backgroundTasks: [{ status: "running" }],
+		});
+		expect(terminalAgentStore.get("terminal-1")?.lastEventType).toBe("Start");
+		expect(terminalAgentStore.get("terminal-1")?.agentSessionId).toBe(
+			"new-session",
+		);
+	});
+
+	it("does not change another harness's Stop behavior", async () => {
+		const { ctx, terminalAgentStore } = createContext("workspace-1");
+		const caller = notificationsRouter.createCaller(ctx);
+		await caller.hook({
+			terminalId: "terminal-1",
+			eventType: "Stop",
+			agent: { agentId: "codex" },
+			backgroundTasks: [{ status: "running" }],
+		});
+		expect(terminalAgentStore.get("terminal-1")?.lastEventType).toBe("Stop");
+	});
+
+	it("does not let a subagent Stop with background tasks change its parent", async () => {
+		const { ctx, terminalAgentStore, broadcastAgentLifecycle } =
+			createContext("workspace-1");
+		const caller = notificationsRouter.createCaller(ctx);
+		await caller.hook({
+			terminalId: "terminal-1",
+			eventType: "PermissionRequest",
+			agent: { agentId: "claude" },
+		});
+		await caller.hook({
+			terminalId: "terminal-1",
+			eventType: "SubagentStop",
+			subagent: { id: "child-1" },
+			backgroundTasks: [{ status: "running" }],
+		});
+		expect(terminalAgentStore.get("terminal-1")?.lastEventType).toBe(
+			"PermissionRequest",
+		);
+		expect(broadcastAgentLifecycle.mock.calls).toHaveLength(1);
+	});
+
 	it("routes subagent events to the roster without a lifecycle broadcast or session capture", async () => {
 		const {
 			ctx,

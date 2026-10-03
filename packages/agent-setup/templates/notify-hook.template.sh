@@ -229,6 +229,41 @@ case "$EVENT_TYPE" in
     ;;
 esac
 
+BACKGROUND_TASKS_FIELD=""
+if [ "$AGENT_ID" = "claude" ] && [ "$EVENT_TYPE" = "Stop" ]; then
+  BACKGROUND_TASKS=$(printf '%s' "$INPUT" | awk '
+    {
+      for (i = 1; i <= length($0); i++) {
+        c = substr($0, i, 1)
+        if (capture) value = value c
+        if (quoted) {
+          token = token c
+          if (escaped) escaped = 0
+          else if (c == "\\") escaped = 1
+          else if (c == "\"") {
+            quoted = 0
+            if (depth == 1 && token == "\"background_tasks\"") found = 1
+          }
+          continue
+        }
+        if (c == "\"") { quoted = 1; token = c; continue }
+        if (found && !capture) {
+          if (c ~ /[[:space:]:]/) continue
+          if (c != "[") exit
+          capture = 1; value = c
+        }
+        if (c == "{" || c == "[") depth++
+        if (c == "}" || c == "]") {
+          depth--
+          if (capture && depth == 1) { print value; exit }
+        }
+      }
+      if (capture) value = value "\n"
+    }
+  ')
+  [ -n "$BACKGROUND_TASKS" ] && BACKGROUND_TASKS_FIELD=",\"backgroundTasks\":$BACKGROUND_TASKS"
+fi
+
 ATTRIBUTION_FIELD=""
 [ -n "$SUPERSET_ACCOUNT_ATTRIBUTION_TOKEN" ] && ATTRIBUTION_FIELD=",\"attributionToken\":\"$(json_escape "$SUPERSET_ACCOUNT_ATTRIBUTION_TOKEN")\""
 TRANSCRIPT_FIELD=""
@@ -265,7 +300,7 @@ case "$EVENT_TYPE" in
 esac
 
 if [ -n "$SUPERSET_TERMINAL_ID" ]; then
-  dispatch_to_host "{\"json\":{\"terminalId\":\"$(json_escape "$SUPERSET_TERMINAL_ID")\",\"eventType\":\"$(json_escape "$EVENT_TYPE")\",\"agent\":{\"agentId\":\"$(json_escape "$AGENT_ID")\",\"sessionId\":\"$(json_escape "$SESSION_ID")\"}$PREVIEW_FIELD$ACCOUNT_FIELD$TRANSCRIPT_FIELD$LAUNCH_FIELD$ATTRIBUTION_FIELD}}"
+  dispatch_to_host "{\"json\":{\"terminalId\":\"$(json_escape "$SUPERSET_TERMINAL_ID")\",\"eventType\":\"$(json_escape "$EVENT_TYPE")\",\"agent\":{\"agentId\":\"$(json_escape "$AGENT_ID")\",\"sessionId\":\"$(json_escape "$SESSION_ID")\"}$PREVIEW_FIELD$ACCOUNT_FIELD$TRANSCRIPT_FIELD$LAUNCH_FIELD$ATTRIBUTION_FIELD$BACKGROUND_TASKS_FIELD}}"
   [ "$HOOK_ACCEPTED" = "1" ] && exit 0
   # Delivered somewhere (2xx) but no host owned the terminal: keep the
   # pre-existing "any 2xx wins" behavior and skip the v1 fallback.

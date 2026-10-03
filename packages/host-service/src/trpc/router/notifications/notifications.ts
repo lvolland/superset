@@ -44,6 +44,7 @@ const hookInput = z.object({
 		.transform((value) => value.slice(0, 4000))
 		.optional(),
 	subagent: subagentInput,
+	backgroundTasks: z.array(z.looseObject({ status: z.string() })).optional(),
 	launchId: z.string().max(128).optional(),
 	accountProfile: z.string().max(4096).optional(),
 	apiKey: z.boolean().optional(),
@@ -114,7 +115,7 @@ export const notificationsRouter = router({
 	 */
 	hook: publicProcedure.input(hookInput).mutation(async ({ ctx, input }) => {
 		const subagentId = trimOrUndefined(input.subagent?.id);
-		const eventType = subagentId ? undefined : mapEventType(input.eventType);
+		let eventType = subagentId ? undefined : mapEventType(input.eventType);
 		if (!subagentId && !eventType) {
 			return { success: true, ignored: true as const };
 		}
@@ -171,8 +172,25 @@ export const notificationsRouter = router({
 
 		const agent = normalizeAgentIdentity(input.agent);
 		const preview = trimOrUndefined(input.preview);
-
 		const prior = ctx.terminalAgentStore.get(input.terminalId);
+		if (
+			eventType === "Stop" &&
+			input.eventType === "Stop" &&
+			agent?.agentId === "claude" &&
+			input.backgroundTasks?.some((task) => task.status === "running")
+		) {
+			if (
+				prior?.agentId === agent.agentId &&
+				prior.agentSessionId === agent.sessionId &&
+				(!input.launchId || input.launchId === prior.launchId) &&
+				(prior.lastEventType === "PermissionRequest" ||
+					prior.lastEventType === "Failed")
+			) {
+				return { success: true, ignored: false as const };
+			}
+			eventType = "Start";
+		}
+
 		const account =
 			verifyAttributionToken(input.terminalId, input.attributionToken) &&
 			eventType === "Attached" &&

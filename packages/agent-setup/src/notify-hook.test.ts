@@ -51,13 +51,15 @@ function runNotifyHook(
  * hook's curl against that server.
  */
 async function runNotifyHookAsync(
-	input: Record<string, unknown>,
+	input: Record<string, unknown> | string,
 	envOverrides: Record<string, string> = {},
 ) {
 	const proc = Bun.spawn({
 		cmd: ["bash", "-c", renderNotifyHookScript()],
 		env: hookEnv(envOverrides),
-		stdin: Buffer.from(JSON.stringify(input)),
+		stdin: Buffer.from(
+			typeof input === "string" ? input : JSON.stringify(input),
+		),
 		stdout: "pipe",
 		stderr: "pipe",
 	});
@@ -104,7 +106,92 @@ function writeHookManifest(home: string, orgId: string, endpoint: string) {
 
 describe("getNotifyScriptContent", () => {
 	it("bumps the notify hook marker when hook semantics change", () => {
-		expect(NOTIFY_SCRIPT_MARKER).toBe("# Superset agent notification hook v20");
+		expect(NOTIFY_SCRIPT_MARKER).toBe("# Superset agent notification hook v21");
+	});
+
+	it("forwards background tasks without parsing text inside descriptions as hook fields", async () => {
+		const host = fakeHostService(false);
+		const backgroundTasks = [
+			{
+				id: "shell-1",
+				type: "shell",
+				status: "running",
+				description: 'Watch [logs] and "status": "completed"',
+				command: "echo [ok]",
+			},
+			{
+				id: "agent-1",
+				type: "subagent",
+				status: "running",
+				agent_type: "Explore",
+			},
+		];
+		try {
+			const result = await runNotifyHookAsync(
+				{ hook_event_name: "Stop", background_tasks: backgroundTasks },
+				{
+					SUPERSET_AGENT_ID: "claude",
+					SUPERSET_HOST_AGENT_HOOK_URL: `${host.url}/trpc/notifications.hook`,
+				},
+			);
+			expect(result.exitCode).toBe(0);
+			expect(host.requests).toHaveLength(1);
+			expect(host.requests[0]?.json.eventType).toBe("Stop");
+			expect(host.requests[0]?.json.backgroundTasks).toEqual(backgroundTasks);
+		} finally {
+			host.stop();
+		}
+	});
+
+	it.each([
+		{ agentId: "claude", tasks: undefined, expected: undefined },
+		{ agentId: "claude", tasks: [], expected: [] },
+		{
+			agentId: "claude",
+			tasks: [
+				{
+					status: "running",
+					description: "watch \\ logs",
+					metadata: { labels: ["a", "b"] },
+				},
+			],
+			expected: [
+				{
+					status: "running",
+					description: "watch \\ logs",
+					metadata: { labels: ["a", "b"] },
+				},
+			],
+		},
+		{ agentId: "codex", tasks: [{ status: "running" }], expected: undefined },
+	])("preserves optional background tasks for %j", async ({
+		agentId,
+		tasks,
+		expected,
+	}) => {
+		const host = fakeHostService(false);
+		try {
+			const result = await runNotifyHookAsync(
+				JSON.stringify(
+					{
+						metadata: { background_tasks: [{ status: "running" }] },
+						hook_event_name: "Stop",
+						background_tasks: tasks,
+					},
+					null,
+					2,
+				),
+				{
+					SUPERSET_AGENT_ID: agentId,
+					SUPERSET_HOST_AGENT_HOOK_URL: `${host.url}/trpc/notifications.hook`,
+				},
+			);
+			expect(result.exitCode).toBe(0);
+			expect(host.requests).toHaveLength(1);
+			expect(host.requests[0]?.json.backgroundTasks).toEqual(expected);
+		} finally {
+			host.stop();
+		}
 	});
 
 	it("forwards the main session's transcript path with its identity", async () => {
@@ -301,7 +388,7 @@ describe("getNotifyScriptContent", () => {
 			"HOOK_SESSION_ID=$(json_field session_id sessionId)",
 		);
 		expect(script).toContain(
-			'dispatch_to_host "{\\"json\\":{\\"terminalId\\":\\"$(json_escape "$SUPERSET_TERMINAL_ID")\\",\\"eventType\\":\\"$(json_escape "$EVENT_TYPE")\\",\\"agent\\":{\\"agentId\\":\\"$(json_escape "$AGENT_ID")\\",\\"sessionId\\":\\"$(json_escape "$SESSION_ID")\\"}$PREVIEW_FIELD$ACCOUNT_FIELD$TRANSCRIPT_FIELD$LAUNCH_FIELD$ATTRIBUTION_FIELD}}"',
+			'dispatch_to_host "{\\"json\\":{\\"terminalId\\":\\"$(json_escape "$SUPERSET_TERMINAL_ID")\\",\\"eventType\\":\\"$(json_escape "$EVENT_TYPE")\\",\\"agent\\":{\\"agentId\\":\\"$(json_escape "$AGENT_ID")\\",\\"sessionId\\":\\"$(json_escape "$SESSION_ID")\\"}$PREVIEW_FIELD$ACCOUNT_FIELD$TRANSCRIPT_FIELD$LAUNCH_FIELD$ATTRIBUTION_FIELD$BACKGROUND_TASKS_FIELD}}"',
 		);
 		// One dispatcher serves both the agent and subagent payloads.
 		expect(script.split('dispatch_to_host "').length - 1).toBe(2);
