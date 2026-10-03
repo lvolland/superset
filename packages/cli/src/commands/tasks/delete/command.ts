@@ -1,6 +1,11 @@
 import { CLIError, positional } from "@superset/cli-framework";
 import { command } from "../../../lib/command";
-import { requireOrganizationId, resolveTask, trackerOption } from "../tracker";
+import {
+	requireOrganizationId,
+	resolveTask,
+	resolveTracker,
+	trackerOption,
+} from "../tracker";
 
 export default command({
 	description: "Delete tasks (Linear issues are archived)",
@@ -10,11 +15,12 @@ export default command({
 		const ids = args.ids as string[];
 		const deleted: string[] = [];
 		const archived: string[] = [];
+		const tracker = await resolveTracker(ctx, options.tracker);
 		const failed: { id: string; reason: string }[] = [];
 
 		for (const idOrSlug of ids) {
 			try {
-				const resolved = await resolveTask(ctx, idOrSlug, options.tracker);
+				const resolved = await resolveTask(ctx, idOrSlug, tracker);
 				if (resolved.tracker === "linear") {
 					await ctx.api.integration.linear.archiveIssue.mutate({
 						organizationId: requireOrganizationId(ctx),

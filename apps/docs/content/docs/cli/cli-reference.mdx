@@ -1363,10 +1363,9 @@ unless `--yes` is passed; non-interactive input does not prompt.
 Tasks are units of work in your organization's task tracker. When the
 organization tracks tasks in Linear (an owner's setting), these commands work on
 its Linear issues through your own Linear connection; otherwise on Superset
-tasks. `--tracker superset|linear` overrides that for one command. Unless you
-pass `--tracker linear`, a Superset task ID or slug resolves to the Superset
-task, so the task linked to a workspace stays reachable in an organization that
-tracks in Linear.
+tasks. A command works on one tracker only: in an organization that tracks in
+Linear, Superset tasks are not listed or resolved, and the reverse. Pass
+`--tracker superset|linear` to reach the other one for a single command.
 
 <Command
 	name="superset tasks list"

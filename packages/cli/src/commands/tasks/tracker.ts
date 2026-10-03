@@ -35,25 +35,15 @@ export type ResolvedTask =
 	  }
 	| { tracker: "linear"; issueId: string };
 
-/**
- * A Superset id or slug wins, so agents keep reaching the task linked to their
- * workspace in an organization that tracks in Linear; anything else is a Linear
- * identifier there.
- */
 export async function resolveTask(
 	ctx: CliContext,
 	idOrSlug: string,
 	requested: string | undefined,
 ): Promise<ResolvedTask> {
-	if (requested !== "linear") {
-		const task = await ctx.api.task.byIdOrSlug.query(idOrSlug);
-		if (task) return { tracker: "superset", task };
-		if (requested === "superset") {
-			throw new CLIError(`Task not found: ${idOrSlug}`);
-		}
-	}
 	if ((await resolveTracker(ctx, requested)) === "linear") {
 		return { tracker: "linear", issueId: idOrSlug };
 	}
-	throw new CLIError(`Task not found: ${idOrSlug}`);
+	const task = await ctx.api.task.byIdOrSlug.query(idOrSlug);
+	if (!task) throw new CLIError(`Task not found: ${idOrSlug}`);
+	return { tracker: "superset", task };
 }
