@@ -106,7 +106,7 @@ function writeHookManifest(home: string, orgId: string, endpoint: string) {
 
 describe("getNotifyScriptContent", () => {
 	it("bumps the notify hook marker when hook semantics change", () => {
-		expect(NOTIFY_SCRIPT_MARKER).toBe("# Superset agent notification hook v21");
+		expect(NOTIFY_SCRIPT_MARKER).toBe("# Superset agent notification hook v22");
 	});
 
 	it("forwards background tasks without parsing text inside descriptions as hook fields", async () => {
@@ -137,7 +137,9 @@ describe("getNotifyScriptContent", () => {
 			expect(result.exitCode).toBe(0);
 			expect(host.requests).toHaveLength(1);
 			expect(host.requests[0]?.json.eventType).toBe("Stop");
-			expect(host.requests[0]?.json.backgroundTasks).toEqual(backgroundTasks);
+			expect(host.requests[0]?.json.backgroundTasks).toEqual(
+				backgroundTasks.map(({ type, status }) => ({ type, status })),
+			);
 		} finally {
 			host.stop();
 		}
@@ -158,8 +160,6 @@ describe("getNotifyScriptContent", () => {
 			expected: [
 				{
 					status: "running",
-					description: "watch \\ logs",
-					metadata: { labels: ["a", "b"] },
 				},
 			],
 		},
@@ -189,6 +189,76 @@ describe("getNotifyScriptContent", () => {
 			expect(result.exitCode).toBe(0);
 			expect(host.requests).toHaveLength(1);
 			expect(host.requests[0]?.json.backgroundTasks).toEqual(expected);
+		} finally {
+			host.stop();
+		}
+	});
+
+	it.each([
+		false,
+		true,
+	])("recognizes background_tasks only as a key (multiline=%s)", async (multiline) => {
+		const host = fakeHostService(false);
+		try {
+			const result = await runNotifyHookAsync(
+				JSON.stringify(
+					{
+						hook_event_name: "Stop",
+						last_assistant_message: "background_tasks",
+						background_tasks: [
+							{ type: "subagent", status: "running", description: "Ignore me" },
+						],
+					},
+					null,
+					multiline ? 2 : undefined,
+				),
+				{
+					SUPERSET_AGENT_ID: "claude",
+					SUPERSET_HOST_AGENT_HOOK_URL: `${host.url}/trpc/notifications.hook`,
+				},
+			);
+			expect(result.exitCode).toBe(0);
+			expect(host.requests).toHaveLength(1);
+			expect(host.requests[0]?.json.backgroundTasks).toEqual([
+				{ type: "subagent", status: "running" },
+			]);
+		} finally {
+			host.stop();
+		}
+	});
+
+	it("forwards large previews and projects task fields without large curl arguments", async () => {
+		const host = fakeHostService(false);
+		try {
+			const result = await runNotifyHookAsync(
+				{
+					hook_event_name: "Stop",
+					last_assistant_message: "x".repeat(140000),
+					background_tasks: [
+						{
+							type: "subagent",
+							status: "running",
+							description: "x".repeat(140000),
+							command: "x".repeat(140000),
+							metadata: { type: "shell", status: "completed" },
+						},
+						null,
+						"x",
+						{ type: "workflow", status: null },
+					],
+				},
+				{
+					SUPERSET_AGENT_ID: "claude",
+					SUPERSET_HOST_AGENT_HOOK_URL: `${host.url}/trpc/notifications.hook`,
+				},
+			);
+			expect(result.exitCode).toBe(0);
+			expect(host.requests).toHaveLength(1);
+			expect(host.requests[0]?.json.backgroundTasks).toEqual([
+				{ type: "subagent", status: "running" },
+				{ type: "workflow" },
+			]);
+			expect(host.requests[0]?.json.preview).toBe("x".repeat(140000));
 		} finally {
 			host.stop();
 		}

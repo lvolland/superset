@@ -182,8 +182,6 @@ describe("notificationsRouter.hook", () => {
 		{ type: "subagent", status: "pending" },
 		{ type: "workflow", status: "running" },
 		{ type: "workflow", status: "pending" },
-		{ type: "teammate", status: "running" },
-		{ type: "teammate", status: "pending" },
 	])("keeps the parent working for an active task (%j), then stops when it finishes", async ({
 		type,
 		status,
@@ -211,6 +209,14 @@ describe("notificationsRouter.hook", () => {
 		[
 			undefined,
 			[],
+			[null],
+			["x"],
+			[{ type: "subagent" }],
+			[{ type: "subagent", status: null }],
+			Array.from({ length: 201 }, () => ({
+				type: "subagent",
+				status: "running",
+			})),
 			[{ type: "subagent", status: "completed" }],
 			[{ type: "workflow", status: "failed" }],
 			[{ type: "teammate", status: "killed" }],
@@ -218,6 +224,7 @@ describe("notificationsRouter.hook", () => {
 			[{ status: "running" }],
 			[{ status: "pending" }],
 			...[
+				"teammate",
 				"shell",
 				"monitor",
 				"dream",
@@ -241,6 +248,17 @@ describe("notificationsRouter.hook", () => {
 			backgroundTasks,
 		});
 		expect(terminalAgentStore.get("terminal-1")?.lastEventType).toBe("Stop");
+	});
+
+	it("ignores malformed entries without losing valid active tasks", async () => {
+		const { ctx, terminalAgentStore } = createContext("workspace-1");
+		await notificationsRouter.createCaller(ctx).hook({
+			terminalId: "terminal-1",
+			eventType: "Stop",
+			agent: { agentId: "claude" },
+			backgroundTasks: [null, "x", { type: "subagent", status: "running" }],
+		});
+		expect(terminalAgentStore.get("terminal-1")?.lastEventType).toBe("Start");
 	});
 
 	it.each([

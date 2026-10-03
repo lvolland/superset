@@ -44,7 +44,7 @@ const hookInput = z.object({
 		.transform((value) => value.slice(0, 4000))
 		.optional(),
 	subagent: subagentInput,
-	backgroundTasks: z.array(z.looseObject({ status: z.string() })).optional(),
+	backgroundTasks: z.array(z.unknown()).max(200).optional().catch(undefined),
 	launchId: z.string().max(128).optional(),
 	accountProfile: z.string().max(4096).optional(),
 	apiKey: z.boolean().optional(),
@@ -173,6 +173,7 @@ export const notificationsRouter = router({
 		const agent = normalizeAgentIdentity(input.agent);
 		const preview = trimOrUndefined(input.preview);
 		const prior = ctx.terminalAgentStore.get(input.terminalId);
+		// Idle teammates still report running; their messages wake the lead.
 		// Ambient tasks may not wake the session; shells and monitors may never end.
 		if (
 			eventType === "Stop" &&
@@ -180,9 +181,11 @@ export const notificationsRouter = router({
 			agent?.agentId === "claude" &&
 			input.backgroundTasks?.some(
 				(task) =>
-					(task.type === "subagent" ||
-						task.type === "workflow" ||
-						task.type === "teammate") &&
+					typeof task === "object" &&
+					task !== null &&
+					"type" in task &&
+					"status" in task &&
+					(task.type === "subagent" || task.type === "workflow") &&
 					(task.status === "running" || task.status === "pending"),
 			)
 		) {

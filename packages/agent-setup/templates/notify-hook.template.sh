@@ -164,10 +164,10 @@ dispatch_to_host() {
     case " $SEEN_HOOK_URLS " in *" $HOOK_URL "*) continue ;; esac
     SEEN_HOOK_URLS="$SEEN_HOOK_URLS $HOOK_URL"
 
-    RESPONSE=$(curl -sX POST "$HOOK_URL" \
+    RESPONSE=$(printf '%s' "$DISPATCH_PAYLOAD" | curl -sX POST "$HOOK_URL" \
       --connect-timeout 2 --max-time 5 \
       -H "Content-Type: application/json" \
-      -d "$DISPATCH_PAYLOAD" \
+      --data-binary @- \
       -w "|%{http_code}" 2>/dev/null)
     STATUS_CODE="${RESPONSE##*|}"
     BODY="${RESPONSE%|*}"
@@ -233,32 +233,68 @@ BACKGROUND_TASKS_FIELD=""
 if [ "$AGENT_ID" = "claude" ] && [ "$EVENT_TYPE" = "Stop" ]; then
   BACKGROUND_TASKS=$(printf '%s' "$INPUT" | awk '
     {
-      for (i = 1; i <= length($0); i++) {
-        c = substr($0, i, 1)
-        if (capture) value = value c
+      n = split($0, ch, "")
+      for (i = 1; i <= n; i++) {
+        c = ch[i]
         if (quoted) {
-          token = token c
           if (escaped) escaped = 0
           else if (c == "\\") escaped = 1
           else if (c == "\"") {
             quoted = 0
-            if (depth == 1 && token == "\"background_tasks\"") found = 1
+            if (keyString) key = substr($0, start, i - start + 1)
+            else if (capture && depth == 3 && field != "" && i - start < 4096) {
+              text = substr($0, start, i - start + 1)
+              if (field == "\"type\"") taskType = text
+              if (field == "\"status\"") taskStatus = text
+            }
+            field = ""
+            previous = "string"
           }
           continue
         }
-        if (c == "\"") { quoted = 1; token = c; continue }
+        if (c ~ /[[:space:]]/) continue
+        if (key != "") {
+          if (c == ":") {
+            if (depth == 1 && key == "\"background_tasks\"") found = 1
+            if (capture && depth == 3 && (key == "\"type\"" || key == "\"status\"")) field = key
+            key = ""
+            previous = c
+            continue
+          }
+          key = ""
+        }
         if (found && !capture) {
-          if (c ~ /[[:space:]:]/) continue
           if (c != "[") exit
-          capture = 1; value = c
+          capture = 1
+          value = "["
         }
-        if (c == "{" || c == "[") depth++
+        if (c == "\"") {
+          quoted = 1
+          start = i
+          keyString = (depth == 1 || (capture && depth == 3)) && (previous == "{" || previous == ",")
+          continue
+        }
+        field = ""
+        if (c == "{" || c == "[") {
+          depth++
+          if (capture && depth == 3 && c == "{") {
+            taskType = ""
+            taskStatus = ""
+          }
+        }
         if (c == "}" || c == "]") {
+          if (capture && depth == 3 && c == "}" && (taskType != "" || taskStatus != "")) {
+            if (++count > 200) exit
+            value = value (count > 1 ? "," : "") "{"
+            if (taskType != "") value = value "\"type\":" taskType
+            if (taskStatus != "") value = value (taskType != "" ? "," : "") "\"status\":" taskStatus
+            value = value "}"
+          }
           depth--
-          if (capture && depth == 1) { print value; exit }
+          if (capture && depth == 1) { print value "]"; exit }
         }
+        previous = c
       }
-      if (capture) value = value "\n"
     }
   ')
   [ -n "$BACKGROUND_TASKS" ] && BACKGROUND_TASKS_FIELD=",\"backgroundTasks\":$BACKGROUND_TASKS"
