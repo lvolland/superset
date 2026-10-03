@@ -6,7 +6,7 @@ export const trackerInput = z
 	.enum(["superset", "linear"])
 	.nullish()
 	.describe(
-		"Work on Superset tasks or Linear issues. Omit to use the organization's task tracker setting.",
+		"Work on Superset tasks or Linear issues. Omit to use the organization's task tracker setting. A call reaches one tracker only.",
 	);
 
 export type TaskTracker = "superset" | "linear";
@@ -27,26 +27,17 @@ export type ResolvedTask =
 	  }
 	| { tracker: "linear"; issueId: string };
 
-/**
- * A Superset id or slug wins, so the task linked to a workspace stays reachable
- * in an organization that tracks in Linear; anything else is a Linear
- * identifier there.
- */
 export async function resolveTask(
 	caller: McpCaller,
 	idOrSlug: string,
 	requested: TaskTracker | null | undefined,
 ): Promise<ResolvedTask> {
-	if (requested !== "linear") {
-		const task = await caller.task.byIdOrSlug(idOrSlug);
-		if (task) return { tracker: "superset", task };
-		if (requested === "superset")
-			throw new Error(`Task not found: ${idOrSlug}`);
-	}
 	if ((await resolveTracker(caller, requested)) === "linear") {
 		return { tracker: "linear", issueId: idOrSlug };
 	}
-	throw new Error(`Task not found: ${idOrSlug}`);
+	const task = await caller.task.byIdOrSlug(idOrSlug);
+	if (!task) throw new Error(`Task not found: ${idOrSlug}`);
+	return { tracker: "superset", task };
 }
 
 export function rejectUnsupported(fields: Record<string, unknown>) {
