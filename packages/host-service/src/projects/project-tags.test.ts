@@ -53,7 +53,7 @@ function setup() {
 		({ db, eventBus, userId, isAuthenticated: true }) as HostServiceContext;
 	const caller = (userId?: string) =>
 		createCallerFactory(projectRouter)(context(userId));
-	return { db, messages, context, caller };
+	return { db, sqlite, messages, context, caller };
 }
 
 describe("personal project tags", () => {
@@ -239,4 +239,80 @@ describe("personal project tags", () => {
 		expect(await folders("alice").list()).toEqual([]);
 		expect(await folders("bob").list()).toHaveLength(1);
 	});
+});
+
+describe("batch collection moves", () => {
+	test("one call changes several projects and keeps other users' tags", async () => {
+		const h = setup();
+		h.db
+			.insert(projects)
+			.values({ id: OTHER_PROJECT, name: "other", repoPath: "/other" })
+			.run();
+		await h.caller("bob").setTags({ projectId: PROJECT, tags: ["bob"] });
+		const result = await h.caller("alice").setTagsBatch({
+			updates: [
+				{ projectId: PROJECT, tags: [" Team "] },
+				{ projectId: OTHER_PROJECT, tags: ["team"] },
+			],
+		});
+		expect(result.map((project) => project.tags)).toEqual([["team"], ["team"]]);
+		expect(
+			(await h.caller("bob").list()).find((project) => project.id === PROJECT)
+				?.tags,
+		).toEqual(["bob"]);
+		expect(h.messages.slice(-2).map((message) => message.projectId)).toEqual([
+			PROJECT,
+			OTHER_PROJECT,
+		]);
+	});
+	test("missing or deleted project rejects the entire batch without broadcasts", async () => {
+		const h = setup();
+		for (const deleted of [false, true]) {
+			if (deleted)
+				h.db
+					.insert(projects)
+					.values({
+						id: OTHER_PROJECT,
+						name: "deleted",
+						repoPath: "/deleted",
+						deletedAt: 1,
+					})
+					.run();
+			await expect(
+				h.caller("alice").setTagsBatch({
+					updates: [
+						{ projectId: PROJECT, tags: ["changed"] },
+						{ projectId: OTHER_PROJECT, tags: ["changed"] },
+					],
+				}),
+			).rejects.toMatchObject({ code: "NOT_FOUND" });
+			expect((await h.caller("alice").list())[0]?.tags).toEqual([]);
+			expect(h.messages).toEqual([]);
+		}
+	});
+});
+
+test("batch database failure restores tags and publishes no partial events", async () => {
+	const h = setup();
+	h.db
+		.insert(projects)
+		.values({ id: OTHER_PROJECT, name: "other", repoPath: "/other" })
+		.run();
+	await h.caller("alice").setTags({ projectId: PROJECT, tags: ["keep"] });
+	h.messages.splice(0);
+	h.sqlite.run(
+		`CREATE TRIGGER reject_batch BEFORE INSERT ON project_tags WHEN NEW.project_id = '${OTHER_PROJECT}' BEGIN SELECT RAISE(ABORT, 'reject batch'); END`,
+	);
+	await expect(
+		h.caller("alice").setTagsBatch({
+			updates: [
+				{ projectId: PROJECT, tags: ["changed"] },
+				{ projectId: OTHER_PROJECT, tags: ["changed"] },
+			],
+		}),
+	).rejects.toThrow("reject batch");
+	expect(
+		(await h.caller("alice").list()).find((row) => row.id === PROJECT)?.tags,
+	).toEqual(["keep"]);
+	expect(h.messages).toEqual([]);
 });

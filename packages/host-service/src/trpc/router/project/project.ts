@@ -26,6 +26,7 @@ import {
 import {
 	getProjectTagsByProjectId,
 	setProjectTags,
+	setProjectTagsBatch,
 } from "../../../projects/project-tags";
 import { createUserSimpleGit } from "../../../runtime/git/simple-git";
 import {
@@ -143,6 +144,29 @@ export const projectRouter = router({
 				});
 			}
 			return project;
+		}),
+
+	setTagsBatch: protectedProcedure
+		.input(
+			z.object({
+				updates: z.array(
+					z.object({
+						projectId: z.string().uuid(),
+						tags: workspaceTagsInputSchema,
+					}),
+				),
+			}),
+		)
+		.mutation(({ ctx, input }) => {
+			for (const update of input.updates) {
+				const project = getLocalProject(ctx.db, update.projectId);
+				if (!project || project.deletedAt !== null)
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Project is not set up on this host",
+					});
+			}
+			return setProjectTagsBatch(ctx, input.updates);
 		}),
 
 	/** Rename. Commits locally, projects have no cloud dependency. */

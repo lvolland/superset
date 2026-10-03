@@ -102,3 +102,34 @@ export function setProjectTags(
 		tags: visibleWorkspaceTags(tagAssignments, ctx.userId),
 	};
 }
+
+export function setProjectTagsBatch(
+	ctx: ProjectStoreContext & { userId?: string },
+	updates: Array<{ projectId: string; tags: string[] }>,
+) {
+	const messages: Parameters<
+		ProjectStoreContext["eventBus"]["broadcastProjectChanged"]
+	>[0][] = [];
+	const eventBus = {
+		...ctx.eventBus,
+		broadcastProjectChanged: (message: (typeof messages)[number]) => {
+			messages.push(message);
+		},
+	};
+	const results = ctx.db.transaction(() =>
+		updates.map((update) => {
+			const result = setProjectTags(
+				{ ...ctx, eventBus: eventBus as ProjectStoreContext["eventBus"] },
+				update.projectId,
+				update.tags,
+			);
+			if (!result)
+				throw new Error(
+					`Project is not set up on this host: ${update.projectId}`,
+				);
+			return result;
+		}),
+	);
+	for (const message of messages) ctx.eventBus.broadcastProjectChanged(message);
+	return results;
+}

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { env } from "renderer/env.renderer";
 import { useKnownHosts } from "renderer/hooks/known-hosts/useKnownHosts";
 import { useRelayUrl } from "renderer/hooks/useRelayUrl";
+import { authClient } from "renderer/lib/auth-client";
 import { getHostEventBus } from "renderer/lib/host-event-bus";
 import { getHostServiceClientByUrl } from "renderer/lib/host-service-client";
 import { useLocalHostService } from "renderer/routes/_authenticated/providers/LocalHostServiceProvider";
@@ -48,6 +49,8 @@ export interface UseHostProjectsResult {
  */
 export function useHostProjects(): UseHostProjectsResult {
 	const queryClient = useQueryClient();
+	const { data: session } = authClient.useSession();
+	const currentUserId = session?.user?.id ?? null;
 	const { activeHostUrl, machineId, activeOrganizationId } =
 		useLocalHostService();
 	const relayUrl = useRelayUrl();
@@ -169,7 +172,12 @@ export function useHostProjects(): UseHostProjectsResult {
 					queryClient.setQueryData<HostProjectRow[] | undefined>(
 						getHostProjectsQueryKey(target),
 						(rows) => {
-							const next = applyProjectChangedEvent(rows, event, projectId);
+							const next = applyProjectChangedEvent(
+								rows,
+								event,
+								projectId,
+								currentUserId,
+							);
 							if (next && next !== rows) {
 								saveHostProjectsSnapshot(
 									target.organizationId,
@@ -191,7 +199,7 @@ export function useHostProjects(): UseHostProjectsResult {
 		return () => {
 			for (const cleanup of cleanups) cleanup();
 		};
-	}, [targets, queryClient]);
+	}, [targets, queryClient, currentUserId]);
 
 	const hostResults = useMemo<HostProjectRowsResult[]>(
 		() =>

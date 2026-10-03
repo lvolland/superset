@@ -520,3 +520,20 @@ export const screenshots = sqliteTable(
 
 export type InsertScreenshot = typeof screenshots.$inferInsert;
 export type SelectScreenshot = typeof screenshots.$inferSelect;
+
+export const projectCollectionPlacements = sqliteTable(
+	"project_collection_placements",
+	{
+		organizationId: text("organization_id").notNull(),
+		userId: text("user_id").notNull(),
+		key: text("key").notNull(),
+		kind: text("kind", { enum: ["project", "collection"] }).notNull(),
+		tabOrder: integer("tab_order").notNull().default(0),
+		isCollapsed: integer("is_collapsed", { mode: "boolean" })
+			.notNull()
+			.default(false),
+	},
+	(table) => [
+		primaryKey({ columns: [table.organizationId, table.userId, table.key] }),
+	],
+);
