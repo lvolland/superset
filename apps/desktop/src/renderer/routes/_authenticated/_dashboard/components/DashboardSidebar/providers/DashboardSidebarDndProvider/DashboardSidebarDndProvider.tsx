@@ -6,12 +6,15 @@ import {
 } from "@dnd-kit/core";
 import { type ReactNode, useCallback } from "react";
 import { createPortal } from "react-dom";
+import type { ProjectCollectionCommand } from "renderer/routes/_authenticated/hooks/useProjectCollections";
+import { DashboardSidebarGroupHeader } from "../../components/DashboardSidebarGroupHeader";
 import { DashboardSidebarProjectSection } from "../../components/DashboardSidebarProjectSection";
 import { SidebarDragOverlay } from "../../components/SidebarDragOverlay";
 import {
 	SidebarDndContextProvider,
 	useSidebarDnd,
 } from "../../hooks/useSidebarDnd";
+import type { ProjectCollectionDragLayout } from "../../hooks/useSidebarDnd/projectCollectionDrop";
 import type {
 	DashboardSidebarPinnedWorkspace,
 	DashboardSidebarProject,
@@ -27,6 +30,8 @@ interface DashboardSidebarDndProviderProps {
 	isSidebarCollapsed: boolean;
 	workspaceShortcutLabels: Map<string, string>;
 	onReorderProjects: (projectIds: string[]) => void;
+	collectionLayout?: ProjectCollectionDragLayout;
+	onCollectionDrop?: (command: ProjectCollectionCommand) => Promise<boolean>;
 	/**
 	 * True while `projects` is a filtered view rather than the manual order —
 	 * see useSidebarDnd's `projectDragDisabled` option.
@@ -53,6 +58,8 @@ export function DashboardSidebarDndProvider({
 	isSidebarCollapsed,
 	workspaceShortcutLabels,
 	onReorderProjects,
+	collectionLayout,
+	onCollectionDrop,
 	isProjectDragDisabled = false,
 	isChildDragDisabled = false,
 	children,
@@ -70,6 +77,8 @@ export function DashboardSidebarDndProvider({
 		pinnedWorkspaces,
 		sessionChildren,
 		onReorderProjects,
+		collectionLayout,
+		onCollectionDrop,
 		projectDragDisabled: isProjectDragDisabled,
 		childDragDisabled: isChildDragDisabled,
 	});
@@ -155,6 +164,27 @@ export function DashboardSidebarDndProvider({
 									/>
 								</div>
 							</DndContext>
+						) : activeItem?.type === "collection" ? (
+							<DashboardSidebarGroupHeader
+								indentation="top-level"
+								isCollapsed={false}
+								onToggleCollapse={() => {}}
+								label={
+									<>
+										<span
+											className="size-2.5 rounded-full bg-muted-foreground"
+											style={
+												activeItem.collection.color
+													? { backgroundColor: activeItem.collection.color }
+													: undefined
+											}
+										/>
+										<span className="truncate">
+											{activeItem.collection.name}
+										</span>
+									</>
+								}
+							/>
 						) : activeItem ? (
 							<SidebarDragOverlay
 								activeItem={activeItem}

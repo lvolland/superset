@@ -3881,6 +3881,12 @@ msgstr "Khối suy nghĩ thu gọn được, kèm nhãn thời lượng"
 msgid "Collecting…"
 msgstr "Đang thu thập…"
 
+msgid "Collection actions"
+msgstr "Thao tác với bộ sưu tập"
+
+msgid "Collection name"
+msgstr "Tên bộ sưu tập"
+
 msgid "Color"
 msgstr "Màu"
 
@@ -4756,6 +4762,9 @@ msgstr "Không thể gửi prompt. Hãy thử lại."
 msgid "Could not take a screenshot"
 msgstr "Không thể chụp màn hình"
 
+msgid "Could not update collection"
+msgstr "Không thể cập nhật bộ sưu tập"
+
 msgid "Could not update plugin"
 msgstr "Không thể cập nhật plugin"
 
@@ -5457,6 +5466,9 @@ msgstr "Xóa tự động hóa"
 
 msgid "Delete automation?"
 msgstr "Xóa tự động hóa?"
+
+msgid "Delete collection"
+msgstr "Xóa bộ sưu tập"
 
 #. placeholder {0}: index + 1
 msgid "Delete command {0}"
@@ -7803,6 +7815,9 @@ msgstr "Ẩn chi tiết"
 msgid "Hide emails"
 msgstr "Ẩn email"
 
+msgid "Hide empty collections"
+msgstr "Ẩn bộ sưu tập trống"
+
 msgid "Hide file tree"
 msgstr "Ẩn cây tệp"
 
@@ -9705,6 +9720,9 @@ msgstr "Gần như suốt lịch sử phần mềm"
 msgid "Move {count} to Group"
 msgstr "Chuyển {count} vào nhóm"
 
+msgid "Move to collection"
+msgstr "Chuyển vào bộ sưu tập"
+
 msgid "Move to group"
 msgstr "Chuyển vào nhóm"
 
@@ -9882,6 +9900,9 @@ msgstr "Chat mới"
 
 msgid "New cloud workspace"
 msgstr "Workspace cloud mới"
+
+msgid "New collection"
+msgstr "Bộ sưu tập mới"
 
 msgid "New environment"
 msgstr "Environment mới"
@@ -12838,6 +12859,9 @@ msgstr "Gỡ {label}?"
 
 msgid "Remove attachment"
 msgstr "Xóa tệp đính kèm"
+
+msgid "Remove from collection"
+msgstr "Xóa khỏi bộ sưu tập"
 
 msgid "Remove from Queue"
 msgstr "Bỏ khỏi hàng đợi"

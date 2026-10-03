@@ -3881,6 +3881,12 @@ msgstr "Süre etiketli, daraltılabilir düşünme bloğu"
 msgid "Collecting…"
 msgstr "Toplanıyor…"
 
+msgid "Collection actions"
+msgstr "Koleksiyon işlemleri"
+
+msgid "Collection name"
+msgstr "Koleksiyon adı"
+
 msgid "Color"
 msgstr "Renk"
 
@@ -4756,6 +4762,9 @@ msgstr "İstem gönderilemedi. Yeniden deneyin."
 msgid "Could not take a screenshot"
 msgstr "Ekran görüntüsü alınamadı"
 
+msgid "Could not update collection"
+msgstr "Koleksiyon güncellenemedi"
+
 msgid "Could not update plugin"
 msgstr "Eklenti güncellenemedi"
 
@@ -5457,6 +5466,9 @@ msgstr "Otomasyonu sil"
 
 msgid "Delete automation?"
 msgstr "Otomasyon silinsin mi?"
+
+msgid "Delete collection"
+msgstr "Koleksiyonu sil"
 
 #. placeholder {0}: index + 1
 msgid "Delete command {0}"
@@ -7803,6 +7815,9 @@ msgstr "Ayrıntıları gizle"
 msgid "Hide emails"
 msgstr "E-postaları gizle"
 
+msgid "Hide empty collections"
+msgstr "Boş koleksiyonları gizle"
+
 msgid "Hide file tree"
 msgstr "Dosya ağacını gizle"
 
@@ -9705,6 +9720,9 @@ msgstr "Yazılım tarihinin çoğu"
 msgid "Move {count} to Group"
 msgstr "{count} öğeyi gruba taşı"
 
+msgid "Move to collection"
+msgstr "Koleksiyona taşı"
+
 msgid "Move to group"
 msgstr "Gruba taşı"
 
@@ -9882,6 +9900,9 @@ msgstr "Yeni sohbet"
 
 msgid "New cloud workspace"
 msgstr "Yeni bulut çalışma alanı"
+
+msgid "New collection"
+msgstr "Yeni koleksiyon"
 
 msgid "New environment"
 msgstr "Yeni ortam"
@@ -12838,6 +12859,9 @@ msgstr "{label} kaldırılsın mı?"
 
 msgid "Remove attachment"
 msgstr "Eki kaldır"
+
+msgid "Remove from collection"
+msgstr "Koleksiyondan çıkar"
 
 msgid "Remove from Queue"
 msgstr "Kuyruktan çıkar"

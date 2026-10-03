@@ -3881,6 +3881,12 @@ msgstr "所要時間ラベル付きの折りたためる思考ブロック"
 msgid "Collecting…"
 msgstr "収集中…"
 
+msgid "Collection actions"
+msgstr "コレクションの操作"
+
+msgid "Collection name"
+msgstr "コレクション名"
+
 msgid "Color"
 msgstr "色"
 
@@ -4756,6 +4762,9 @@ msgstr "プロンプトを送信できませんでした。もう一度お試し
 msgid "Could not take a screenshot"
 msgstr "スクリーンショットを撮れませんでした"
 
+msgid "Could not update collection"
+msgstr "コレクションを更新できませんでした"
+
 msgid "Could not update plugin"
 msgstr "プラグインを更新できませんでした"
 
@@ -5457,6 +5466,9 @@ msgstr "オートメーションを削除"
 
 msgid "Delete automation?"
 msgstr "オートメーションを削除しますか?"
+
+msgid "Delete collection"
+msgstr "コレクションを削除"
 
 #. placeholder {0}: index + 1
 msgid "Delete command {0}"
@@ -7803,6 +7815,9 @@ msgstr "詳細を隠す"
 msgid "Hide emails"
 msgstr "メールを隠す"
 
+msgid "Hide empty collections"
+msgstr "空のコレクションを非表示"
+
 msgid "Hide file tree"
 msgstr "ファイルツリーを隠す"
 
@@ -9705,6 +9720,9 @@ msgstr "ソフトウェアの歴史のほとんど"
 msgid "Move {count} to Group"
 msgstr "{count}件をグループへ移動"
 
+msgid "Move to collection"
+msgstr "コレクションに移動"
+
 msgid "Move to group"
 msgstr "グループへ移動"
 
@@ -9882,6 +9900,9 @@ msgstr "新しいチャット"
 
 msgid "New cloud workspace"
 msgstr "新規クラウドワークスペース"
+
+msgid "New collection"
+msgstr "新しいコレクション"
 
 msgid "New environment"
 msgstr "新しい環境"
@@ -12838,6 +12859,9 @@ msgstr "{label}を削除しますか?"
 
 msgid "Remove attachment"
 msgstr "添付ファイルを削除"
+
+msgid "Remove from collection"
+msgstr "コレクションから削除"
 
 msgid "Remove from Queue"
 msgstr "キューから削除"

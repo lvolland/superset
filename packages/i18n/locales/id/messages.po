@@ -3881,6 +3881,12 @@ msgstr "Blok berpikir yang bisa diciutkan dengan label durasi"
 msgid "Collecting…"
 msgstr "Mengumpulkan…"
 
+msgid "Collection actions"
+msgstr "Tindakan koleksi"
+
+msgid "Collection name"
+msgstr "Nama koleksi"
+
 msgid "Color"
 msgstr "Warna"
 
@@ -4756,6 +4762,9 @@ msgstr "Tidak bisa mengirim prompt. Coba lagi."
 msgid "Could not take a screenshot"
 msgstr "Tidak bisa mengambil tangkapan layar"
 
+msgid "Could not update collection"
+msgstr "Tidak dapat memperbarui koleksi"
+
 msgid "Could not update plugin"
 msgstr "Tidak bisa memperbarui plugin"
 
@@ -5457,6 +5466,9 @@ msgstr "Hapus otomatisasi"
 
 msgid "Delete automation?"
 msgstr "Hapus otomatisasi?"
+
+msgid "Delete collection"
+msgstr "Hapus koleksi"
 
 #. placeholder {0}: index + 1
 msgid "Delete command {0}"
@@ -7803,6 +7815,9 @@ msgstr "Sembunyikan Detail"
 msgid "Hide emails"
 msgstr "Sembunyikan email"
 
+msgid "Hide empty collections"
+msgstr "Sembunyikan koleksi kosong"
+
 msgid "Hide file tree"
 msgstr "Sembunyikan pohon file"
 
@@ -9705,6 +9720,9 @@ msgstr "Sebagian besar sejarah perangkat lunak"
 msgid "Move {count} to Group"
 msgstr "Pindahkan {count} ke Grup"
 
+msgid "Move to collection"
+msgstr "Pindahkan ke koleksi"
+
 msgid "Move to group"
 msgstr "Pindahkan ke grup"
 
@@ -9882,6 +9900,9 @@ msgstr "Chat baru"
 
 msgid "New cloud workspace"
 msgstr "Workspace cloud baru"
+
+msgid "New collection"
+msgstr "Koleksi baru"
 
 msgid "New environment"
 msgstr "Environment baru"
@@ -12838,6 +12859,9 @@ msgstr "Hapus {label}?"
 
 msgid "Remove attachment"
 msgstr "Hapus lampiran"
+
+msgid "Remove from collection"
+msgstr "Keluarkan dari koleksi"
 
 msgid "Remove from Queue"
 msgstr "Keluarkan dari Antrean"
