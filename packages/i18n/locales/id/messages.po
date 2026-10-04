@@ -191,6 +191,7 @@ msgstr "{0, plural, one {# proyek dipilih.} other {# proyek dipilih.}}"
 
 #. placeholder {0}: chosenProjects.length
 #. placeholder {0}: projectFilters.length
+#. placeholder {0}: props.projectCount
 msgid "{0, plural, one {# project} other {# projects}}"
 msgstr "{0, plural, one {# proyek} other {# proyek}}"
 

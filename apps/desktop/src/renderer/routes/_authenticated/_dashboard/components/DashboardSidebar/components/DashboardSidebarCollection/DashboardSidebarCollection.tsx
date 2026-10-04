@@ -2,6 +2,7 @@ import { useDroppable } from "@dnd-kit/core";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useLingui } from "@lingui/react/macro";
+import { mintFolderTag } from "@superset/shared/workspace-tags";
 import {
 	ContextMenu,
 	ContextMenuContent,
@@ -16,7 +17,6 @@ import { cn } from "@superset/ui/utils";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { HiEllipsisHorizontal } from "react-icons/hi2";
 import type { ProjectCollection } from "renderer/routes/_authenticated/utils/projectCollections/projectCollections";
-import { mintFolderTag } from "renderer/routes/_authenticated/utils/workspaceTagFolders";
 import { useRunAfterMenuClose } from "../../hooks/useRunAfterMenuClose";
 import { collectionDropId } from "../../hooks/useSidebarDnd/projectCollectionDrop";
 import { useSidebarProjectCollections } from "../../providers/DashboardSidebarProjectCollectionsProvider/DashboardSidebarProjectCollectionsProvider";

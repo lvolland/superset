@@ -1,12 +1,12 @@
 import {
+	projectCollectionId,
+	resolveProjectCollections,
+} from "@superset/shared/project-collections";
+import {
 	getWorkspaceActivityTime,
 	toTime,
 } from "@superset/shared/workspace-activity";
-import {
-	normalizeWorkspaceTag,
-	normalizeWorkspaceTags,
-	PROJECTS_TAG_SCOPE,
-} from "@superset/shared/workspace-tags";
+import { PROJECTS_TAG_SCOPE } from "@superset/shared/workspace-tags";
 import {
 	type HostTagFoldersResult,
 	mergeHostTagFolders,
@@ -48,9 +48,7 @@ export type ProjectCollectionRootItem<Project> =
 			tabOrder: number;
 	  };
 
-export function projectCollectionId(tag: string): string {
-	return `${PROJECTS_TAG_SCOPE}:${tag}`;
-}
+export { projectCollectionId } from "@superset/shared/project-collections";
 
 export function deriveProjectCollections<Project extends CollectionProject>({
 	projects,
@@ -81,16 +79,6 @@ export function deriveProjectCollections<Project extends CollectionProject>({
 	const settings = mergeHostTagFolders(hostResults).filter(
 		(row) => row.scope === PROJECTS_TAG_SCOPE,
 	);
-	const settingsByTag = new Map(
-		settings.flatMap((row) => {
-			const tag = normalizeWorkspaceTag(row.tag);
-			return tag ? [[tag, row] as const] : [];
-		}),
-	);
-	const tags = normalizeWorkspaceTags([
-		...settingsByTag.keys(),
-		...projects.flatMap((project) => [...(project.tags ?? [])]),
-	]);
 	const localByTag = new Map(
 		placements
 			.filter((row) => row.projectId === PROJECTS_TAG_SCOPE && row.tag != null)
@@ -99,24 +87,19 @@ export function deriveProjectCollections<Project extends CollectionProject>({
 	const projectPlacementById = new Map(
 		projectPlacements.map((row) => [row.projectId, row]),
 	);
-	const collections: ProjectCollection<Project>[] = tags.map((tag, index) => {
-		const setting = settingsByTag.get(tag);
-		const local = localByTag.get(tag);
-		return {
-			id: projectCollectionId(tag),
-			tag,
-			name: setting?.displayName ?? tag,
-			color: setting?.color ?? null,
-			tabOrder: local?.tabOrder ?? setting?.tabOrder ?? 1_000_000 + index,
-			isCollapsed: local?.isCollapsed ?? false,
-			projects: [],
-		};
+	const resolved = resolveProjectCollections({
+		projects,
+		settings,
+		tabOrderOverride: (tag) => localByTag.get(tag)?.tabOrder,
 	});
-	const compareCollections = (
-		a: ProjectCollection<Project>,
-		b: ProjectCollection<Project>,
-	) => a.tabOrder - b.tabOrder || a.tag.localeCompare(b.tag);
-	collections.sort(compareCollections);
+	const collections: ProjectCollection<Project>[] = resolved.collections.map(
+		(summary) => ({
+			id: projectCollectionId(summary.tag),
+			...summary,
+			isCollapsed: localByTag.get(summary.tag)?.isCollapsed ?? false,
+			projects: [],
+		}),
+	);
 	const collectionByTag = new Map(
 		collections.map((collection) => [collection.tag, collection]),
 	);
@@ -124,12 +107,8 @@ export function deriveProjectCollections<Project extends CollectionProject>({
 	const rootItems: ProjectCollectionRootItem<Project>[] = [];
 	const query = filter.trim().toLowerCase();
 	for (const project of projects) {
-		const collection = normalizeWorkspaceTags(project.tags)
-			.map((tag) => collectionByTag.get(tag))
-			.filter(
-				(value): value is ProjectCollection<Project> => value !== undefined,
-			)
-			.sort(compareCollections)[0];
+		const tag = resolved.collectionByProjectId.get(project.id)?.tag;
+		const collection = tag ? collectionByTag.get(tag) : undefined;
 		if (collection) collectionByProjectId.set(project.id, collection);
 		if (projectPlacementById.get(project.id)?.isHidden) continue;
 		if (

@@ -1,3 +1,4 @@
+import { normalizeWorkspaceTags } from "@superset/shared/workspace-tags";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import type { WorkspacesHost } from "@/hooks/useHostWorkspaces";
@@ -13,6 +14,9 @@ export interface HostProjectItem {
 	iconUrl: string | null;
 	repoOwner: string | null;
 	repoName: string | null;
+	tags: string[];
+	/** False on a host that predates project tags: it can't hold collections. */
+	supportsCollections: boolean;
 }
 
 const PROJECTS_REFETCH_INTERVAL_MS = 30_000;
@@ -36,7 +40,16 @@ export function toHostProjectItem(
 		iconUrl,
 		repoOwner,
 		repoName: row.repoName ?? null,
+		tags: normalizeWorkspaceTags(row.tags),
+		supportsCollections: Array.isArray(row.tags),
 	};
+}
+
+export function hostProjectsQueryKey(host: WorkspacesHost | null) {
+	const hostUrl = host
+		? hostServiceUrl(host.organizationId, host.machineId)
+		: null;
+	return ["host-service", "projects", "list", host?.machineId, hostUrl];
 }
 
 export interface UseHostProjectsResult {
@@ -58,7 +71,7 @@ export function useHostProjects(
 		: null;
 
 	const query = useQuery({
-		queryKey: ["host-service", "projects", "list", host?.machineId, hostUrl],
+		queryKey: hostProjectsQueryKey(host),
 		enabled: hostUrl !== null && (host?.isOnline ?? false),
 		refetchInterval: PROJECTS_REFETCH_INTERVAL_MS,
 		networkMode: "always" as const,

@@ -191,6 +191,7 @@ msgstr "{0, plural, one {已選擇#個專案。} other {已選擇#個專案。}}
 
 #. placeholder {0}: chosenProjects.length
 #. placeholder {0}: projectFilters.length
+#. placeholder {0}: props.projectCount
 msgid "{0, plural, one {# project} other {# projects}}"
 msgstr "{0, plural, one {# 個專案} other {# 個專案}}"
 

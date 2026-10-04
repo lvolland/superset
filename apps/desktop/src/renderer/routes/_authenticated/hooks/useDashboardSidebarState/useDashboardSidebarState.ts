@@ -1,5 +1,6 @@
 import type { Pane } from "@superset/panes";
 import {
+	mintFolderTag,
 	normalizeWorkspaceTag,
 	normalizeWorkspaceTags,
 	SESSIONS_TAG_SCOPE,
@@ -31,7 +32,6 @@ import {
 	deriveTagFolders,
 	getProjectFolderTagIndex,
 	laneProjectIdForScope,
-	mintFolderTag,
 	parseSidebarFolderKey,
 	resolveWorkspaceSectionId,
 	type TagFolderContext,

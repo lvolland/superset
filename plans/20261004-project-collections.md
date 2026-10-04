@@ -65,9 +65,21 @@ PROJECTS
 - Composants co-localisés sous `DashboardSidebar/components/`, un dossier par composant ; la ligne de collection s'appuie sur `DashboardSidebarGroupHeader`.
 - Chaînes Lingui, `bun run check:i18n`, traductions écrites dans chaque locale.
 
+## Mobile (`apps/mobile`)
+
+Ajouté à la demande de Louis le 2026-10-04, dans la même PR. Le mobile lit déjà ses projets sur l'hôte sélectionné (`project.list`) : il lit les collections au même endroit, la synchro avec le desktop et la CLI vient avec, sans cloud.
+
+- Accueil : les sections projets de l'hôte sélectionné sont regroupées sous des en-têtes de collection (pastille de couleur, nom, nombre de projets quand repliée). Une collection prend la place de son premier projet dans l'ordre actuel du mobile ; ses projets gardent cet ordre. Les workspaces cloud ne changent pas.
+- Données : `tags` de `project.list` et réglages `tag_folder_settings` du scope `projects` de cet hôte (nom affiché, couleur), avec la même dérivation que le desktop (un conteneur par projet), partagée plutôt que recopiée quand c'est possible.
+- Repli des collections : local à l'appareil, persisté comme le repli actuel des projets.
+- Appui long sur un projet : « Move to collection » (collections existantes avec une coche sur l'actuelle, New collection… qui demande un nom, Remove from collection). Écrit `project.setTags` sur l'hôte, et pour une nouvelle collection le réglage `projects` (nom affiché), avec le même tag que le desktop créerait pour ce nom.
+- Renommer, colorer, supprimer et réordonner restent au desktop et à la CLI.
+- Hôte ancien sans `project.setTags` ni `tags` : pas de collections, action absente, sans erreur.
+- Chaînes traduites comme le reste du mobile ; vérification sur simulateur avec des données fictives.
+
 ## Hors périmètre
 
-Sidebar v1, mobile, collections imbriquées, icône ou image de collection, tri alphabétique (n'existe pas dans main), partage de collections entre membres, configuration commune à une collection (env, MCP, presets : #4018), projets multi-repos (#7699).
+Sidebar v1, gestion complète des collections sur mobile (renommer, couleur, supprimer, ordre), collections imbriquées, icône ou image de collection, tri alphabétique (n'existe pas dans main), partage de collections entre membres, configuration commune à une collection (env, MCP, presets : #4018), projets multi-repos (#7699).
 
 ## Livraison
 

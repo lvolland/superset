@@ -5,6 +5,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useLingui } from "@lingui/react/macro";
+import { mintFolderTag } from "@superset/shared/workspace-tags";
 import { OverflowFadeContainer } from "@superset/ui/overflow-fade-container";
 import { toast } from "@superset/ui/sonner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
@@ -27,7 +28,6 @@ import { useDashboardSidebarState } from "renderer/routes/_authenticated/hooks/u
 import type { ProjectCollectionCommand } from "renderer/routes/_authenticated/hooks/useProjectCollections";
 import { useProjectCollections } from "renderer/routes/_authenticated/hooks/useProjectCollections";
 import { useLocalHostService } from "renderer/routes/_authenticated/providers/LocalHostServiceProvider";
-import { mintFolderTag } from "renderer/routes/_authenticated/utils/workspaceTagFolders";
 import { useSidebarSectionsCollapseStore } from "renderer/stores/sidebar-sections-collapse";
 import { useV2NotificationStore } from "renderer/stores/v2-notifications";
 import { DashboardSidebarBulkActions } from "./components/DashboardSidebarBulkActions";
