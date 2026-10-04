@@ -4400,6 +4400,9 @@ msgstr "링크 복사됨"
 msgid "Copied terminal ID"
 msgstr "터미널 ID 복사됨"
 
+msgid "Copied the first {count} cells of the selection"
+msgstr "선택 영역의 처음 {count}개 셀을 복사했습니다"
+
 msgid "Copied to clipboard."
 msgstr "클립보드에 복사했습니다."
 
@@ -10025,6 +10028,9 @@ msgstr "다음 일치 항목"
 msgid "Next run {0}"
 msgstr "다음 실행 {0}"
 
+msgid "Next sheets"
+msgstr "다음 시트"
+
 msgid "Next slide"
 msgstr "다음 슬라이드"
 
@@ -12171,6 +12177,9 @@ msgstr "이전 일치 항목"
 
 msgid "Previous prompts"
 msgstr "이전 프롬프트"
+
+msgid "Previous sheets"
+msgstr "이전 시트"
 
 msgid "Previous slide"
 msgstr "이전 슬라이드"
@@ -16396,8 +16405,14 @@ msgstr "이 파일"
 msgid "This file could not be read as a spreadsheet"
 msgstr "이 파일을 스프레드시트로 읽을 수 없습니다"
 
+msgid "This file format is not supported"
+msgstr "지원되지 않는 파일 형식입니다"
+
 msgid "This file is empty or was deleted."
 msgstr "이 파일은 비어 있거나 삭제되었습니다."
+
+msgid "This file is password protected"
+msgstr "이 파일은 암호로 보호되어 있습니다"
 
 msgid "This GitHub installation is already connected to another Superset organization. Disconnect it there, or uninstall the Superset GitHub App, then try again."
 msgstr "이 GitHub 설치는 이미 다른 Superset 조직에 연결되어 있습니다. 해당 조직에서 연결을 해제하거나 Superset GitHub App을 제거한 뒤 다시 시도해 주세요."

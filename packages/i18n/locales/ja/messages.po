@@ -4400,6 +4400,9 @@ msgstr "リンクをコピーしました"
 msgid "Copied terminal ID"
 msgstr "ターミナルIDをコピーしました"
 
+msgid "Copied the first {count} cells of the selection"
+msgstr "選択範囲の最初の {count} 個のセルをコピーしました"
+
 msgid "Copied to clipboard."
 msgstr "クリップボードにコピーしました。"
 
@@ -10025,6 +10028,9 @@ msgstr "次の一致"
 msgid "Next run {0}"
 msgstr "次回の実行 {0}"
 
+msgid "Next sheets"
+msgstr "次のシート"
+
 msgid "Next slide"
 msgstr "次のスライド"
 
@@ -12171,6 +12177,9 @@ msgstr "前の一致"
 
 msgid "Previous prompts"
 msgstr "以前のプロンプト"
+
+msgid "Previous sheets"
+msgstr "前のシート"
 
 msgid "Previous slide"
 msgstr "前のスライド"
@@ -16396,8 +16405,14 @@ msgstr "このファイル"
 msgid "This file could not be read as a spreadsheet"
 msgstr "このファイルをスプレッドシートとして読み込めませんでした"
 
+msgid "This file format is not supported"
+msgstr "このファイル形式はサポートされていません"
+
 msgid "This file is empty or was deleted."
 msgstr "このファイルは空か、削除されています。"
+
+msgid "This file is password protected"
+msgstr "このファイルはパスワードで保護されています"
 
 msgid "This GitHub installation is already connected to another Superset organization. Disconnect it there, or uninstall the Superset GitHub App, then try again."
 msgstr "このGitHubインストールは別のSuperset組織にすでに接続されています。そちらで接続を解除するか、Superset GitHub Appをアンインストールしてから、もう一度お試しください。"

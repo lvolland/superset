@@ -4400,6 +4400,9 @@ msgstr "Odkaz zkopírován"
 msgid "Copied terminal ID"
 msgstr "ID terminálu zkopírováno"
 
+msgid "Copied the first {count} cells of the selection"
+msgstr "Zkopírováno prvních {count} buněk výběru"
+
 msgid "Copied to clipboard."
 msgstr "Zkopírováno do schránky."
 
@@ -10025,6 +10028,9 @@ msgstr "Další shoda"
 msgid "Next run {0}"
 msgstr "Další běh {0}"
 
+msgid "Next sheets"
+msgstr "Další listy"
+
 msgid "Next slide"
 msgstr "Další snímek"
 
@@ -12171,6 +12177,9 @@ msgstr "Předchozí shoda"
 
 msgid "Previous prompts"
 msgstr "Předchozí prompty"
+
+msgid "Previous sheets"
+msgstr "Předchozí listy"
 
 msgid "Previous slide"
 msgstr "Předchozí snímek"
@@ -16396,8 +16405,14 @@ msgstr "tento soubor"
 msgid "This file could not be read as a spreadsheet"
 msgstr "Tento soubor nelze přečíst jako tabulku"
 
+msgid "This file format is not supported"
+msgstr "Tento formát souboru není podporován"
+
 msgid "This file is empty or was deleted."
 msgstr "Tento soubor je prázdný nebo byl smazán."
+
+msgid "This file is password protected"
+msgstr "Tento soubor je chráněn heslem"
 
 msgid "This GitHub installation is already connected to another Superset organization. Disconnect it there, or uninstall the Superset GitHub App, then try again."
 msgstr "Tato instalace GitHubu je už připojená k jiné organizaci Superset. Odpojte ji tam, nebo odinstalujte Superset GitHub App, a zkuste to znovu."

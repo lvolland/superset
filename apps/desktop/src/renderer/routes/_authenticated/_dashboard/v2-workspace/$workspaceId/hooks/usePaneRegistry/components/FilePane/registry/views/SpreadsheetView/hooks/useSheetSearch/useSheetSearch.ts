@@ -1,3 +1,4 @@
+import type { NumberSeparators } from "@superset/i18n/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CellPosition, SearchResult } from "../../types";
 import type { SheetWorkerClient } from "../../utils/sheetWorker";
@@ -9,26 +10,42 @@ interface UseSheetSearchOptions {
 	client: SheetWorkerClient;
 	sheetIndex: number;
 	colCount: number;
+	numbers: NumberSeparators;
 	onReveal: (cell: CellPosition) => void;
+	delayMs?: number;
+}
+
+/** Matches belong to the search that produced them, and die with it. */
+interface Answer {
+	key: string;
+	result: SearchResult;
+	activeIndex: number;
 }
 
 export function useSheetSearch({
 	client,
 	sheetIndex,
 	colCount,
+	numbers,
 	onReveal,
+	delayMs = QUERY_DELAY_MS,
 }: UseSheetSearchOptions) {
 	const [isOpen, setIsOpen] = useState(false);
 	const [query, setQuery] = useState("");
 	const [caseSensitive, setCaseSensitive] = useState(false);
-	const [result, setResult] = useState<SearchResult | null>(null);
-	const [activeIndex, setActiveIndex] = useState(0);
+	const [answer, setAnswer] = useState<Answer | null>(null);
+	const { group, decimal } = numbers;
+	const key = JSON.stringify([
+		sheetIndex,
+		query,
+		caseSensitive,
+		group,
+		decimal,
+	]);
+	const current = isOpen && query && answer?.key === key ? answer : null;
 
 	useEffect(() => {
-		if (!isOpen || !query) {
-			setResult(null);
-			return;
-		}
+		if (!isOpen || !query) return;
 		let cancelled = false;
 		const timer = setTimeout(() => {
 			client
@@ -38,24 +55,37 @@ export function useSheetSearch({
 					query,
 					caseSensitive,
 					limit: MATCH_LIMIT,
+					numbers: { group, decimal },
 				})
 				.then(
-					(next) => {
+					(result) => {
 						if (cancelled) return;
-						setResult(next);
-						setActiveIndex(0);
-						const [row, col] = next.matches;
+						setAnswer({ key, result, activeIndex: 0 });
+						const [row, col] = result.matches;
 						if (row !== undefined && col !== undefined) onReveal({ row, col });
 					},
 					() => {},
 				);
-		}, QUERY_DELAY_MS);
+		}, delayMs);
 		return () => {
 			cancelled = true;
 			clearTimeout(timer);
 		};
-	}, [client, sheetIndex, query, caseSensitive, isOpen, onReveal]);
+	}, [
+		client,
+		key,
+		sheetIndex,
+		query,
+		caseSensitive,
+		group,
+		decimal,
+		isOpen,
+		onReveal,
+		delayMs,
+	]);
 
+	const result = current?.result ?? null;
+	const activeIndex = current?.activeIndex ?? 0;
 	const matchCount = result ? result.matches.length / 2 : 0;
 
 	const matchKeys = useMemo(() => {
@@ -78,16 +108,13 @@ export function useSheetSearch({
 		[result],
 	);
 
-	const step = useCallback(
-		(delta: 1 | -1) => {
-			if (matchCount === 0) return;
-			const next = (activeIndex + delta + matchCount) % matchCount;
-			setActiveIndex(next);
-			const cell = matchAt(next);
-			if (cell) onReveal(cell);
-		},
-		[activeIndex, matchCount, matchAt, onReveal],
-	);
+	const step = (delta: 1 | -1) => {
+		if (!current || matchCount === 0) return;
+		const next = (activeIndex + delta + matchCount) % matchCount;
+		setAnswer({ ...current, activeIndex: next });
+		const cell = matchAt(next);
+		if (cell) onReveal(cell);
+	};
 
 	return {
 		isOpen,
@@ -100,8 +127,8 @@ export function useSheetSearch({
 		matchCount,
 		truncated: result?.truncated ?? false,
 		activeIndex,
-		activeMatch: isOpen ? matchAt(activeIndex) : null,
-		matchKeys: isOpen ? matchKeys : null,
+		activeMatch: matchAt(activeIndex),
+		matchKeys,
 		findNext: () => step(1),
 		findPrevious: () => step(-1),
 	};

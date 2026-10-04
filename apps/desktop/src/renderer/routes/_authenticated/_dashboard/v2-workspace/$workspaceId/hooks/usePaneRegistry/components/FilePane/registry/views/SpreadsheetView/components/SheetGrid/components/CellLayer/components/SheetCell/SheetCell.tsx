@@ -1,6 +1,6 @@
 import { cn } from "@superset/ui/utils";
 import { memo } from "react";
-import type { GridCell } from "../../../../types";
+import type { GridCell } from "../../../../../../types";
 
 export type MatchState = "none" | "match" | "active";
 

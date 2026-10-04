@@ -1,80 +1,118 @@
+import type { NumberSeparators } from "@superset/i18n/format";
 import { getFileExtension } from "@superset/shared/media-files";
-import { type CellObject, read, utils, type WorkBook } from "xlsx";
+import {
+	type CellObject,
+	read,
+	SSF,
+	utils,
+	type WorkBook,
+	type WorkSheet,
+} from "xlsx";
 import type {
 	CellKind,
 	CellRange,
+	CellWindow,
+	CopyResult,
+	FrozenPane,
 	GridCell,
 	SearchResult,
 	SheetSummary,
+	UnreadableReason,
 	WorkbookSource,
 } from "../../types";
-import { toTsv } from "../toTsv";
+import { delimitedSource, parseDelimitedText } from "../delimitedText";
+import { type ArchiveFiles, NO_FREEZE, readFrozenPanes } from "../frozenPanes";
+import { tsvField } from "../toTsv";
 
 const WIDTH_SAMPLE_ROWS = 1000;
 const MAX_SAMPLED_CHARS = 60;
 const ZIP_EXTENSIONS = new Set(["xlsx", "xlsm", "xlsb", "ods"]);
 const NUMERIC_TEXT =
-	/^[-+(]?[$€£¥]?\s?\d[\d\s.,'  ]*(?:[eE][-+]?\d+)?\s?[%$€£¥]?\)?$/;
+	/^[-+(]?[$€£¥]?\s?\d[\d\s.,' {2}]*(?:[eE][-+]?\d+)?\s?[%$€£¥]?\)?$/;
+// SheetJS formats numbers the en-US way: "," groups digits, "." starts decimals.
+const EN_SEPARATOR = /\.(?=\d)|(?<=\d),(?=\d)/g;
+const DELIMITED_HEADER: FrozenPane = { rows: 1, cols: 0 };
+
+export interface CopyLimits {
+	maxCells: number;
+	maxChars: number;
+}
+
+export const COPY_LIMITS: CopyLimits = {
+	maxCells: 1_000_000,
+	maxChars: 4_000_000,
+};
 
 export class UnreadableWorkbookError extends Error {}
 
 export interface WorkbookModel {
 	sheets: SheetSummary[];
-	getRows(
+	/** Row i, column j of the result is cell (rowStart + i, colStart + j). */
+	getCells(
 		sheetIndex: number,
-		start: number,
-		end: number,
+		window: CellWindow,
+		numbers: NumberSeparators,
 	): (GridCell | null)[][];
 	search(
 		sheetIndex: number,
 		query: string,
 		caseSensitive: boolean,
 		limit: number,
+		numbers: NumberSeparators,
 	): SearchResult;
-	rangeToTsv(sheetIndex: number, range: CellRange): string;
+	/** Walks the cells that exist, so a sparse sheet copies at its real size. */
+	rangeToTsv(
+		sheetIndex: number,
+		range: CellRange,
+		numbers: NumberSeparators,
+		limits?: CopyLimits,
+	): CopyResult;
+}
+
+interface SheetData {
+	summary: SheetSummary;
+	rows: CellObject[][];
 }
 
 export function openWorkbook(source: WorkbookSource): WorkbookModel {
-	const workbook =
-		source.kind === "text" ? readDelimitedText(source.text) : readBytes(source);
 	const delimited = source.kind === "text";
-	const sheets = workbook.SheetNames.map((name, index) =>
-		summarize(workbook, name, index),
-	);
-	const data = workbook.SheetNames.map((name) => sheetData(workbook, name));
-
-	const cellAt = (sheetIndex: number, r: number, c: number) =>
-		data[sheetIndex]?.[r]?.[c];
+	const sheets = delimited ? readDelimited(source) : readBytes(source);
+	const display = (cell: CellObject | undefined, numbers: NumberSeparators) =>
+		delimited ? cellText(cell) : localizedText(cell, numbers);
 
 	return {
-		sheets,
-		getRows(sheetIndex, start, end) {
+		sheets: sheets.map((sheet) => sheet.summary),
+		getCells(sheetIndex, window, numbers) {
 			const sheet = sheets[sheetIndex];
 			if (!sheet) return [];
-			const rows: (GridCell | null)[][] = [];
-			const last = Math.min(end, sheet.rowCount);
-			for (let r = start; r < last; r += 1) {
-				const source = data[sheetIndex]?.[r];
+			const { rowCount, colCount } = sheet.summary;
+			const result: (GridCell | null)[][] = [];
+			const rowEnd = Math.min(window.rowEnd, rowCount);
+			const colEnd = Math.min(window.colEnd, colCount);
+			for (let r = window.rowStart; r < rowEnd; r += 1) {
+				const source = sheet.rows[r];
 				const row: (GridCell | null)[] = [];
 				if (source) {
-					for (let c = 0; c < source.length; c += 1) {
-						row.push(toGridCell(source[c], delimited));
+					const end = Math.min(colEnd, source.length);
+					for (let c = window.colStart; c < end; c += 1) {
+						const cell = toGridCell(source[c], delimited, numbers);
+						if (cell) row[c - window.colStart] = cell;
 					}
 				}
-				rows.push(row);
+				result.push(row);
 			}
-			return rows;
+			return result;
 		},
-		search(sheetIndex, query, caseSensitive, limit) {
+		search(sheetIndex, query, caseSensitive, limit, numbers) {
 			const needle = caseSensitive ? query : query.toLowerCase();
 			const matches: number[] = [];
-			const rows = data[sheetIndex];
+			const rows = sheets[sheetIndex]?.rows;
 			if (!needle || !rows) return { matches, truncated: false };
 			for (let r = 0; r < rows.length; r += 1) {
 				const row = rows[r];
 				if (!row) continue;
 				for (let c = 0; c < row.length; c += 1) {
-					const text = cellText(row[c]);
+					const text = display(row[c], numbers);
 					if (!text) continue;
 					const haystack = caseSensitive ? text : text.toLowerCase();
 					if (!haystack.includes(needle)) continue;
@@ -86,43 +124,82 @@ export function openWorkbook(source: WorkbookSource): WorkbookModel {
 			}
 			return { matches, truncated: false };
 		},
-		rangeToTsv(sheetIndex, range) {
-			const rows: string[][] = [];
-			for (let r = range.top; r <= range.bottom; r += 1) {
-				const row: string[] = [];
-				for (let c = range.left; c <= range.right; c += 1) {
-					row.push(cellText(cellAt(sheetIndex, r, c)));
+		rangeToTsv(sheetIndex, range, numbers, limits = COPY_LIMITS) {
+			const sheet = sheets[sheetIndex];
+			const parts: string[] = [];
+			let cells = 0;
+			let chars = 0;
+			if (!sheet) return { text: "", cells, truncated: false };
+			const bottom = Math.min(range.bottom, sheet.summary.rowCount - 1);
+			const right = Math.min(range.right, sheet.summary.colCount - 1);
+			for (let r = range.top; r <= bottom; r += 1) {
+				if (r > range.top) {
+					if (chars + 1 > limits.maxChars) {
+						return { text: parts.join(""), cells, truncated: true };
+					}
+					parts.push("\n");
+					chars += 1;
 				}
-				rows.push(row);
+				const row = sheet.rows[r];
+				if (!row) continue;
+				let last = Math.min(right, row.length - 1);
+				while (last >= range.left && !display(row[last], numbers)) last -= 1;
+				for (let c = range.left; c <= last; c += 1) {
+					const field = tsvField(display(row[c], numbers));
+					const size = field.length + (c > range.left ? 1 : 0);
+					if (cells + 1 > limits.maxCells || chars + size > limits.maxChars) {
+						return { text: parts.join(""), cells, truncated: true };
+					}
+					parts.push(c > range.left ? `\t${field}` : field);
+					cells += 1;
+					chars += size;
+				}
 			}
-			return toTsv(rows);
+			return { text: parts.join(""), cells, truncated: false };
 		},
 	};
 }
 
-function readDelimitedText(text: string): WorkBook {
-	const withoutBom = text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
-	// raw keeps the text as written: SheetJS would read "5200,50" as 520050.
-	return read(withoutBom, {
-		type: "string",
-		dense: true,
-		raw: true,
-		cellHTML: false,
-	});
+function readDelimited(
+	source: Extract<WorkbookSource, { kind: "text" }>,
+): SheetData[] {
+	const withoutBom =
+		source.text.charCodeAt(0) === 0xfeff ? source.text.slice(1) : source.text;
+	const tsv = getFileExtension(source.fileName) === "tsv";
+	const { text, separator } = delimitedSource(withoutBom, tsv ? "\t" : null);
+	const rows = parseDelimitedText(text, separator);
+	const summary = summarize("Sheet1", false, rows, [], DELIMITED_HEADER);
+	return [{ summary, rows }];
 }
 
-function readBytes(source: Extract<WorkbookSource, { kind: "bytes" }>) {
+function readBytes(
+	source: Extract<WorkbookSource, { kind: "bytes" }>,
+): SheetData[] {
 	const extension = getFileExtension(source.fileName);
 	if (ZIP_EXTENSIONS.has(extension) && !hasZipSignature(source.bytes)) {
 		throw new UnreadableWorkbookError("Not a valid workbook archive");
 	}
-	return read(source.bytes, {
+	const workbook = read(source.bytes, {
 		type: "array",
 		dense: true,
 		cellFormula: true,
 		cellHTML: false,
-		cellNF: false,
+		cellNF: true,
 		cellStyles: false,
+		bookFiles: true,
+	}) as WorkBook & { files?: ArchiveFiles };
+	const frozen = readFrozenPanes(workbook.files);
+	return workbook.SheetNames.map((name, index) => {
+		const sheet = workbook.Sheets[name];
+		const rows = (sheet?.["!data"] as CellObject[][] | undefined) ?? [];
+		const summary = summarize(
+			name,
+			Boolean(workbook.Workbook?.Sheets?.[index]?.Hidden),
+			rows,
+			mergesOf(sheet),
+			frozen[index] ?? NO_FREEZE,
+		);
+		return { summary, rows };
 	});
 }
 
@@ -136,17 +213,22 @@ function hasZipSignature(bytes: Uint8Array): boolean {
 	);
 }
 
-function sheetData(workbook: WorkBook, name: string): CellObject[][] {
-	return (workbook.Sheets[name]?.["!data"] as CellObject[][] | undefined) ?? [];
+function mergesOf(sheet: WorkSheet | undefined): CellRange[] {
+	return (sheet?.["!merges"] ?? []).map((merge) => ({
+		top: merge.s.r,
+		left: merge.s.c,
+		bottom: merge.e.r,
+		right: merge.e.c,
+	}));
 }
 
 function summarize(
-	workbook: WorkBook,
 	name: string,
-	index: number,
+	hidden: boolean,
+	rows: CellObject[][],
+	allMerges: CellRange[],
+	frozen: FrozenPane,
 ): SheetSummary {
-	const sheet = workbook.Sheets[name];
-	const rows = sheetData(workbook, name);
 	let rowCount = 0;
 	let colCount = 0;
 	const colChars: number[] = [];
@@ -154,8 +236,9 @@ function summarize(
 		const row = rows[r];
 		if (!row) continue;
 		for (let c = 0; c < row.length; c += 1) {
-			const text = cellText(row[c]);
-			if (!text) continue;
+			const cell = row[c];
+			const text = cellText(cell);
+			if (!text && !cell?.f) continue;
 			rowCount = r + 1;
 			if (c + 1 > colCount) colCount = c + 1;
 			if (r < WIDTH_SAMPLE_ROWS) {
@@ -164,25 +247,24 @@ function summarize(
 			}
 		}
 	}
-	const merges = (sheet?.["!merges"] ?? [])
-		.map((merge) => ({
-			top: merge.s.r,
-			left: merge.s.c,
-			bottom: merge.e.r,
-			right: merge.e.c,
-		}))
-		.filter((merge) => merge.top < rowCount && merge.left < colCount);
+	const merges = allMerges.filter(
+		(merge) => merge.top < rowCount && merge.left < colCount,
+	);
 	for (const merge of merges) {
 		rowCount = Math.max(rowCount, merge.bottom + 1);
 		colCount = Math.max(colCount, merge.right + 1);
 	}
 	return {
 		name,
-		hidden: Boolean(workbook.Workbook?.Sheets?.[index]?.Hidden),
+		hidden,
 		rowCount,
 		colCount,
 		colChars: Array.from({ length: colCount }, (_, c) => colChars[c] ?? 0),
 		merges,
+		frozen: {
+			rows: Math.min(frozen.rows, rowCount),
+			cols: Math.min(frozen.cols, colCount),
+		},
 	};
 }
 
@@ -205,16 +287,39 @@ export function cellText(cell: CellObject | undefined): string {
 	}
 }
 
+function isLocalizedNumber(cell: CellObject | undefined): cell is CellObject {
+	return (
+		cell?.t === "n" && !(typeof cell.z === "string" && SSF.is_date(cell.z))
+	);
+}
+
+function isEnglish(numbers: NumberSeparators): boolean {
+	return numbers.group === "," && numbers.decimal === ".";
+}
+
+/** The file's number format, written with the separators of the app language. */
+function localizedText(
+	cell: CellObject | undefined,
+	numbers: NumberSeparators,
+): string {
+	const text = cellText(cell);
+	if (!isLocalizedNumber(cell) || isEnglish(numbers)) return text;
+	return text.replace(EN_SEPARATOR, (mark) =>
+		mark === "." ? numbers.decimal : numbers.group,
+	);
+}
+
 function toGridCell(
 	cell: CellObject | undefined,
 	delimited: boolean,
+	numbers: NumberSeparators,
 ): GridCell | null {
 	if (!cell) return null;
-	const text = cellText(cell);
+	const text = delimited ? cellText(cell) : localizedText(cell, numbers);
 	const formula = cell.f ? `=${cell.f}` : undefined;
 	if (!text && !formula) return null;
 	const kind = cellKind(cell, text, delimited);
-	const value = rawValue(cell);
+	const value = rawValue(cell, numbers);
 	return {
 		text,
 		kind,
@@ -242,9 +347,22 @@ function cellKind(
 	}
 }
 
-function rawValue(cell: CellObject): string | undefined {
+function rawValue(
+	cell: CellObject,
+	numbers: NumberSeparators,
+): string | undefined {
 	if (cell.v === undefined || cell.v === null) return undefined;
 	if (cell.t === "b") return cell.v ? "TRUE" : "FALSE";
 	if (cell.v instanceof Date) return cell.v.toISOString();
+	if (cell.t === "n") return String(cell.v).replace(".", numbers.decimal);
 	return String(cell.v);
+}
+
+export function unreadableReason(error: unknown): UnreadableReason | null {
+	const message = error instanceof Error ? error.message : String(error);
+	if (/password|encrypt/i.test(message)) return "password";
+	if (/unsupported|not supported|not a spreadsheet/i.test(message)) {
+		return "unsupported";
+	}
+	return null;
 }

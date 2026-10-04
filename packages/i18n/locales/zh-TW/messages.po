@@ -4400,6 +4400,9 @@ msgstr "已複製連結"
 msgid "Copied terminal ID"
 msgstr "已複製終端ID"
 
+msgid "Copied the first {count} cells of the selection"
+msgstr "已複製選取範圍的前 {count} 個儲存格"
+
 msgid "Copied to clipboard."
 msgstr "已複製到剪貼簿。"
 
@@ -10025,6 +10028,9 @@ msgstr "下一個匹配"
 msgid "Next run {0}"
 msgstr "下次執行{0}"
 
+msgid "Next sheets"
+msgstr "後面的工作表"
+
 msgid "Next slide"
 msgstr "下一張"
 
@@ -12171,6 +12177,9 @@ msgstr "上一個匹配"
 
 msgid "Previous prompts"
 msgstr "歷史提示詞"
+
+msgid "Previous sheets"
+msgstr "前面的工作表"
 
 msgid "Previous slide"
 msgstr "上一張"
@@ -16396,8 +16405,14 @@ msgstr "該檔案"
 msgid "This file could not be read as a spreadsheet"
 msgstr "無法將此檔案讀取為試算表"
 
+msgid "This file format is not supported"
+msgstr "不支援此檔案格式"
+
 msgid "This file is empty or was deleted."
 msgstr "這個檔案為空或已被刪除。"
+
+msgid "This file is password protected"
+msgstr "此檔案受密碼保護"
 
 msgid "This GitHub installation is already connected to another Superset organization. Disconnect it there, or uninstall the Superset GitHub App, then try again."
 msgstr "這個GitHub安裝已連線到另一個Superset組織。請先在那裡斷開連線，或解除安裝Superset GitHub App，然後重試。"

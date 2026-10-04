@@ -1,1 +1,1 @@
-export { toTsv } from "./toTsv";
+export { toTsv, tsvField } from "./toTsv";

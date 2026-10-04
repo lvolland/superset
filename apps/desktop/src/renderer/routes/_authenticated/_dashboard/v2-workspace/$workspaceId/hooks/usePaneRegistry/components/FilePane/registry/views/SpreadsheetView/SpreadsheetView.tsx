@@ -1,9 +1,9 @@
-import { Trans } from "@lingui/react/macro";
+import { Trans, useLingui } from "@lingui/react/macro";
 import { Button } from "@superset/ui/button";
 import { useMemo } from "react";
+import { ErrorState } from "../../../components/ErrorState";
 import { LoadingState } from "../../../components/LoadingState";
 import type { ViewProps } from "../../types";
-import { SheetMessage } from "./components/SheetMessage";
 import { WorkbookViewer } from "./components/WorkbookViewer";
 import { useWorkbook } from "./hooks/useWorkbook";
 import type { WorkbookSource } from "./types";
@@ -15,6 +15,7 @@ export function SpreadsheetView({
 	embedded = false,
 	onChangeView,
 }: ViewProps) {
+	const { t } = useLingui();
 	const { content } = document;
 	const source = useMemo<WorkbookSource | null>(() => {
 		if (content.kind === "bytes") {
@@ -31,9 +32,17 @@ export function SpreadsheetView({
 		return <LoadingState />;
 	}
 	if (workbook.status === "error") {
+		const detail =
+			workbook.reason === "password"
+				? t`This file is password protected`
+				: workbook.reason === "unsupported"
+					? t`This file format is not supported`
+					: undefined;
 		return (
-			<SheetMessage
-				detail={workbook.message || undefined}
+			<ErrorState
+				reason="load-failed"
+				message={t`This file could not be read as a spreadsheet`}
+				detail={detail}
 				action={
 					source?.kind === "text" && !embedded ? (
 						<Button
@@ -45,9 +54,7 @@ export function SpreadsheetView({
 						</Button>
 					) : undefined
 				}
-			>
-				<Trans>This file could not be read as a spreadsheet</Trans>
-			</SheetMessage>
+			/>
 		);
 	}
 

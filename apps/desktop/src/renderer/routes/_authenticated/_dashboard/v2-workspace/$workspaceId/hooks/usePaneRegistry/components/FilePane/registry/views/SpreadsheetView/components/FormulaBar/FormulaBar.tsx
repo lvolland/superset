@@ -22,11 +22,11 @@ export function FormulaBar({ address, cell }: FormulaBarProps) {
 				aria-hidden
 				className="size-3.5 shrink-0 text-muted-foreground/70"
 			/>
-			<span className="min-w-0 flex-1 cursor-text select-text truncate font-mono">
+			<span className="min-w-0 cursor-text select-text truncate font-mono">
 				{source}
 			</span>
 			{showResult && (
-				<span className="max-w-[40%] shrink-0 cursor-text select-text truncate text-muted-foreground tabular-nums">
+				<span className="min-w-0 max-w-[40%] shrink-0 cursor-text select-text truncate text-muted-foreground tabular-nums">
 					{cell?.text}
 				</span>
 			)}

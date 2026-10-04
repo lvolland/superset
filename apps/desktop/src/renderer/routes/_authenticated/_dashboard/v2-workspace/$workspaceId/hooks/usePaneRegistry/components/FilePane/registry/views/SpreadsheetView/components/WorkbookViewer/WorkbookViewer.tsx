@@ -1,4 +1,6 @@
-import { Trans } from "@lingui/react/macro";
+import { useLingui } from "@lingui/react/macro";
+import { useFormat } from "@superset/i18n/react";
+import { toast } from "@superset/ui/sonner";
 import {
 	useCallback,
 	useEffect,
@@ -9,13 +11,20 @@ import {
 } from "react";
 import { useCopyToClipboard } from "renderer/hooks/useCopyToClipboard";
 import { useHotkey } from "renderer/hotkeys";
+import { ErrorState } from "../../../../../components/ErrorState";
 import { useSheetSearch } from "../../hooks/useSheetSearch";
-import type { CellPosition, SheetSummary } from "../../types";
-import { estimateColumnWidth, rangeAddress } from "../../utils/gridGeometry";
-import { RowBlockCache } from "../../utils/RowBlockCache";
+import type { CellPosition, CellRange, SheetSummary } from "../../types";
+import { CellBlockCache } from "../../utils/CellBlockCache";
 import {
+	cellAddress,
+	estimateColumnWidth,
+	rangeAddress,
+} from "../../utils/gridGeometry";
+import {
+	activeCellRange,
 	clampSelection,
 	collapsed,
+	normalizeSelection,
 	ORIGIN,
 	type Selection,
 	selectionRange,
@@ -23,7 +32,6 @@ import {
 import type { SheetWorkerClient } from "../../utils/sheetWorker";
 import { FormulaBar } from "../FormulaBar";
 import { SheetGrid, type SheetGridHandle } from "../SheetGrid";
-import { SheetMessage } from "../SheetMessage";
 import { SheetSearch } from "../SheetSearch";
 import { SheetTabs } from "../SheetTabs";
 
@@ -34,12 +42,21 @@ interface WorkbookViewerProps {
 	embedded: boolean;
 }
 
+const sameRange = (a: CellRange, b: CellRange) =>
+	a.top === b.top &&
+	a.left === b.left &&
+	a.bottom === b.bottom &&
+	a.right === b.right;
+
 export function WorkbookViewer({
 	client,
 	sheets,
 	isActive,
 	embedded,
 }: WorkbookViewerProps) {
+	const { t } = useLingui();
+	const { formatNumber, getNumberSeparators } = useFormat();
+	const numbers = useMemo(() => getNumberSeparators(), [getNumberSeparators]);
 	const [sheetIndex, selectSheet] = useState(() =>
 		Math.max(
 			0,
@@ -50,11 +67,12 @@ export function WorkbookViewer({
 	const [widthOverrides, setWidthOverrides] = useState<
 		Record<number, Record<number, number>>
 	>({});
-	const [, onRowsLoaded] = useReducer((count: number) => count + 1, 0);
+	const [, onCellsLoaded] = useReducer((count: number) => count + 1, 0);
 	const gridRef = useRef<SheetGridHandle>(null);
 	const { copyToClipboard } = useCopyToClipboard();
 
 	const sheet = sheets[sheetIndex];
+	const merges = sheet?.merges ?? [];
 	const bounds = { rows: sheet?.rowCount ?? 0, cols: sheet?.colCount ?? 0 };
 	const selection = clampSelection(
 		selections[sheetIndex] ?? collapsed(ORIGIN),
@@ -63,16 +81,21 @@ export function WorkbookViewer({
 
 	const cache = useMemo(
 		() =>
-			new RowBlockCache(
-				(start, end) =>
-					client.request({ type: "rows", sheet: sheetIndex, start, end }),
-				onRowsLoaded,
+			new CellBlockCache(
+				(window) =>
+					client.request({
+						type: "cells",
+						sheet: sheetIndex,
+						window,
+						numbers,
+					}),
+				onCellsLoaded,
 			),
-		[client, sheetIndex],
+		[client, sheetIndex, numbers],
 	);
 	useEffect(() => () => cache.dispose(), [cache]);
-	const ensureRows = useCallback(
-		(start: number, end: number) => cache.ensure(start, end),
+	const ensureCells = useCallback(
+		(ranges: CellRange[]) => cache.ensure(ranges),
 		[cache],
 	);
 	const getCell = useCallback(
@@ -91,9 +114,12 @@ export function WorkbookViewer({
 
 	const setSelection = useCallback(
 		(next: Selection) => {
-			setSelections((current) => ({ ...current, [sheetIndex]: next }));
+			setSelections((current) => ({
+				...current,
+				[sheetIndex]: normalizeSelection(next, merges),
+			}));
 		},
-		[sheetIndex],
+		[sheetIndex, merges],
 	);
 
 	const revealCell = useCallback(
@@ -108,6 +134,7 @@ export function WorkbookViewer({
 		client,
 		sheetIndex,
 		colCount: sheet?.colCount ?? 0,
+		numbers,
 		onReveal: revealCell,
 	});
 
@@ -136,39 +163,48 @@ export function WorkbookViewer({
 		[sheetIndex],
 	);
 
+	const range = selectionRange(selection, merges);
+	const active = activeCellRange(selection, merges);
+
 	const handleCopy = () => {
 		client
-			.request({
-				type: "tsv",
-				sheet: sheetIndex,
-				range: selectionRange(selection),
+			.request({ type: "tsv", sheet: sheetIndex, range, numbers })
+			.then(async (copy) => {
+				await copyToClipboard(copy.text);
+				if (copy.truncated) {
+					const count = formatNumber(copy.cells);
+					toast.warning(t`Copied the first ${count} cells of the selection`);
+				}
 			})
-			.then(copyToClipboard)
 			.catch(() => {});
 	};
 
 	if (!sheet) return null;
 
 	const isEmpty = sheet.rowCount === 0 || sheet.colCount === 0;
-	const range = selectionRange(selection);
 
 	return (
 		<div className="relative flex h-full w-full flex-col bg-background">
-			{!embedded && !isEmpty && (
+			{!embedded && (
 				<FormulaBar
-					address={rangeAddress(range)}
-					cell={getCell(selection.anchor.row, selection.anchor.col)}
+					address={
+						isEmpty
+							? ""
+							: sameRange(range, active)
+								? cellAddress(selection.anchor)
+								: rangeAddress(range)
+					}
+					cell={
+						isEmpty ? null : getCell(selection.anchor.row, selection.anchor.col)
+					}
 				/>
 			)}
 			<div className="relative min-h-0 flex-1">
 				{isEmpty ? (
-					<SheetMessage>
-						{sheets.length > 1 ? (
-							<Trans>Empty sheet</Trans>
-						) : (
-							<Trans>Empty file</Trans>
-						)}
-					</SheetMessage>
+					<ErrorState
+						reason="load-failed"
+						message={sheets.length > 1 ? t`Empty sheet` : t`Empty file`}
+					/>
 				) : (
 					<SheetGrid
 						key={sheetIndex}
@@ -177,7 +213,7 @@ export function WorkbookViewer({
 						sheet={sheet}
 						widths={widths}
 						getCell={getCell}
-						ensureRows={ensureRows}
+						ensureCells={ensureCells}
 						selection={selection}
 						onSelectionChange={setSelection}
 						onColumnResize={handleColumnResize}
@@ -187,8 +223,8 @@ export function WorkbookViewer({
 								Math.max(0, Math.min(sheets.length - 1, sheetIndex + delta)),
 							)
 						}
-						matchKeys={search.matchKeys}
-						activeMatch={search.activeMatch}
+						matchKeys={search.isOpen ? search.matchKeys : null}
+						activeMatch={search.isOpen ? search.activeMatch : null}
 					/>
 				)}
 				{search.isOpen && !isEmpty && (

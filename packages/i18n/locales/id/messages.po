@@ -4400,6 +4400,9 @@ msgstr "Tautan Disalin"
 msgid "Copied terminal ID"
 msgstr "ID terminal disalin"
 
+msgid "Copied the first {count} cells of the selection"
+msgstr "{count} sel pertama dari pilihan telah disalin"
+
 msgid "Copied to clipboard."
 msgstr "Disalin ke clipboard."
 
@@ -10025,6 +10028,9 @@ msgstr "Kecocokan berikutnya"
 msgid "Next run {0}"
 msgstr "Run berikutnya {0}"
 
+msgid "Next sheets"
+msgstr "Lembar berikutnya"
+
 msgid "Next slide"
 msgstr "Slide berikutnya"
 
@@ -12171,6 +12177,9 @@ msgstr "Kecocokan sebelumnya"
 
 msgid "Previous prompts"
 msgstr "Prompt sebelumnya"
+
+msgid "Previous sheets"
+msgstr "Lembar sebelumnya"
 
 msgid "Previous slide"
 msgstr "Slide sebelumnya"
@@ -16396,8 +16405,14 @@ msgstr "file ini"
 msgid "This file could not be read as a spreadsheet"
 msgstr "File ini tidak dapat dibaca sebagai spreadsheet"
 
+msgid "This file format is not supported"
+msgstr "Format file ini tidak didukung"
+
 msgid "This file is empty or was deleted."
 msgstr "File ini kosong atau sudah dihapus."
+
+msgid "This file is password protected"
+msgstr "File ini dilindungi kata sandi"
 
 msgid "This GitHub installation is already connected to another Superset organization. Disconnect it there, or uninstall the Superset GitHub App, then try again."
 msgstr "Instalasi GitHub ini sudah terhubung ke organisasi Superset lain. Putuskan di sana, atau copot GitHub App Superset, lalu coba lagi."

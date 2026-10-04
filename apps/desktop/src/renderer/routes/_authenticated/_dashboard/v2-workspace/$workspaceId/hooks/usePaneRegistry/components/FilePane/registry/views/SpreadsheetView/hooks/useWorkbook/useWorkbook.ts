@@ -1,11 +1,19 @@
 import { useEffect, useState } from "react";
-import type { SheetSummary, WorkbookSource } from "../../types";
-import { createSheetWorker, SheetWorkerClient } from "../../utils/sheetWorker";
+import type {
+	SheetSummary,
+	UnreadableReason,
+	WorkbookSource,
+} from "../../types";
+import {
+	createSheetWorker,
+	SheetWorkerClient,
+	SheetWorkerError,
+} from "../../utils/sheetWorker";
 
 export type WorkbookState =
 	| { status: "loading" }
 	| { status: "ready"; client: SheetWorkerClient; sheets: SheetSummary[] }
-	| { status: "error"; message: string };
+	| { status: "error"; reason: UnreadableReason | null };
 
 /** Parses the source in a worker, which then serves rows on demand. */
 export function useWorkbook(source: WorkbookSource | null): WorkbookState {
@@ -27,7 +35,7 @@ export function useWorkbook(source: WorkbookSource | null): WorkbookState {
 				if (cancelled) return;
 				setState({
 					status: "error",
-					message: error instanceof Error ? error.message : String(error),
+					reason: error instanceof SheetWorkerError ? error.reason : null,
 				});
 			},
 		);

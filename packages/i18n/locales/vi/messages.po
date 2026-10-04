@@ -4400,6 +4400,9 @@ msgstr "Đã sao chép liên kết"
 msgid "Copied terminal ID"
 msgstr "Đã sao chép ID terminal"
 
+msgid "Copied the first {count} cells of the selection"
+msgstr "Đã sao chép {count} ô đầu tiên của vùng chọn"
+
 msgid "Copied to clipboard."
 msgstr "Đã sao chép vào clipboard."
 
@@ -10025,6 +10028,9 @@ msgstr "Kết quả kế tiếp"
 msgid "Next run {0}"
 msgstr "Lần chạy tiếp theo {0}"
 
+msgid "Next sheets"
+msgstr "Các trang tính tiếp theo"
+
 msgid "Next slide"
 msgstr "Slide kế tiếp"
 
@@ -12171,6 +12177,9 @@ msgstr "Kết quả trước"
 
 msgid "Previous prompts"
 msgstr "Prompt trước đó"
+
+msgid "Previous sheets"
+msgstr "Các trang tính trước"
 
 msgid "Previous slide"
 msgstr "Slide trước"
@@ -16396,8 +16405,14 @@ msgstr "tệp này"
 msgid "This file could not be read as a spreadsheet"
 msgstr "Không thể đọc tệp này dưới dạng bảng tính"
 
+msgid "This file format is not supported"
+msgstr "Định dạng tệp này không được hỗ trợ"
+
 msgid "This file is empty or was deleted."
 msgstr "Tệp này rỗng hoặc đã bị xóa."
+
+msgid "This file is password protected"
+msgstr "Tệp này được bảo vệ bằng mật khẩu"
 
 msgid "This GitHub installation is already connected to another Superset organization. Disconnect it there, or uninstall the Superset GitHub App, then try again."
 msgstr "Bản cài đặt GitHub này đã kết nối với một tổ chức Superset khác. Hãy ngắt kết nối ở đó, hoặc gỡ Superset GitHub App, rồi thử lại."

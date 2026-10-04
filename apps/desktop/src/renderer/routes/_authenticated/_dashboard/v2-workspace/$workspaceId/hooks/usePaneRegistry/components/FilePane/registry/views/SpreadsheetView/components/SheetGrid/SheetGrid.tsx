@@ -26,17 +26,15 @@ import {
 	revealOffset,
 } from "../../utils/gridGeometry";
 import {
+	activeCellRange,
 	moveSelection,
 	type Selection,
 	selectionRange,
 } from "../../utils/selection";
+import { CellLayer, type MatchState } from "./components/CellLayer";
 import { ColumnHeader } from "./components/ColumnHeader";
-import { type MatchState, SheetCell } from "./components/SheetCell";
-import {
-	HEADER_SURFACE,
-	HEADER_SURFACE_SELECTED,
-	ROW_LINES,
-} from "./constants";
+import { RowHeader } from "./components/RowHeader";
+import { HEADER_SURFACE } from "./constants";
 
 export interface SheetGridHandle {
 	reveal: (cell: CellPosition) => void;
@@ -49,7 +47,7 @@ interface SheetGridProps {
 	sheet: SheetSummary;
 	widths: number[];
 	getCell: (row: number, col: number) => GridCell | null | undefined;
-	ensureRows: (start: number, end: number) => void;
+	ensureCells: (ranges: CellRange[]) => void;
 	selection: Selection;
 	onSelectionChange: (selection: Selection) => void;
 	onColumnResize: (col: number, width: number | null) => void;
@@ -61,13 +59,19 @@ interface SheetGridProps {
 
 type DragMode = "cells" | "rows" | "cols";
 
+const range = (from: number, to: number) =>
+	Array.from({ length: Math.max(0, to - from) }, (_, i) => from + i);
+
+const FROZEN_EDGE =
+	"pointer-events-none absolute z-[11] bg-muted-foreground/40";
+
 export function SheetGrid({
 	ref,
 	label,
 	sheet,
 	widths,
 	getCell,
-	ensureRows,
+	ensureCells,
 	selection,
 	onSelectionChange,
 	onColumnResize,
@@ -104,63 +108,122 @@ export function SheetGrid({
 		cols.measure();
 	}, [cols, widths]);
 
+	// A frozen pane never takes more than half of the view.
+	const viewWidth = cols.scrollRect?.width ?? 0;
+	const viewHeight = rows.scrollRect?.height ?? 0;
+	const frozenRows = Math.max(
+		0,
+		Math.min(
+			sheet.frozen.rows,
+			Math.floor((viewHeight - HEADER_HEIGHT) / 2 / ROW_HEIGHT),
+		),
+	);
+	let frozenCols = Math.min(sheet.frozen.cols, colCount);
+	while (
+		frozenCols > 0 &&
+		(starts[frozenCols] ?? 0) > (viewWidth - gutter) / 2
+	) {
+		frozenCols -= 1;
+	}
+	const frozenWidth = starts[frozenCols] ?? 0;
+	const frozenHeight = frozenRows * ROW_HEIGHT;
+	const stickyTop = HEADER_HEIGHT + frozenHeight;
+	const stickyLeft = gutter + frozenWidth;
+
 	const rowItems = rows.getVirtualItems();
 	const colItems = cols.getVirtualItems();
 	const firstRow = rowItems[0]?.index ?? 0;
 	const lastRow = rowItems.at(-1)?.index ?? 0;
 	const firstCol = colItems[0]?.index ?? 0;
 	const lastCol = colItems.at(-1)?.index ?? 0;
+	const scrollRows = rowItems
+		.map((item) => item.index)
+		.filter((row) => row >= frozenRows);
+	const scrollCols = colItems
+		.map((item) => item.index)
+		.filter((col) => col >= frozenCols);
+	const pinnedRows = range(0, frozenRows);
+	const pinnedCols = range(0, frozenCols);
 
 	const visibleMerges = useMemo(
 		() =>
 			merges.filter(
 				(merge) =>
-					merge.bottom >= firstRow &&
 					merge.top <= lastRow &&
-					merge.right >= firstCol &&
-					merge.left <= lastCol,
+					(merge.bottom >= firstRow || merge.top < frozenRows) &&
+					merge.left <= lastCol &&
+					(merge.right >= firstCol || merge.left < frozenCols),
 			),
-		[merges, firstRow, lastRow, firstCol, lastCol],
+		[merges, firstRow, lastRow, firstCol, lastCol, frozenRows, frozenCols],
 	);
 
 	useEffect(() => {
-		ensureRows(firstRow, lastRow);
-		for (const merge of visibleMerges) ensureRows(merge.top, merge.top);
-	}, [ensureRows, firstRow, lastRow, visibleMerges]);
-
-	const rectOf = useCallback(
-		(range: CellRange) => ({
-			top: HEADER_HEIGHT + range.top * ROW_HEIGHT,
-			left: gutter + (starts[range.left] ?? 0),
-			width: (starts[range.right + 1] ?? 0) - (starts[range.left] ?? 0),
-			height: (range.bottom - range.top + 1) * ROW_HEIGHT,
-		}),
-		[gutter, starts],
-	);
+		const ranges: CellRange[] = [
+			{ top: firstRow, bottom: lastRow, left: firstCol, right: lastCol },
+		];
+		if (frozenRows > 0) {
+			ranges.push({
+				top: 0,
+				bottom: frozenRows - 1,
+				left: firstCol,
+				right: lastCol,
+			});
+		}
+		if (frozenCols > 0) {
+			ranges.push({
+				top: 0,
+				bottom: lastRow,
+				left: 0,
+				right: frozenCols - 1,
+			});
+		}
+		for (const merge of visibleMerges) {
+			ranges.push({
+				top: merge.top,
+				bottom: merge.top,
+				left: merge.left,
+				right: merge.left,
+			});
+		}
+		ensureCells(ranges);
+	}, [
+		ensureCells,
+		firstRow,
+		lastRow,
+		firstCol,
+		lastCol,
+		frozenRows,
+		frozenCols,
+		visibleMerges,
+	]);
 
 	const reveal = useCallback(
 		(cell: CellPosition) => {
 			const element = scrollRef.current;
 			if (!element) return;
-			const top = HEADER_HEIGHT + cell.row * ROW_HEIGHT;
-			const y = revealOffset(
-				top,
-				top + ROW_HEIGHT,
-				element.scrollTop,
-				element.clientHeight,
-				HEADER_HEIGHT,
-			);
-			const x = revealOffset(
-				gutter + (starts[cell.col] ?? 0),
-				gutter + (starts[cell.col + 1] ?? 0),
-				element.scrollLeft,
-				element.clientWidth,
-				gutter,
-			);
-			if (y !== null) element.scrollTop = y;
-			if (x !== null) element.scrollLeft = x;
+			if (cell.row >= frozenRows) {
+				const top = HEADER_HEIGHT + cell.row * ROW_HEIGHT;
+				const y = revealOffset(
+					top,
+					top + ROW_HEIGHT,
+					element.scrollTop,
+					element.clientHeight,
+					stickyTop,
+				);
+				if (y !== null) element.scrollTop = y;
+			}
+			if (cell.col >= frozenCols) {
+				const x = revealOffset(
+					gutter + (starts[cell.col] ?? 0),
+					gutter + (starts[cell.col + 1] ?? 0),
+					element.scrollLeft,
+					element.clientWidth,
+					stickyLeft,
+				);
+				if (x !== null) element.scrollLeft = x;
+			}
 		},
-		[gutter, starts],
+		[gutter, starts, frozenRows, frozenCols, stickyTop, stickyLeft],
 	);
 
 	useImperativeHandle(
@@ -172,8 +235,13 @@ export function SheetGrid({
 		[reveal],
 	);
 
-	const range = selectionRange(selection);
-	const isMultiCell = range.top !== range.bottom || range.left !== range.right;
+	const selected = selectionRange(selection, merges);
+	const active = activeCellRange(selection, merges);
+	const isMultiCell =
+		selected.top !== active.top ||
+		selected.left !== active.left ||
+		selected.bottom !== active.bottom ||
+		selected.right !== active.right;
 	const lastRowIndex = rowCount - 1;
 	const lastColIndex = colCount - 1;
 	const allCells: Selection = {
@@ -209,7 +277,7 @@ export function SheetGrid({
 		const pageRows = element
 			? Math.max(
 					1,
-					Math.floor((element.clientHeight - HEADER_HEIGHT) / ROW_HEIGHT) - 1,
+					Math.floor((element.clientHeight - stickyTop) / ROW_HEIGHT) - 1,
 				)
 			: 1;
 		const next = moveSelection(
@@ -217,6 +285,7 @@ export function SheetGrid({
 			{ key, shiftKey: event.shiftKey, primaryKey },
 			{ rows: rowCount, cols: colCount },
 			pageRows,
+			merges,
 		);
 		if (!next) return;
 		// Tab at the first or last column leaves the grid instead of trapping focus.
@@ -237,8 +306,10 @@ export function SheetGrid({
 		const bounds = element.getBoundingClientRect();
 		const viewX = event.clientX - bounds.left;
 		const viewY = event.clientY - bounds.top;
-		const x = viewX + element.scrollLeft - gutter;
-		const y = viewY + element.scrollTop - HEADER_HEIGHT;
+		const x =
+			(viewX < stickyLeft ? viewX : viewX + element.scrollLeft) - gutter;
+		const y =
+			(viewY < stickyTop ? viewY : viewY + element.scrollTop) - HEADER_HEIGHT;
 		return {
 			viewX,
 			viewY,
@@ -307,15 +378,6 @@ export function SheetGrid({
 		drag.current = null;
 	};
 
-	const coveredBy = (row: number, col: number) =>
-		visibleMerges.some(
-			(merge) =>
-				row >= merge.top &&
-				row <= merge.bottom &&
-				col >= merge.left &&
-				col <= merge.right,
-		);
-
 	const matchState = (row: number, col: number): MatchState => {
 		if (activeMatch && activeMatch.row === row && activeMatch.col === col) {
 			return "active";
@@ -323,177 +385,177 @@ export function SheetGrid({
 		return matchKeys?.has(row * colCount + col) ? "match" : "none";
 	};
 
-	const activeRange = merges.find(
-		(merge) =>
-			selection.anchor.row >= merge.top &&
-			selection.anchor.row <= merge.bottom &&
-			selection.anchor.col >= merge.left &&
-			selection.anchor.col <= merge.right,
-	) ?? {
-		top: selection.anchor.row,
-		left: selection.anchor.col,
-		bottom: selection.anchor.row,
-		right: selection.anchor.col,
+	const layer = {
+		gutter,
+		starts,
+		merges: visibleMerges,
+		getCell,
+		matchState,
+		selection: isMultiCell ? selected : null,
+		active,
 	};
-	const activeRect = rectOf(activeRange);
-	// Clamped to the rendered window so selecting a whole sheet never builds a
-	// layer millions of pixels tall.
-	const overlayRange = {
-		top: Math.max(range.top, firstRow - 1),
-		bottom: Math.min(range.bottom, lastRow + 1),
-		left: Math.max(range.left, firstCol - 1),
-		right: Math.min(range.right, lastCol + 1),
-	};
-	const overlayRect =
-		isMultiCell &&
-		overlayRange.top <= overlayRange.bottom &&
-		overlayRange.left <= overlayRange.right
-			? rectOf(overlayRange)
-			: null;
+	const columnHeader = (col: number, left: number) => (
+		<ColumnHeader
+			key={col}
+			col={col}
+			left={left}
+			width={widths[col] ?? 0}
+			selected={col >= selected.left && col <= selected.right}
+			onResize={onColumnResize}
+		/>
+	);
+	const rowHeader = (row: number, top: number) => (
+		<RowHeader
+			key={row}
+			row={row}
+			top={top}
+			width={gutter}
+			selected={row >= selected.top && row <= selected.bottom}
+		/>
+	);
 
 	return (
-		<div
-			ref={scrollRef}
-			role="application"
-			aria-label={label}
-			// biome-ignore lint/a11y/noNoninteractiveTabindex: focus is required for the keyboard navigation handlers
-			tabIndex={0}
-			className="group relative h-full w-full select-none overflow-auto outline-none"
-			onKeyDown={handleKeyDown}
-			onPointerDown={handlePointerDown}
-			onPointerMove={handlePointerMove}
-			onPointerUp={endDrag}
-			onPointerCancel={endDrag}
-		>
+		<div className="relative h-full w-full">
 			<div
-				className="relative"
-				style={{ width: totalWidth, height: totalHeight }}
+				ref={scrollRef}
+				role="application"
+				aria-label={label}
+				// biome-ignore lint/a11y/noNoninteractiveTabindex: focus is required for the keyboard navigation handlers
+				tabIndex={0}
+				className="group peer relative h-full w-full select-none overflow-auto outline-none"
+				onKeyDown={handleKeyDown}
+				onPointerDown={handlePointerDown}
+				onPointerMove={handlePointerMove}
+				onPointerUp={endDrag}
+				onPointerCancel={endDrag}
 			>
 				<div
-					className="absolute top-0 left-0 z-0"
-					style={{
-						width: totalWidth,
-						height: totalHeight,
-						backgroundImage: ROW_LINES,
-						backgroundPosition: `0 ${HEADER_HEIGHT}px`,
-					}}
+					className="relative"
+					style={{ width: totalWidth, height: totalHeight }}
 				>
-					{colItems.map((colItem) => (
-						<div
-							key={`line:${colItem.index}`}
-							className="absolute w-px bg-border"
-							style={{
-								left: gutter + (starts[colItem.index + 1] ?? 0) - 1,
-								top: rowItems[0]?.start ?? 0,
-								height: rowItems.length * ROW_HEIGHT,
-							}}
-						/>
-					))}
-					{rowItems.map((rowItem) =>
-						colItems.map((colItem) => {
-							const row = rowItem.index;
-							const col = colItem.index;
-							if (coveredBy(row, col)) return null;
-							return (
-								<SheetCell
-									key={`${row}:${col}`}
-									top={rowItem.start}
-									left={gutter + (starts[col] ?? 0)}
-									width={(widths[col] ?? 0) - 1}
-									height={ROW_HEIGHT - 1}
-									cell={getCell(row, col)}
-									match={matchState(row, col)}
-								/>
-							);
-						}),
-					)}
-					{visibleMerges.map((merge) => {
-						const rect = rectOf(merge);
-						return (
-							<SheetCell
-								key={`merge:${merge.top}:${merge.left}`}
-								top={rect.top}
-								left={rect.left}
-								width={rect.width - 1}
-								height={rect.height - 1}
-								cell={getCell(merge.top, merge.left)}
-								match={matchState(merge.top, merge.left)}
-								merged
-							/>
-						);
-					})}
-					{overlayRect && (
-						<div
-							className="pointer-events-none absolute z-[2] border border-primary/40 bg-primary/10"
-							style={overlayRect}
-						/>
-					)}
-					<div
-						className="pointer-events-none absolute z-[3] border-2 border-muted-foreground/50 group-focus:border-primary"
-						style={{
-							top: activeRect.top - 1,
-							left: activeRect.left - 1,
-							width: activeRect.width + 1,
-							height: activeRect.height + 1,
+					<CellLayer
+						{...layer}
+						className="z-0"
+						region={{
+							top: frozenRows,
+							left: frozenCols,
+							bottom: lastRowIndex,
+							right: lastColIndex,
 						}}
-					/>
-				</div>
-				<div
-					className="sticky top-0 z-20 flex"
-					style={{ width: totalWidth, height: HEADER_HEIGHT }}
-				>
-					<div
-						className={cn(
-							"sticky left-0 z-10 h-full shrink-0 border-border border-r border-b",
-							HEADER_SURFACE,
-						)}
-						style={{ width: gutter }}
+						rows={scrollRows}
+						cols={scrollCols}
+						top={stickyTop}
+						left={stickyLeft}
 					/>
 					<div
-						className="relative h-full"
-						style={{ width: totalWidth - gutter }}
+						className="sticky top-0 z-20 flex"
+						style={{ width: totalWidth, height: stickyTop }}
 					>
-						{colItems.map((colItem) => (
-							<ColumnHeader
-								key={colItem.index}
-								col={colItem.index}
-								left={starts[colItem.index] ?? 0}
-								width={widths[colItem.index] ?? 0}
-								selected={
-									colItem.index >= range.left && colItem.index <= range.right
-								}
-								onResize={onColumnResize}
+						<div
+							className="sticky left-0 z-10 h-full shrink-0"
+							style={{ width: stickyLeft }}
+						>
+							<div
+								className={cn(
+									"absolute top-0 left-0 border-border border-r border-b",
+									HEADER_SURFACE,
+								)}
+								style={{ width: gutter, height: HEADER_HEIGHT }}
 							/>
-						))}
+							{pinnedCols.map((col) =>
+								columnHeader(col, gutter + (starts[col] ?? 0)),
+							)}
+							{pinnedRows.map((row) =>
+								rowHeader(row, HEADER_HEIGHT + row * ROW_HEIGHT),
+							)}
+							{frozenRows > 0 && frozenCols > 0 && (
+								<CellLayer
+									{...layer}
+									region={{
+										top: 0,
+										left: 0,
+										bottom: frozenRows - 1,
+										right: frozenCols - 1,
+									}}
+									rows={pinnedRows}
+									cols={pinnedCols}
+									top={HEADER_HEIGHT}
+									left={gutter}
+								/>
+							)}
+							{frozenRows > 0 && frozenCols > 0 && (
+								<div
+									className={cn(FROZEN_EDGE, "w-px")}
+									style={{
+										top: HEADER_HEIGHT,
+										left: stickyLeft - 1,
+										height: frozenHeight,
+									}}
+								/>
+							)}
+						</div>
+						<div
+							className="relative h-full shrink-0"
+							style={{ width: totalWidth - stickyLeft }}
+						>
+							{scrollCols.map((col) =>
+								columnHeader(col, (starts[col] ?? 0) - frozenWidth),
+							)}
+							{frozenRows > 0 && (
+								<CellLayer
+									{...layer}
+									region={{
+										top: 0,
+										left: frozenCols,
+										bottom: frozenRows - 1,
+										right: lastColIndex,
+									}}
+									rows={pinnedRows}
+									cols={scrollCols}
+									top={HEADER_HEIGHT}
+									left={0}
+								/>
+							)}
+						</div>
+						{frozenRows > 0 && (
+							<div
+								className={cn(FROZEN_EDGE, "left-0 h-px")}
+								style={{ top: stickyTop - 1, width: totalWidth }}
+							/>
+						)}
+					</div>
+					<div
+						className="sticky left-0 z-10"
+						style={{ width: stickyLeft, height: totalHeight - stickyTop }}
+					>
+						{scrollRows.map((row) =>
+							rowHeader(row, (row - frozenRows) * ROW_HEIGHT),
+						)}
+						{frozenCols > 0 && (
+							<CellLayer
+								{...layer}
+								region={{
+									top: frozenRows,
+									left: 0,
+									bottom: lastRowIndex,
+									right: frozenCols - 1,
+								}}
+								rows={scrollRows}
+								cols={pinnedCols}
+								top={0}
+								left={gutter}
+							/>
+						)}
+						{frozenCols > 0 && (
+							<div
+								className={cn(FROZEN_EDGE, "top-0 h-full w-px")}
+								style={{ left: stickyLeft - 1 }}
+							/>
+						)}
 					</div>
 				</div>
-				<div
-					className="sticky left-0 z-10"
-					style={{ width: gutter, height: totalHeight - HEADER_HEIGHT }}
-				>
-					{rowItems.map((rowItem) => {
-						const selected =
-							rowItem.index >= range.top && rowItem.index <= range.bottom;
-						return (
-							<div
-								key={rowItem.index}
-								className={cn(
-									"absolute left-0 w-full border-border border-r border-b pr-1.5 text-right text-[11px] tabular-nums leading-6",
-									selected
-										? `${HEADER_SURFACE_SELECTED} text-foreground`
-										: `${HEADER_SURFACE} text-muted-foreground`,
-								)}
-								style={{
-									top: rowItem.start - HEADER_HEIGHT,
-									height: ROW_HEIGHT,
-								}}
-							>
-								{rowItem.index + 1}
-							</div>
-						);
-					})}
-				</div>
 			</div>
+			<div className="pointer-events-none absolute inset-0 z-30 peer-focus-visible:ring-1 peer-focus-visible:ring-ring peer-focus-visible:ring-inset" />
 		</div>
 	);
 }

@@ -4400,6 +4400,9 @@ msgstr "Bağlantı kopyalandı"
 msgid "Copied terminal ID"
 msgstr "Terminal kimliği kopyalandı"
 
+msgid "Copied the first {count} cells of the selection"
+msgstr "Seçimin ilk {count} hücresi kopyalandı"
+
 msgid "Copied to clipboard."
 msgstr "Panoya kopyalandı."
 
@@ -10025,6 +10028,9 @@ msgstr "Sonraki eşleşme"
 msgid "Next run {0}"
 msgstr "Sonraki çalıştırma {0}"
 
+msgid "Next sheets"
+msgstr "Sonraki sayfalar"
+
 msgid "Next slide"
 msgstr "Sonraki slayt"
 
@@ -12171,6 +12177,9 @@ msgstr "Önceki eşleşme"
 
 msgid "Previous prompts"
 msgstr "Önceki istemler"
+
+msgid "Previous sheets"
+msgstr "Önceki sayfalar"
 
 msgid "Previous slide"
 msgstr "Önceki slayt"
@@ -16396,8 +16405,14 @@ msgstr "bu dosya"
 msgid "This file could not be read as a spreadsheet"
 msgstr "Bu dosya elektronik tablo olarak okunamadı"
 
+msgid "This file format is not supported"
+msgstr "Bu dosya biçimi desteklenmiyor"
+
 msgid "This file is empty or was deleted."
 msgstr "Bu dosya boş veya silinmiş."
+
+msgid "This file is password protected"
+msgstr "Bu dosya parola korumalı"
 
 msgid "This GitHub installation is already connected to another Superset organization. Disconnect it there, or uninstall the Superset GitHub App, then try again."
 msgstr "Bu GitHub kurulumu zaten başka bir Superset kuruluşuna bağlı. Oradaki bağlantıyı kesin veya Superset GitHub App'i kaldırın, sonra yeniden deneyin."

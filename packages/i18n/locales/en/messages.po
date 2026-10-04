@@ -4400,6 +4400,9 @@ msgstr "Copied Link"
 msgid "Copied terminal ID"
 msgstr "Copied terminal ID"
 
+msgid "Copied the first {count} cells of the selection"
+msgstr "Copied the first {count} cells of the selection"
+
 msgid "Copied to clipboard."
 msgstr "Copied to clipboard."
 
@@ -10025,6 +10028,9 @@ msgstr "Next match"
 msgid "Next run {0}"
 msgstr "Next run {0}"
 
+msgid "Next sheets"
+msgstr "Next sheets"
+
 msgid "Next slide"
 msgstr "Next slide"
 
@@ -12171,6 +12177,9 @@ msgstr "Previous match"
 
 msgid "Previous prompts"
 msgstr "Previous prompts"
+
+msgid "Previous sheets"
+msgstr "Previous sheets"
 
 msgid "Previous slide"
 msgstr "Previous slide"
@@ -16396,8 +16405,14 @@ msgstr "this file"
 msgid "This file could not be read as a spreadsheet"
 msgstr "This file could not be read as a spreadsheet"
 
+msgid "This file format is not supported"
+msgstr "This file format is not supported"
+
 msgid "This file is empty or was deleted."
 msgstr "This file is empty or was deleted."
+
+msgid "This file is password protected"
+msgstr "This file is password protected"
 
 msgid "This GitHub installation is already connected to another Superset organization. Disconnect it there, or uninstall the Superset GitHub App, then try again."
 msgstr "This GitHub installation is already connected to another Superset organization. Disconnect it there, or uninstall the Superset GitHub App, then try again."

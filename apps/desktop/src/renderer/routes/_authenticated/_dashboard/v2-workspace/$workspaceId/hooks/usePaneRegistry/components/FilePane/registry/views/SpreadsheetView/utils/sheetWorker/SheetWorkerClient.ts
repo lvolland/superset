@@ -1,6 +1,14 @@
+import type { UnreadableReason } from "../../types";
 import type { SheetRequestBody, SheetResponse, SheetResults } from "./protocol";
 
-export class SheetWorkerError extends Error {}
+export class SheetWorkerError extends Error {
+	constructor(
+		message: string,
+		readonly reason: UnreadableReason | null = null,
+	) {
+		super(message);
+	}
+}
 
 interface Pending {
 	resolve: (value: never) => void;
@@ -26,7 +34,14 @@ export class SheetWorkerClient {
 			if (!pending) return;
 			this.pending.delete(response.id);
 			if (response.ok) pending.resolve(response.result as never);
-			else pending.reject(new SheetWorkerError(response.message));
+			else {
+				pending.reject(
+					new SheetWorkerError(
+						response.reason ?? "unreadable",
+						response.reason,
+					),
+				);
+			}
 		};
 		worker.onerror = (event) => {
 			event.preventDefault?.();

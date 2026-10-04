@@ -4400,6 +4400,9 @@ msgstr "Ссылка скопирована"
 msgid "Copied terminal ID"
 msgstr "ID терминала скопирован"
 
+msgid "Copied the first {count} cells of the selection"
+msgstr "Скопированы первые {count} ячеек выделения"
+
 msgid "Copied to clipboard."
 msgstr "Скопировано в буфер обмена."
 
@@ -10025,6 +10028,9 @@ msgstr "Следующее совпадение"
 msgid "Next run {0}"
 msgstr "Следующий запуск {0}"
 
+msgid "Next sheets"
+msgstr "Следующие листы"
+
 msgid "Next slide"
 msgstr "Следующий слайд"
 
@@ -12171,6 +12177,9 @@ msgstr "Предыдущее совпадение"
 
 msgid "Previous prompts"
 msgstr "Предыдущие промпты"
+
+msgid "Previous sheets"
+msgstr "Предыдущие листы"
 
 msgid "Previous slide"
 msgstr "Предыдущий слайд"
@@ -16396,8 +16405,14 @@ msgstr "этот файл"
 msgid "This file could not be read as a spreadsheet"
 msgstr "Не удалось прочитать файл как электронную таблицу"
 
+msgid "This file format is not supported"
+msgstr "Этот формат файла не поддерживается"
+
 msgid "This file is empty or was deleted."
 msgstr "Файл пуст или удалён."
+
+msgid "This file is password protected"
+msgstr "Этот файл защищён паролем"
 
 msgid "This GitHub installation is already connected to another Superset organization. Disconnect it there, or uninstall the Superset GitHub App, then try again."
 msgstr "Эта установка GitHub уже подключена к другой организации Superset. Отключите её там или удалите GitHub App Superset, затем повторите."
