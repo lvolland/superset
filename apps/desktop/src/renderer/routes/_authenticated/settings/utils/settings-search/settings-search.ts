@@ -2018,13 +2018,20 @@ export function getVisibleItemsForSection(params: {
 	searchQuery: string;
 	isV2: boolean;
 	cloudWorkspaces?: boolean;
+	macHostKnown?: boolean;
 }): SettingItemId[] {
-	const { section, searchQuery, isV2, cloudWorkspaces = true } = params;
+	const {
+		section,
+		searchQuery,
+		isV2,
+		cloudWorkspaces = true,
+		macHostKnown = true,
+	} = params;
 	const matched = searchQuery.trim()
 		? getMatchingItemsForSection(searchQuery, section)
 		: SETTINGS_ITEMS.filter((item) => item.section === section);
 	return matched
-		.filter((item) => isItemOffered(item, isV2, cloudWorkspaces))
+		.filter((item) => isItemOffered(item, isV2, cloudWorkspaces, macHostKnown))
 		.map((item) => item.id);
 }
 
@@ -2043,16 +2050,22 @@ const CLOUD_WORKSPACE_ITEMS: ReadonlySet<SettingItemId> = new Set([
 	SETTING_ITEM_ID.CONNECTIONS,
 ]);
 
+const MAC_HOST_ITEMS: ReadonlySet<SettingItemId> = new Set([
+	SETTING_ITEM_ID.CONNECTIONS_SUPERWHISPER,
+]);
+
 function isItemOffered(
 	item: { id: SettingItemId; section: SettingsSection },
 	isV2: boolean,
 	cloudWorkspaces: boolean,
+	macHostKnown: boolean,
 ): boolean {
 	return (
 		isItemAllowedForVariant(item.id, isV2) &&
 		(cloudWorkspaces ||
 			(!CLOUD_WORKSPACE_SECTIONS.has(item.section) &&
-				!CLOUD_WORKSPACE_ITEMS.has(item.id)))
+				!CLOUD_WORKSPACE_ITEMS.has(item.id))) &&
+		(macHostKnown || !MAC_HOST_ITEMS.has(item.id))
 	);
 }
 
@@ -2061,10 +2074,11 @@ export function getVisibleMatchCountBySection(
 	isV2: boolean,
 	cloudWorkspaces: boolean,
 	mobileEnabled = false,
+	macHostKnown = true,
 ): Partial<Record<SettingsSection, number>> {
 	const matches = searchSettings(query).filter(
 		(item) =>
-			isItemOffered(item, isV2, cloudWorkspaces) &&
+			isItemOffered(item, isV2, cloudWorkspaces, macHostKnown) &&
 			(item.section !== "mobile" || mobileEnabled),
 	);
 	const counts: Partial<Record<SettingsSection, number>> = {};
@@ -2082,10 +2096,12 @@ export function getVisibleMatchCountBySection(
 export function getAllowedSectionsForVariant(
 	isV2: boolean,
 	cloudWorkspaces: boolean,
+	macHostKnown = true,
 ): Set<SettingsSection> {
 	const sections = new Set<SettingsSection>();
 	for (const item of SETTINGS_ITEMS) {
-		if (isItemOffered(item, isV2, cloudWorkspaces)) sections.add(item.section);
+		if (isItemOffered(item, isV2, cloudWorkspaces, macHostKnown))
+			sections.add(item.section);
 	}
 	return sections;
 }

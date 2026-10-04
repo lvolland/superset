@@ -23,7 +23,7 @@ import {
 	type DictationTarget,
 	dictationEngineFor,
 } from "./dictationSession";
-import { transcribeHostDictation } from "./transcribeHostDictation/transcribeHostDictation";
+import { transcribeHostDictation } from "./transcribeHostDictation";
 
 const composers = new Map<string, RefObject<ComposerHandle | null>>();
 const sessions = new Map<string, ReturnType<typeof createDictationSession>>();
@@ -83,14 +83,14 @@ export function useHostDictation({
 		networkMode: "always",
 		retry: false,
 		queryFn: async () => {
-			if (!target) return { enabled: false };
+			if (!target) return { enabled: false, installed: false };
 			try {
 				return await getHostServiceClientByUrl(
 					target.hostUrl,
 				).settings.superwhisper.get.query();
 			} catch (error) {
 				if (isTrpcErrorWithData(error) && error.data.code === "NOT_FOUND") {
-					return { enabled: false };
+					return { enabled: false, installed: false };
 				}
 				throw error;
 			}

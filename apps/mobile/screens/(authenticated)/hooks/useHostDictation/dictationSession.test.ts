@@ -16,7 +16,7 @@ function deferred<T>() {
 }
 
 describe("dictation engine", () => {
-	test("only an enabled target uses file recording, unresolved settings wait", () => {
+	test("only an enabled target with Superwhisper installed uses file recording, unresolved settings wait", () => {
 		expect(dictationEngineFor(null, { data: undefined, isPending: true })).toBe(
 			"apple",
 		);
@@ -25,12 +25,21 @@ describe("dictation engine", () => {
 		).toBe("waiting");
 		expect(
 			dictationEngineFor(target, {
-				data: { enabled: false },
+				data: { enabled: false, installed: true },
 				isPending: false,
 			}),
 		).toBe("apple");
 		expect(
-			dictationEngineFor(target, { data: { enabled: true }, isPending: false }),
+			dictationEngineFor(target, {
+				data: { enabled: true, installed: false },
+				isPending: false,
+			}),
+		).toBe("apple");
+		expect(
+			dictationEngineFor(target, {
+				data: { enabled: true, installed: true },
+				isPending: false,
+			}),
 		).toBe("file");
 	});
 });
@@ -42,8 +51,8 @@ test.each([
 	const client = new QueryClient({
 		defaultOptions: { queries: { retry: false, gcTime: Infinity } },
 	});
-	const pending = deferred<{ enabled: boolean }>();
-	client.setQueryData(["dictation"], { enabled });
+	const pending = deferred<{ enabled: boolean; installed: boolean }>();
+	client.setQueryData(["dictation"], { enabled, installed: true });
 	const observer = new QueryObserver(client, {
 		queryKey: ["dictation"],
 		queryFn: () => pending.promise,

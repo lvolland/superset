@@ -53,7 +53,7 @@ export const systemSuperwhisperDependencies: SuperwhisperDependencies = {
 				{
 					timeout: timeoutMs,
 					killSignal: "SIGKILL",
-					maxBuffer: 1024 * 1024,
+					maxBuffer: 256 * 1024 * 1024,
 					env,
 				},
 				(error, stdout) => {
@@ -134,20 +134,21 @@ export function wavDurationMs(wav: Buffer): number {
 
 export class SuperwhisperAdapter {
 	private queue: Promise<unknown> = Promise.resolve();
-	private appDirectory: Promise<string> | undefined;
 
 	constructor(private readonly deps: SuperwhisperDependencies) {}
 
-	private getAppDirectory(): Promise<string> {
-		this.appDirectory ??= this.deps
-			.run("/usr/bin/defaults", ["read", DOMAIN, "appFolderDirectory"], {
-				timeoutMs: TIMEOUT_MS,
-			})
-			.then(
-				(folder) => join(folder.trim() || this.deps.home, "superwhisper"),
-				() => join(this.deps.home, "superwhisper"),
-			);
-		return this.appDirectory;
+	private async readAppDirectory(timeoutMs = TIMEOUT_MS): Promise<string> {
+		let folder = "";
+		try {
+			folder = (
+				await this.deps.run(
+					"/usr/bin/defaults",
+					["read", DOMAIN, "appFolderDirectory"],
+					{ timeoutMs },
+				)
+			).trim();
+		} catch {}
+		return join(folder || this.deps.home, "superwhisper");
 	}
 
 	private async exists(path: string): Promise<boolean> {
@@ -163,12 +164,16 @@ export class SuperwhisperAdapter {
 	async status(): Promise<{ installed: boolean; modeReady: boolean }> {
 		if (this.deps.platform !== "darwin")
 			return { installed: false, modeReady: false };
+		return this.statusIn(await this.readAppDirectory());
+	}
+
+	private async statusIn(
+		appDirectory: string,
+	): Promise<{ installed: boolean; modeReady: boolean }> {
+		if (this.deps.platform !== "darwin")
+			return { installed: false, modeReady: false };
 		const installed = await this.exists(APP);
-		const modePath = join(
-			await this.getAppDirectory(),
-			"modes",
-			"superset.json",
-		);
+		const modePath = join(appDirectory, "modes", "superset.json");
 		let modeReady = false;
 		try {
 			modeReady = modeIsSafe(
@@ -185,12 +190,16 @@ export class SuperwhisperAdapter {
 	}
 
 	async ensureMode(): Promise<void> {
-		if (!(await this.status()).installed)
+		await this.ensureModeIn(await this.readAppDirectory());
+	}
+
+	private async ensureModeIn(appDirectory: string): Promise<void> {
+		if (!(await this.statusIn(appDirectory)).installed)
 			throw new DictationError(
 				"UNAVAILABLE",
 				"Superwhisper is not installed on this Mac",
 			);
-		const modes = join(await this.getAppDirectory(), "modes");
+		const modes = join(appDirectory, "modes");
 		const modePath = join(modes, "superset.json");
 		if (!(await this.exists(modePath))) {
 			try {
@@ -224,7 +233,7 @@ export class SuperwhisperAdapter {
 					);
 			}
 		}
-		if (!(await this.status()).modeReady)
+		if (!(await this.statusIn(appDirectory)).modeReady)
 			throw new DictationError(
 				"MODE_NOT_READY",
 				"The Superset mode must disable automatic paste, realtime output and scripts",
@@ -271,8 +280,8 @@ export class SuperwhisperAdapter {
 			await this.deps.sleep(Math.min(100, remaining()));
 			remaining();
 		};
-		remaining();
-		await this.ensureMode();
+		const appDirectory = await this.readAppDirectory(remaining());
+		await this.ensureModeIn(appDirectory);
 		let directory: string | undefined;
 		let originalMode: string | undefined;
 		let clipboard: string | undefined;
@@ -314,7 +323,7 @@ export class SuperwhisperAdapter {
 					"INVALID_AUDIO",
 					"Dictation cannot exceed five minutes",
 				);
-			const recordings = join(await this.getAppDirectory(), "recordings");
+			const recordings = join(appDirectory, "recordings");
 			originalMode = (
 				await command("/usr/bin/defaults", ["read", DOMAIN, "activeModeKey"])
 			).trim();
@@ -335,8 +344,12 @@ export class SuperwhisperAdapter {
 				).trim() !== "superset"
 			)
 				await pause();
-			clipboard = await command("/usr/bin/pbpaste", []);
-			await this.ensureMode();
+			try {
+				clipboard = await command("/usr/bin/pbpaste", []);
+			} catch (error) {
+				if (error instanceof DictationError) throw error;
+			}
+			await this.ensureModeIn(appDirectory);
 			const previous = new Set(await this.listRecordings(recordings));
 			await command("/usr/bin/open", ["-g", "-a", APP, wav]);
 			while (true) {

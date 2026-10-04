@@ -8,17 +8,23 @@ const queryKey = ["host-service", "superwhisper", "mac", "http://mac"];
 const otherKey = ["host-service", "superwhisper", "other", "http://other"];
 const audio = { uri: "file:///recording.m4a", durationMs: 1000 };
 
+type Settings = { enabled: boolean; installed: boolean };
+const ready: Settings = { enabled: true, installed: true };
+
 test.each([
-	"DISABLED",
-	"UNAVAILABLE",
-])("refreshes only the recording Mac's settings on %s", async (kind) => {
+	{ kind: "DISABLED", refreshed: { enabled: false, installed: true } },
+	{ kind: "UNAVAILABLE", refreshed: { enabled: true, installed: false } },
+])("refreshes only the recording Mac's settings on $kind", async ({
+	kind,
+	refreshed: refreshedSettings,
+}) => {
 	const client = new QueryClient({
 		defaultOptions: { queries: { retry: false, gcTime: Infinity } },
 	});
-	client.setQueryData(queryKey, { enabled: true });
-	client.setQueryData(otherKey, { enabled: true });
-	let resolveSettings!: (value: { enabled: boolean }) => void;
-	const pendingSettings = new Promise<{ enabled: boolean }>((resolve) => {
+	client.setQueryData(queryKey, ready);
+	client.setQueryData(otherKey, ready);
+	let resolveSettings!: (value: Settings) => void;
+	const pendingSettings = new Promise<Settings>((resolve) => {
 		resolveSettings = resolve;
 	});
 	const observer = new QueryObserver(client, {
@@ -31,7 +37,11 @@ test.each([
 		refreshed = resolve;
 	});
 	const unsubscribe = observer.subscribe((result) => {
-		if (result.data?.enabled === false) refreshed();
+		if (
+			result.data?.enabled === refreshedSettings.enabled &&
+			result.data?.installed === refreshedSettings.installed
+		)
+			refreshed();
 	});
 	const error = { data: { dictation: { kind } } };
 	try {
@@ -53,7 +63,7 @@ test.each([
 		expect(dictationEngineFor(target, observer.getCurrentResult())).toBe(
 			"file",
 		);
-		resolveSettings({ enabled: false });
+		resolveSettings(refreshedSettings);
 		await finished;
 		expect(dictationEngineFor(target, observer.getCurrentResult())).toBe(
 			"apple",
@@ -69,7 +79,7 @@ test("keeps known Superwhisper settings on transcription timeout", async () => {
 	const client = new QueryClient({
 		defaultOptions: { queries: { gcTime: Infinity } },
 	});
-	client.setQueryData(queryKey, { enabled: true });
+	client.setQueryData(queryKey, ready);
 	try {
 		await expect(
 			transcribeHostDictation(audio, target, {
@@ -81,7 +91,7 @@ test("keeps known Superwhisper settings on transcription timeout", async () => {
 			}),
 		).rejects.toMatchObject({ data: { dictation: { kind: "TIMEOUT" } } });
 		expect(client.getQueryState(queryKey)?.isInvalidated).toBe(false);
-		expect(client.getQueryData(queryKey)).toEqual({ enabled: true });
+		expect(client.getQueryData(queryKey)).toEqual(ready);
 	} finally {
 		client.clear();
 	}

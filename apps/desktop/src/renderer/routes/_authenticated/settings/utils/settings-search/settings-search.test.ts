@@ -177,6 +177,25 @@ describe("settings search - Superwhisper", () => {
 		);
 	});
 
+	it("offers Connections without cloud workspaces only when a Mac is known", () => {
+		expect(
+			getAllowedSectionsForVariant(true, false, false).has("connections"),
+		).toBe(false);
+		expect(
+			getVisibleMatchCountBySection("Superwhisper", true, false, false, false)
+				.connections,
+		).toBeUndefined();
+		expect(
+			getVisibleItemsForSection({
+				section: "connections",
+				searchQuery: "",
+				isV2: true,
+				cloudWorkspaces: true,
+				macHostKnown: false,
+			}),
+		).toEqual([SETTING_ITEM_ID.CONNECTIONS]);
+	});
+
 	it.each([
 		"Superwhisper",
 		"mobile dictation",
