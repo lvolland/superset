@@ -7004,6 +7004,9 @@ msgstr "更新角色失敗"
 msgid "Failed to update setting"
 msgstr "更新設定失敗"
 
+msgid "Failed to update Superwhisper settings"
+msgstr "無法更新 Superwhisper 設定"
+
 msgid "Failed to update task assignee"
 msgstr "更新任務負責人失敗"
 
@@ -8323,6 +8326,9 @@ msgstr "安裝外掛"
 
 msgid "Install Superset MCP in your client"
 msgstr "在你的客戶端裡安裝Superset MCP"
+
+msgid "Install Superwhisper"
+msgstr "安裝 Superwhisper"
 
 msgid "Install the desktop app"
 msgstr "安裝桌面應用程式"
@@ -14297,6 +14303,9 @@ msgstr "設定專案…"
 msgid "Set Run"
 msgstr "設定執行命令"
 
+msgid "Set the model and language for the Superset mode in Superwhisper."
+msgstr "在 Superwhisper 中設定 Superset 模式的模型和語言。"
+
 msgid "Set this project"
 msgstr "設為此專案"
 
@@ -15466,6 +15475,12 @@ msgstr "iPhone 上的 Superset Mobile 終端"
 msgid "Superset Mobile, cloud workspaces, automations, and priority support."
 msgstr "Superset Mobile、雲端工作區、自動化與優先支援。"
 
+msgid "Superset mode needs setup"
+msgstr "Superset 模式需要設定"
+
+msgid "Superset mode ready"
+msgstr "Superset 模式已就緒"
+
 msgid "Superset needs Full Disk Access to read another browser's data. Grant it in System Settings, then check again."
 msgstr "Superset需要「完全磁碟存取權限」才能讀取其他瀏覽器的資料。請在系統設定中授予權限，然後重新檢查。"
 
@@ -15502,6 +15517,12 @@ msgstr "Superset 手機應用程式讓我可以隨時隨地推動代理程式工
 
 msgid "Supervised"
 msgstr "監督"
+
+msgid "Superwhisper"
+msgstr "Superwhisper"
+
+msgid "Superwhisper status"
+msgstr "Superwhisper 狀態"
 
 msgid "Support"
 msgstr "支援"
@@ -16823,6 +16844,9 @@ msgstr "揪出那個不穩定的測試…"
 msgid "Tracking"
 msgstr "已追蹤"
 
+msgid "Transcribe mobile dictation on {hostName}."
+msgstr "在 {hostName} 上轉錄行動聽寫。"
+
 msgid "Translated"
 msgstr "已翻譯"
 
@@ -17351,6 +17375,9 @@ msgstr "在手機上使用 Superset"
 
 msgid "Use Superset on your phone with Pro."
 msgstr "透過 Pro 在手機上使用 Superset。"
+
+msgid "Use Superwhisper for mobile dictation"
+msgstr "使用 Superwhisper 進行行動聽寫"
 
 msgid "Use the desktop app to start running parallel coding agents."
 msgstr "使用桌面應用程式開始並行執行編碼代理程式。"

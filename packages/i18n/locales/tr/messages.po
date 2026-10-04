@@ -7004,6 +7004,9 @@ msgstr "Rol güncellenemedi"
 msgid "Failed to update setting"
 msgstr "Ayar güncellenemedi"
 
+msgid "Failed to update Superwhisper settings"
+msgstr "Superwhisper ayarları güncellenemedi"
+
 msgid "Failed to update task assignee"
 msgstr "Görevin atanan kişisi güncellenemedi"
 
@@ -8323,6 +8326,9 @@ msgstr "Eklenti kur"
 
 msgid "Install Superset MCP in your client"
 msgstr "Superset MCP'yi istemcinize kurun"
+
+msgid "Install Superwhisper"
+msgstr "Superwhisper yükle"
 
 msgid "Install the desktop app"
 msgstr "Masaüstü uygulamasını kurun"
@@ -14297,6 +14303,9 @@ msgstr "Projeyi ayarla…"
 msgid "Set Run"
 msgstr "Çalıştırmayı ayarla"
 
+msgid "Set the model and language for the Superset mode in Superwhisper."
+msgstr "Superwhisper içinde Superset modu için modeli ve dili ayarlayın."
+
 msgid "Set this project"
 msgstr "Bu projeyi ayarla"
 
@@ -15466,6 +15475,12 @@ msgstr "iPhone'da Superset Mobile terminali"
 msgid "Superset Mobile, cloud workspaces, automations, and priority support."
 msgstr "Superset Mobile, bulut çalışma alanları, otomasyonlar ve öncelikli destek."
 
+msgid "Superset mode needs setup"
+msgstr "Superset modunun ayarlanması gerekiyor"
+
+msgid "Superset mode ready"
+msgstr "Superset modu hazır"
+
 msgid "Superset needs Full Disk Access to read another browser's data. Grant it in System Settings, then check again."
 msgstr "Superset'in başka bir tarayıcının verilerini okuyabilmesi için Tam Disk Erişimi gerekir. Sistem Ayarları'ndan verin, sonra yeniden denetleyin."
 
@@ -15502,6 +15517,12 @@ msgstr "Superset'in mobil uygulaması, bilgisayarımdan çok uzakta olsam bile a
 
 msgid "Supervised"
 msgstr "Gözetimli"
+
+msgid "Superwhisper"
+msgstr "Superwhisper"
+
+msgid "Superwhisper status"
+msgstr "Superwhisper durumu"
 
 msgid "Support"
 msgstr "Destek"
@@ -16823,6 +16844,9 @@ msgstr "Şu kararsız testin izini sür…"
 msgid "Tracking"
 msgstr "İzleme"
 
+msgid "Transcribe mobile dictation on {hostName}."
+msgstr "{hostName} üzerinde mobil dikteyi yazıya dökün."
+
 msgid "Translated"
 msgstr "Çevrildi"
 
@@ -17351,6 +17375,9 @@ msgstr "Superset’i mobilde kullanın"
 
 msgid "Use Superset on your phone with Pro."
 msgstr "Pro ile Superset’i telefonunuzda kullanın."
+
+msgid "Use Superwhisper for mobile dictation"
+msgstr "Mobil dikte için Superwhisper kullan"
 
 msgid "Use the desktop app to start running parallel coding agents."
 msgstr "Paralel kodlama ajanları çalıştırmaya başlamak için masaüstü uygulamasını kullanın."

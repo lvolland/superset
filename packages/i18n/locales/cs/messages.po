@@ -7004,6 +7004,9 @@ msgstr "Roli se nepodařilo změnit"
 msgid "Failed to update setting"
 msgstr "Nepodařilo se změnit nastavení"
 
+msgid "Failed to update Superwhisper settings"
+msgstr "Nastavení Superwhisper se nepodařilo aktualizovat"
+
 msgid "Failed to update task assignee"
 msgstr "Řešitele úkolu se nepodařilo změnit"
 
@@ -8323,6 +8326,9 @@ msgstr "Nainstalovat plugin"
 
 msgid "Install Superset MCP in your client"
 msgstr "Nainstalujte Superset MCP do svého klienta"
+
+msgid "Install Superwhisper"
+msgstr "Nainstalovat Superwhisper"
 
 msgid "Install the desktop app"
 msgstr "Nainstalujte desktopovou aplikaci"
@@ -14297,6 +14303,9 @@ msgstr "Nastavit projekt…"
 msgid "Set Run"
 msgstr "Nastavit spuštění"
 
+msgid "Set the model and language for the Superset mode in Superwhisper."
+msgstr "Nastavte model a jazyk pro režim Superset v Superwhisper."
+
 msgid "Set this project"
 msgstr "Nastavit tento projekt"
 
@@ -15466,6 +15475,12 @@ msgstr "Terminál Superset Mobile na iPhonu"
 msgid "Superset Mobile, cloud workspaces, automations, and priority support."
 msgstr "Superset Mobile, cloudové workspaces, automatizace a prioritní podpora."
 
+msgid "Superset mode needs setup"
+msgstr "Režim Superset vyžaduje nastavení"
+
+msgid "Superset mode ready"
+msgstr "Režim Superset je připraven"
+
 msgid "Superset needs Full Disk Access to read another browser's data. Grant it in System Settings, then check again."
 msgstr "Superset potřebuje Plný přístup k disku, aby mohl číst data jiného prohlížeče. Povolte ho v Nastavení systému a zkontrolujte to znovu."
 
@@ -15502,6 +15517,12 @@ msgstr "Mobilní aplikace Superset mi umožňuje udržovat agenty v chodu a odbl
 
 msgid "Supervised"
 msgstr "Pod dohledem"
+
+msgid "Superwhisper"
+msgstr "Superwhisper"
+
+msgid "Superwhisper status"
+msgstr "Stav Superwhisper"
 
 msgid "Support"
 msgstr "Podpora"
@@ -16823,6 +16844,9 @@ msgstr "Vypátrej ten nestabilní test…"
 msgid "Tracking"
 msgstr "Sleduji"
 
+msgid "Transcribe mobile dictation on {hostName}."
+msgstr "Přepisovat mobilní diktování na {hostName}."
+
 msgid "Translated"
 msgstr "Přeloženo"
 
@@ -17351,6 +17375,9 @@ msgstr "Používejte Superset na mobilu"
 
 msgid "Use Superset on your phone with Pro."
 msgstr "Používejte Superset na telefonu s Pro."
+
+msgid "Use Superwhisper for mobile dictation"
+msgstr "Použít Superwhisper pro mobilní diktování"
 
 msgid "Use the desktop app to start running parallel coding agents."
 msgstr "Pro spouštění paralelních kódovacích agentů použijte desktopovou aplikaci."

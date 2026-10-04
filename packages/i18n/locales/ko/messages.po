@@ -7004,6 +7004,9 @@ msgstr "역할을 업데이트하지 못했습니다"
 msgid "Failed to update setting"
 msgstr "설정을 업데이트하지 못했습니다"
 
+msgid "Failed to update Superwhisper settings"
+msgstr "Superwhisper 설정을 업데이트하지 못했습니다"
+
 msgid "Failed to update task assignee"
 msgstr "작업 담당자를 업데이트하지 못했습니다"
 
@@ -8323,6 +8326,9 @@ msgstr "플러그인 설치"
 
 msgid "Install Superset MCP in your client"
 msgstr "클라이언트에 Superset MCP 설치하기"
+
+msgid "Install Superwhisper"
+msgstr "Superwhisper 설치"
 
 msgid "Install the desktop app"
 msgstr "데스크톱 앱 설치"
@@ -14297,6 +14303,9 @@ msgstr "프로젝트 설정…"
 msgid "Set Run"
 msgstr "실행 설정"
 
+msgid "Set the model and language for the Superset mode in Superwhisper."
+msgstr "Superwhisper에서 Superset 모드의 모델과 언어를 설정하세요."
+
 msgid "Set this project"
 msgstr "이 프로젝트로 설정"
 
@@ -15466,6 +15475,12 @@ msgstr "iPhone의 Superset Mobile 터미널"
 msgid "Superset Mobile, cloud workspaces, automations, and priority support."
 msgstr "Superset Mobile, 클라우드 워크스페이스, 자동화, 우선 지원."
 
+msgid "Superset mode needs setup"
+msgstr "Superset 모드를 설정해야 합니다"
+
+msgid "Superset mode ready"
+msgstr "Superset 모드가 준비되었습니다"
+
 msgid "Superset needs Full Disk Access to read another browser's data. Grant it in System Settings, then check again."
 msgstr "다른 브라우저의 데이터를 읽으려면 Superset에 전체 디스크 접근 권한이 필요합니다. 시스템 설정에서 권한을 허용한 다음 다시 확인하세요."
 
@@ -15502,6 +15517,12 @@ msgstr "Superset 모바일 앱 덕분에 컴퓨터에서 멀리 떨어져 있어
 
 msgid "Supervised"
 msgstr "감독"
+
+msgid "Superwhisper"
+msgstr "Superwhisper"
+
+msgid "Superwhisper status"
+msgstr "Superwhisper 상태"
 
 msgid "Support"
 msgstr "지원"
@@ -16823,6 +16844,9 @@ msgstr "불안정한 테스트 추적하기…"
 msgid "Tracking"
 msgstr "추적 기간"
 
+msgid "Transcribe mobile dictation on {hostName}."
+msgstr "{hostName}에서 모바일 받아쓰기를 텍스트로 변환합니다."
+
 msgid "Translated"
 msgstr "번역됨"
 
@@ -17351,6 +17375,9 @@ msgstr "모바일에서 Superset 사용하기"
 
 msgid "Use Superset on your phone with Pro."
 msgstr "Pro로 휴대폰에서 Superset을 사용하세요."
+
+msgid "Use Superwhisper for mobile dictation"
+msgstr "모바일 받아쓰기에 Superwhisper 사용"
 
 msgid "Use the desktop app to start running parallel coding agents."
 msgstr "데스크톱 앱에서 병렬 코딩 에이전트를 실행하세요."

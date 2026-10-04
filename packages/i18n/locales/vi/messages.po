@@ -7004,6 +7004,9 @@ msgstr "Không cập nhật được vai trò"
 msgid "Failed to update setting"
 msgstr "Không thể cập nhật cài đặt"
 
+msgid "Failed to update Superwhisper settings"
+msgstr "Không thể cập nhật cài đặt Superwhisper"
+
 msgid "Failed to update task assignee"
 msgstr "Không cập nhật được người được giao"
 
@@ -8323,6 +8326,9 @@ msgstr "Cài đặt plugin"
 
 msgid "Install Superset MCP in your client"
 msgstr "Cài Superset MCP vào client của bạn"
+
+msgid "Install Superwhisper"
+msgstr "Cài đặt Superwhisper"
 
 msgid "Install the desktop app"
 msgstr "Cài ứng dụng máy tính"
@@ -14297,6 +14303,9 @@ msgstr "Đặt dự án…"
 msgid "Set Run"
 msgstr "Đặt lệnh chạy"
 
+msgid "Set the model and language for the Superset mode in Superwhisper."
+msgstr "Đặt mô hình và ngôn ngữ cho chế độ Superset trong Superwhisper."
+
 msgid "Set this project"
 msgstr "Đặt dự án này"
 
@@ -15466,6 +15475,12 @@ msgstr "Terminal của Superset Mobile trên iPhone"
 msgid "Superset Mobile, cloud workspaces, automations, and priority support."
 msgstr "Superset Mobile, workspace đám mây, tự động hóa và hỗ trợ ưu tiên."
 
+msgid "Superset mode needs setup"
+msgstr "Chế độ Superset cần được thiết lập"
+
+msgid "Superset mode ready"
+msgstr "Chế độ Superset đã sẵn sàng"
+
 msgid "Superset needs Full Disk Access to read another browser's data. Grant it in System Settings, then check again."
 msgstr "Superset cần quyền Full Disk Access để đọc dữ liệu của trình duyệt khác. Cấp quyền trong System Settings rồi kiểm tra lại."
 
@@ -15502,6 +15517,12 @@ msgstr "Ứng dụng di động Superset giúp tôi duy trì công việc của 
 
 msgid "Supervised"
 msgstr "Có giám sát"
+
+msgid "Superwhisper"
+msgstr "Superwhisper"
+
+msgid "Superwhisper status"
+msgstr "Trạng thái Superwhisper"
 
 msgid "Support"
 msgstr "Hỗ trợ"
@@ -16823,6 +16844,9 @@ msgstr "Truy ra bài test chập chờn đó…"
 msgid "Tracking"
 msgstr "Theo dõi"
 
+msgid "Transcribe mobile dictation on {hostName}."
+msgstr "Chép chính tả trên thiết bị di động tại {hostName}."
+
 msgid "Translated"
 msgstr "Đã dịch"
 
@@ -17351,6 +17375,9 @@ msgstr "Dùng Superset trên điện thoại"
 
 msgid "Use Superset on your phone with Pro."
 msgstr "Dùng Superset trên điện thoại với Pro."
+
+msgid "Use Superwhisper for mobile dictation"
+msgstr "Dùng Superwhisper cho đọc chính tả trên thiết bị di động"
 
 msgid "Use the desktop app to start running parallel coding agents."
 msgstr "Dùng ứng dụng máy tính để chạy song song nhiều agent lập trình."

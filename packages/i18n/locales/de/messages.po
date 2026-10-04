@@ -7004,6 +7004,9 @@ msgstr "Rolle konnte nicht geändert werden"
 msgid "Failed to update setting"
 msgstr "Einstellung konnte nicht geändert werden"
 
+msgid "Failed to update Superwhisper settings"
+msgstr "Superwhisper-Einstellungen konnten nicht aktualisiert werden"
+
 msgid "Failed to update task assignee"
 msgstr "Zuweisung der Aufgabe konnte nicht geändert werden"
 
@@ -8323,6 +8326,9 @@ msgstr "Plugin installieren"
 
 msgid "Install Superset MCP in your client"
 msgstr "Superset MCP in deinem Client installieren"
+
+msgid "Install Superwhisper"
+msgstr "Superwhisper installieren"
 
 msgid "Install the desktop app"
 msgstr "Desktop-App installieren"
@@ -14297,6 +14303,9 @@ msgstr "Projekt festlegen…"
 msgid "Set Run"
 msgstr "Run festlegen"
 
+msgid "Set the model and language for the Superset mode in Superwhisper."
+msgstr "Legen Sie Modell und Sprache für den Superset-Modus in Superwhisper fest."
+
 msgid "Set this project"
 msgstr "Dieses Projekt festlegen"
 
@@ -15466,6 +15475,12 @@ msgstr "Terminal von Superset Mobile auf dem iPhone"
 msgid "Superset Mobile, cloud workspaces, automations, and priority support."
 msgstr "Superset Mobile, Cloud-Workspaces, Automatisierungen und priorisierter Support."
 
+msgid "Superset mode needs setup"
+msgstr "Superset-Modus muss eingerichtet werden"
+
+msgid "Superset mode ready"
+msgstr "Superset-Modus ist bereit"
+
 msgid "Superset needs Full Disk Access to read another browser's data. Grant it in System Settings, then check again."
 msgstr "Superset braucht Festplattenvollzugriff, um die Daten eines anderen Browsers zu lesen. Erteile ihn in den Systemeinstellungen und prüfe dann erneut."
 
@@ -15502,6 +15517,12 @@ msgstr "Mit der mobilen Superset-App kann ich meine Agenten von überall aus am 
 
 msgid "Supervised"
 msgstr "Beaufsichtigt"
+
+msgid "Superwhisper"
+msgstr "Superwhisper"
+
+msgid "Superwhisper status"
+msgstr "Superwhisper-Status"
 
 msgid "Support"
 msgstr "Support"
@@ -16823,6 +16844,9 @@ msgstr "Diesem flaky Test auf den Grund gehen…"
 msgid "Tracking"
 msgstr "Erfassung"
 
+msgid "Transcribe mobile dictation on {hostName}."
+msgstr "Mobile Diktate auf {hostName} transkribieren."
+
 msgid "Translated"
 msgstr "Übersetzt"
 
@@ -17351,6 +17375,9 @@ msgstr "Superset auf dem Handy nutzen"
 
 msgid "Use Superset on your phone with Pro."
 msgstr "Nutze Superset mit Pro auf deinem Smartphone."
+
+msgid "Use Superwhisper for mobile dictation"
+msgstr "Superwhisper für mobile Diktate verwenden"
 
 msgid "Use the desktop app to start running parallel coding agents."
 msgstr "Nutze die Desktop-App, um parallele Coding-Agenten laufen zu lassen."

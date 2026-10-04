@@ -7004,6 +7004,9 @@ msgstr "Не удалось изменить роль"
 msgid "Failed to update setting"
 msgstr "Не удалось обновить настройку"
 
+msgid "Failed to update Superwhisper settings"
+msgstr "Не удалось обновить настройки Superwhisper"
+
 msgid "Failed to update task assignee"
 msgstr "Не удалось изменить исполнителя задачи"
 
@@ -8323,6 +8326,9 @@ msgstr "Установить плагин"
 
 msgid "Install Superset MCP in your client"
 msgstr "Установите Superset MCP в своём клиенте"
+
+msgid "Install Superwhisper"
+msgstr "Установить Superwhisper"
 
 msgid "Install the desktop app"
 msgstr "Установите десктопное приложение"
@@ -14297,6 +14303,9 @@ msgstr "Назначить проект…"
 msgid "Set Run"
 msgstr "Задать запуск"
 
+msgid "Set the model and language for the Superset mode in Superwhisper."
+msgstr "Настройте модель и язык для режима Superset в Superwhisper."
+
 msgid "Set this project"
 msgstr "Назначить этот проект"
 
@@ -15466,6 +15475,12 @@ msgstr "Терминал Superset Mobile на iPhone"
 msgid "Superset Mobile, cloud workspaces, automations, and priority support."
 msgstr "Superset Mobile, облачные рабочие пространства, автоматизации и приоритетная поддержка."
 
+msgid "Superset mode needs setup"
+msgstr "Режим Superset требует настройки"
+
+msgid "Superset mode ready"
+msgstr "Режим Superset готов"
+
 msgid "Superset needs Full Disk Access to read another browser's data. Grant it in System Settings, then check again."
 msgstr "Superset нужен полный доступ к диску, чтобы читать данные другого браузера. Выдайте его в Системных настройках и проверьте снова."
 
@@ -15502,6 +15517,12 @@ msgstr "Мобильное приложение Superset позволяет мн
 
 msgid "Supervised"
 msgstr "Под присмотром"
+
+msgid "Superwhisper"
+msgstr "Superwhisper"
+
+msgid "Superwhisper status"
+msgstr "Состояние Superwhisper"
 
 msgid "Support"
 msgstr "Поддержка"
@@ -16823,6 +16844,9 @@ msgstr "Найди причину нестабильного теста…"
 msgid "Tracking"
 msgstr "Отслеживание"
 
+msgid "Transcribe mobile dictation on {hostName}."
+msgstr "Расшифровывать мобильную диктовку на {hostName}."
+
 msgid "Translated"
 msgstr "Переведено"
 
@@ -17351,6 +17375,9 @@ msgstr "Используйте Superset на телефоне"
 
 msgid "Use Superset on your phone with Pro."
 msgstr "Используйте Superset на телефоне с Pro."
+
+msgid "Use Superwhisper for mobile dictation"
+msgstr "Использовать Superwhisper для мобильной диктовки"
 
 msgid "Use the desktop app to start running parallel coding agents."
 msgstr "Используйте десктопное приложение, чтобы запускать параллельных кодовых агентов."
