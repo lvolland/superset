@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { createDictationSession, dictationEngineFor } from "./dictationSession";
 
 const target = { machineId: "mac", hostUrl: "http://mac", hostName: "My Mac" };
@@ -16,11 +17,55 @@ function deferred<T>() {
 
 describe("dictation engine", () => {
 	test("only an enabled target uses file recording, unresolved settings wait", () => {
-		expect(dictationEngineFor(null, undefined)).toBe("apple");
-		expect(dictationEngineFor(target, undefined)).toBe("waiting");
-		expect(dictationEngineFor(target, { enabled: false })).toBe("apple");
-		expect(dictationEngineFor(target, { enabled: true })).toBe("file");
+		expect(dictationEngineFor(null, { data: undefined, isPending: true })).toBe(
+			"apple",
+		);
+		expect(
+			dictationEngineFor(target, { data: undefined, isPending: true }),
+		).toBe("waiting");
+		expect(
+			dictationEngineFor(target, {
+				data: { enabled: false },
+				isPending: false,
+			}),
+		).toBe("apple");
+		expect(
+			dictationEngineFor(target, { data: { enabled: true }, isPending: false }),
+		).toBe("file");
 	});
+});
+
+test.each([
+	true,
+	false,
+])("keeps known dictation settings during and after a failed refetch (enabled: %s)", async (enabled) => {
+	const client = new QueryClient({
+		defaultOptions: { queries: { retry: false, gcTime: Infinity } },
+	});
+	const pending = deferred<{ enabled: boolean }>();
+	client.setQueryData(["dictation"], { enabled });
+	const observer = new QueryObserver(client, {
+		queryKey: ["dictation"],
+		queryFn: () => pending.promise,
+	});
+	const unsubscribe = observer.subscribe(() => {});
+	try {
+		const expected = enabled ? "file" : "apple";
+		expect(observer.getCurrentResult().isFetching).toBe(true);
+		expect(dictationEngineFor(target, observer.getCurrentResult())).toBe(
+			expected,
+		);
+		const refetch = observer.refetch({ cancelRefetch: false });
+		pending.reject(new Error("offline"));
+		await refetch;
+		expect(observer.getCurrentResult().isError).toBe(true);
+		expect(dictationEngineFor(target, observer.getCurrentResult())).toBe(
+			expected,
+		);
+	} finally {
+		unsubscribe();
+		client.clear();
+	}
 });
 
 describe("dictation session", () => {

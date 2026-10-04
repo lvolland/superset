@@ -8,9 +8,7 @@ import { toast } from "@superset/ui/sonner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { useHostServiceInfo } from "renderer/hooks/host-service/useHostServiceInfo";
 import { useHostUrl } from "renderer/hooks/host-service/useHostTargetUrl";
-import { electronTrpc } from "renderer/lib/electron-trpc";
 import { getHostServiceClientByUrl } from "renderer/lib/host-service-client";
 import { getHostServiceUnavailableMessage } from "renderer/lib/host-service-unavailable";
 import { useWorkspaceHostOptions } from "renderer/routes/_authenticated/components/DashboardNewWorkspaceModal/components/DashboardNewWorkspaceForm/components/DevicePicker/hooks/useWorkspaceHostOptions";
@@ -27,10 +25,6 @@ import {
 	V2WorktreeLocationPicker,
 } from "../../../components/V2WorktreeLocationPicker";
 import { useDefaultWorktreePath } from "../../../components/WorktreeLocationPicker";
-import {
-	isSuperwhisperHostSupported,
-	SuperwhisperSettings,
-} from "../SuperwhisperSettings";
 
 interface V2GitSettingsProps {
 	hostId: string | null;
@@ -51,7 +45,6 @@ export function V2GitSettings({ hostId }: V2GitSettingsProps) {
 	const targetHostUrl = useHostUrl(hostId);
 	const targetHostId = hostId ?? machineId;
 	const queryClient = useQueryClient();
-	const { data: desktopPlatform } = electronTrpc.window.getPlatform.useQuery();
 
 	const hostOptions = useMemo<HostSelectOption[]>(() => {
 		const thisDeviceLabel = t({
@@ -104,13 +97,6 @@ export function V2GitSettings({ hostId }: V2GitSettingsProps) {
 	});
 	const setWorktreeBaseDir = useSetV2WorktreeBaseDir(targetHostUrl);
 	const defaultWorktreePath = useDefaultWorktreePath();
-	const hostInfoQuery = useHostServiceInfo(targetHostUrl, isHostOnline);
-	const supportsSuperwhisper = isSuperwhisperHostSupported({
-		hostId: targetHostId,
-		machineId,
-		desktopPlatform,
-		hostPlatform: hostInfoQuery.data?.platform,
-	});
 
 	const branchPrefixQuery = useQuery({
 		queryKey: ["host-branch-prefix", targetHostUrl] as const,
@@ -270,11 +256,6 @@ export function V2GitSettings({ hostId }: V2GitSettingsProps) {
 					/>
 				</SettingsRow>
 			</section>
-			<SuperwhisperSettings
-				hostUrl={targetHostUrl}
-				hostName={selectedHostName}
-				enabled={supportsSuperwhisper && isHostOnline}
-			/>
 		</div>
 	);
 }

@@ -8339,9 +8339,6 @@ msgstr "Instal plugin"
 msgid "Install Superset MCP in your client"
 msgstr "Pasang Superset MCP di klien Anda"
 
-msgid "Install Superwhisper"
-msgstr "Instal Superwhisper"
-
 msgid "Install the desktop app"
 msgstr "Pasang aplikasi desktop"
 
@@ -9606,6 +9603,9 @@ msgstr "model"
 msgid "Model"
 msgstr "Model"
 
+msgid "Model and language"
+msgstr "Model dan bahasa"
+
 msgid "Model context usage"
 msgstr "Penggunaan konteks model"
 
@@ -10702,6 +10702,9 @@ msgstr "Belum diberikan"
 
 msgid "Not included"
 msgstr "Tidak termasuk"
+
+msgid "Not installed"
+msgstr "Belum terinstal"
 
 msgid "Not loaded"
 msgstr "Belum dimuat"
@@ -14315,9 +14318,6 @@ msgstr "Tetapkan proyek…"
 msgid "Set Run"
 msgstr "Setel Run"
 
-msgid "Set the model and language for the Superset mode in Superwhisper."
-msgstr "Atur model dan bahasa untuk mode Superset di Superwhisper."
-
 msgid "Set this project"
 msgstr "Tetapkan proyek ini"
 
@@ -15486,6 +15486,9 @@ msgstr "Terminal Superset Mobile di iPhone"
 
 msgid "Superset Mobile, cloud workspaces, automations, and priority support."
 msgstr "Superset Mobile, workspace cloud, otomatisasi, dan dukungan prioritas."
+
+msgid "Superset mode in Superwhisper"
+msgstr "Mode Superset di Superwhisper"
 
 msgid "Superset mode needs setup"
 msgstr "Mode Superset perlu disiapkan"
@@ -16876,9 +16879,6 @@ msgstr "Lacak tes flaky itu…"
 
 msgid "Tracking"
 msgstr "Pelacakan"
-
-msgid "Transcribe mobile dictation on {hostName}."
-msgstr "Transkripsikan dikte seluler di {hostName}."
 
 msgid "Transcription failed"
 msgstr "Transkripsi gagal"

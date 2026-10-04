@@ -8339,9 +8339,6 @@ msgstr "安裝外掛"
 msgid "Install Superset MCP in your client"
 msgstr "在你的客戶端裡安裝Superset MCP"
 
-msgid "Install Superwhisper"
-msgstr "安裝 Superwhisper"
-
 msgid "Install the desktop app"
 msgstr "安裝桌面應用程式"
 
@@ -9606,6 +9603,9 @@ msgstr "模型"
 msgid "Model"
 msgstr "模型"
 
+msgid "Model and language"
+msgstr "模型與語言"
+
 msgid "Model context usage"
 msgstr "模型上下文用量"
 
@@ -10702,6 +10702,9 @@ msgstr "未授予"
 
 msgid "Not included"
 msgstr "不包含"
+
+msgid "Not installed"
+msgstr "未安裝"
 
 msgid "Not loaded"
 msgstr "未載入"
@@ -14315,9 +14318,6 @@ msgstr "設定專案…"
 msgid "Set Run"
 msgstr "設定執行命令"
 
-msgid "Set the model and language for the Superset mode in Superwhisper."
-msgstr "在 Superwhisper 中設定 Superset 模式的模型和語言。"
-
 msgid "Set this project"
 msgstr "設為此專案"
 
@@ -15486,6 +15486,9 @@ msgstr "iPhone 上的 Superset Mobile 終端"
 
 msgid "Superset Mobile, cloud workspaces, automations, and priority support."
 msgstr "Superset Mobile、雲端工作區、自動化與優先支援。"
+
+msgid "Superset mode in Superwhisper"
+msgstr "Superwhisper 中的 Superset 模式"
 
 msgid "Superset mode needs setup"
 msgstr "Superset 模式需要設定"
@@ -16876,9 +16879,6 @@ msgstr "揪出那個不穩定的測試…"
 
 msgid "Tracking"
 msgstr "已追蹤"
-
-msgid "Transcribe mobile dictation on {hostName}."
-msgstr "在 {hostName} 上轉錄行動聽寫。"
 
 msgid "Transcription failed"
 msgstr "轉錄失敗"

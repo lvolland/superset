@@ -97,10 +97,7 @@ export function useHostDictation({
 	});
 	const session = sessionFor(draftKey);
 	const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
-	const engine = dictationEngineFor(
-		target,
-		query.isError || query.isFetching ? undefined : query.data,
-	);
+	const engine = dictationEngineFor(target, query);
 
 	const errorText = (error: unknown) => {
 		const kind = (error as { data?: { dictation?: { kind?: string } } })?.data

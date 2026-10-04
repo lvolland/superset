@@ -151,3 +151,33 @@ describe("settings search - mobile rollout", () => {
 		).toBe(1);
 	});
 });
+
+describe("settings search - Superwhisper", () => {
+	it.each([
+		"Superwhisper",
+		"mobile dictation",
+		"transcription",
+		"Mac",
+	])("finds the dictation setting in Connections for %s", (searchQuery) => {
+		const results = searchSettings(searchQuery);
+		expect(
+			results.find(
+				(item) => item.id === SETTING_ITEM_ID.CONNECTIONS_SUPERWHISPER,
+			)?.section,
+		).toBe("connections");
+		expect(
+			getVisibleItemsForSection({
+				section: "connections",
+				searchQuery,
+				isV2: true,
+			}),
+		).toContain(SETTING_ITEM_ID.CONNECTIONS_SUPERWHISPER);
+		expect(
+			getVisibleItemsForSection({
+				section: "connections",
+				searchQuery,
+				isV2: false,
+			}),
+		).not.toContain(SETTING_ITEM_ID.CONNECTIONS_SUPERWHISPER);
+	});
+});

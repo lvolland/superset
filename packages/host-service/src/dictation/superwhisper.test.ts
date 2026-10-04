@@ -34,10 +34,11 @@ function fixture(
 		failRestore?: boolean;
 		noLlm?: boolean;
 		ambiguous?: boolean;
+		activeMode?: string;
 	} = {},
 ) {
 	let now = 0;
-	let mode = "pro";
+	let mode = options.activeMode ?? "pro";
 	let clipboard = "original clipboard\n";
 	let submissions = 0;
 	const commands: string[][] = [];
@@ -185,6 +186,38 @@ describe("SuperwhisperAdapter", () => {
 		expect([...f.files.keys()].some((p) => p.startsWith("/temp/job/"))).toBe(
 			false,
 		);
+	});
+	it("uses UTF-8 for clipboard commands and preserves multilingual text", async () => {
+		const f = fixture();
+		const run = f.deps.run;
+		const text = "Été à Tokyo 東京\n";
+		let copied = "";
+		f.deps.run = async (command, args, options) => {
+			if (command.endsWith("pbpaste") || command.endsWith("pbcopy")) {
+				expect(options).toMatchObject({
+					env: { LC_ALL: "en_US.UTF-8", PATH: process.env.PATH },
+				});
+				if (command.endsWith("pbpaste")) return text;
+				copied = options.input ?? "";
+			}
+			return run(command, args, options);
+		};
+		await f.adapter.transcribe(audio, "audio/mp4");
+		expect(copied).toBe(text);
+	});
+	it.each([
+		false,
+		true,
+	])("restores default when Superset was already active (timeout: %s)", async (timeout) => {
+		const f = fixture({ activeMode: "superset", timeout });
+		if (timeout) {
+			await expect(
+				f.adapter.transcribe(audio, "audio/mp4"),
+			).rejects.toMatchObject({ kind: "TIMEOUT" });
+		} else {
+			await f.adapter.transcribe(audio, "audio/mp4");
+		}
+		expect(f.mode()).toBe("default");
 	});
 	it("passes integer command timeouts with a fractional monotonic clock", async () => {
 		const f = fixture();

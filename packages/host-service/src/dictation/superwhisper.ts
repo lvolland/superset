@@ -32,7 +32,7 @@ export interface SuperwhisperDependencies {
 	run(
 		command: string,
 		args: string[],
-		options: { timeoutMs: number; input?: string },
+		options: { timeoutMs: number; input?: string; env?: NodeJS.ProcessEnv },
 	): Promise<string>;
 	now(): number;
 	sleep(ms: number): Promise<void>;
@@ -45,12 +45,17 @@ export const systemSuperwhisperDependencies: SuperwhisperDependencies = {
 	fs,
 	now: () => performance.now(),
 	sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
-	run: (command, args, { timeoutMs, input }) =>
+	run: (command, args, { timeoutMs, input, env }) =>
 		new Promise((resolve, reject) => {
 			const child = execFile(
 				command,
 				args,
-				{ timeout: timeoutMs, killSignal: "SIGKILL", maxBuffer: 1024 * 1024 },
+				{
+					timeout: timeoutMs,
+					killSignal: "SIGKILL",
+					maxBuffer: 1024 * 1024,
+					env,
+				},
 				(error, stdout) => {
 					if (error) reject(error);
 					else resolve(stdout);
@@ -240,7 +245,12 @@ export class SuperwhisperAdapter {
 		};
 		const command = async (name: string, args: string[]) => {
 			try {
-				return await this.deps.run(name, args, { timeoutMs: remaining() });
+				return await this.deps.run(name, args, {
+					timeoutMs: remaining(),
+					...(name === "/usr/bin/pbpaste" && {
+						env: { ...process.env, LC_ALL: "en_US.UTF-8" },
+					}),
+				});
 			} catch (error) {
 				remaining();
 				throw error;
@@ -316,6 +326,7 @@ export class SuperwhisperAdapter {
 					"MODE_NOT_READY",
 					"Cannot read the active Superwhisper mode",
 				);
+			if (originalMode === "superset") originalMode = "default";
 			modeChanged = true;
 			await command("/usr/bin/open", [
 				"-g",
@@ -397,6 +408,7 @@ export class SuperwhisperAdapter {
 					await this.deps.run("/usr/bin/pbcopy", [], {
 						timeoutMs: RESTORE_TIMEOUT_MS,
 						input: clipboard,
+						env: { ...process.env, LC_ALL: "en_US.UTF-8" },
 					});
 				} catch {
 					restoreFailed = true;

@@ -20,11 +20,11 @@ type Snapshot =
 
 export function dictationEngineFor(
 	target: DictationTarget | null,
-	settings: { enabled: boolean } | undefined,
+	settings: { data: { enabled: boolean } | undefined; isPending: boolean },
 ): "apple" | "file" | "waiting" {
 	if (!target) return "apple";
-	if (!settings) return "waiting";
-	return settings.enabled ? "file" : "apple";
+	if (settings.isPending || !settings.data) return "waiting";
+	return settings.data.enabled ? "file" : "apple";
 }
 
 export function createDictationSession(dependencies: {

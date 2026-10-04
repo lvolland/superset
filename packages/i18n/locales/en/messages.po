@@ -8339,9 +8339,6 @@ msgstr "Install plugin"
 msgid "Install Superset MCP in your client"
 msgstr "Install Superset MCP in your client"
 
-msgid "Install Superwhisper"
-msgstr "Install Superwhisper"
-
 msgid "Install the desktop app"
 msgstr "Install the desktop app"
 
@@ -9606,6 +9603,9 @@ msgstr "model"
 msgid "Model"
 msgstr "Model"
 
+msgid "Model and language"
+msgstr "Model and language"
+
 msgid "Model context usage"
 msgstr "Model context usage"
 
@@ -10702,6 +10702,9 @@ msgstr "Not granted"
 
 msgid "Not included"
 msgstr "Not included"
+
+msgid "Not installed"
+msgstr "Not installed"
 
 msgid "Not loaded"
 msgstr "Not loaded"
@@ -14315,9 +14318,6 @@ msgstr "Set project…"
 msgid "Set Run"
 msgstr "Set Run"
 
-msgid "Set the model and language for the Superset mode in Superwhisper."
-msgstr "Set the model and language for the Superset mode in Superwhisper."
-
 msgid "Set this project"
 msgstr "Set this project"
 
@@ -15486,6 +15486,9 @@ msgstr "Superset Mobile terminal on iPhone"
 
 msgid "Superset Mobile, cloud workspaces, automations, and priority support."
 msgstr "Superset Mobile, cloud workspaces, automations, and priority support."
+
+msgid "Superset mode in Superwhisper"
+msgstr "Superset mode in Superwhisper"
 
 msgid "Superset mode needs setup"
 msgstr "Superset mode needs setup"
@@ -16876,9 +16879,6 @@ msgstr "Track down that flaky test…"
 
 msgid "Tracking"
 msgstr "Tracking"
-
-msgid "Transcribe mobile dictation on {hostName}."
-msgstr "Transcribe mobile dictation on {hostName}."
 
 msgid "Transcription failed"
 msgstr "Transcription failed"

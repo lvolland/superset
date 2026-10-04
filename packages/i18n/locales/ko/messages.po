@@ -8339,9 +8339,6 @@ msgstr "플러그인 설치"
 msgid "Install Superset MCP in your client"
 msgstr "클라이언트에 Superset MCP 설치하기"
 
-msgid "Install Superwhisper"
-msgstr "Superwhisper 설치"
-
 msgid "Install the desktop app"
 msgstr "데스크톱 앱 설치"
 
@@ -9606,6 +9603,9 @@ msgstr "모델"
 msgid "Model"
 msgstr "모델"
 
+msgid "Model and language"
+msgstr "모델 및 언어"
+
 msgid "Model context usage"
 msgstr "모델 컨텍스트 사용량"
 
@@ -10702,6 +10702,9 @@ msgstr "허용 안 됨"
 
 msgid "Not included"
 msgstr "미포함"
+
+msgid "Not installed"
+msgstr "설치되지 않음"
 
 msgid "Not loaded"
 msgstr "로드 안 됨"
@@ -14315,9 +14318,6 @@ msgstr "프로젝트 설정…"
 msgid "Set Run"
 msgstr "실행 설정"
 
-msgid "Set the model and language for the Superset mode in Superwhisper."
-msgstr "Superwhisper에서 Superset 모드의 모델과 언어를 설정하세요."
-
 msgid "Set this project"
 msgstr "이 프로젝트로 설정"
 
@@ -15486,6 +15486,9 @@ msgstr "iPhone의 Superset Mobile 터미널"
 
 msgid "Superset Mobile, cloud workspaces, automations, and priority support."
 msgstr "Superset Mobile, 클라우드 워크스페이스, 자동화, 우선 지원."
+
+msgid "Superset mode in Superwhisper"
+msgstr "Superwhisper의 Superset 모드"
 
 msgid "Superset mode needs setup"
 msgstr "Superset 모드를 설정해야 합니다"
@@ -16876,9 +16879,6 @@ msgstr "불안정한 테스트 추적하기…"
 
 msgid "Tracking"
 msgstr "추적 기간"
-
-msgid "Transcribe mobile dictation on {hostName}."
-msgstr "{hostName}에서 모바일 받아쓰기를 텍스트로 변환합니다."
 
 msgid "Transcription failed"
 msgstr "전사 실패"

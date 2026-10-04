@@ -8339,9 +8339,6 @@ msgstr "Установить плагин"
 msgid "Install Superset MCP in your client"
 msgstr "Установите Superset MCP в своём клиенте"
 
-msgid "Install Superwhisper"
-msgstr "Установить Superwhisper"
-
 msgid "Install the desktop app"
 msgstr "Установите десктопное приложение"
 
@@ -9606,6 +9603,9 @@ msgstr "модель"
 msgid "Model"
 msgstr "Модель"
 
+msgid "Model and language"
+msgstr "Модель и язык"
+
 msgid "Model context usage"
 msgstr "Использование контекста модели"
 
@@ -10702,6 +10702,9 @@ msgstr "Не выдано"
 
 msgid "Not included"
 msgstr "Не входит"
+
+msgid "Not installed"
+msgstr "Не установлено"
 
 msgid "Not loaded"
 msgstr "Не загружено"
@@ -14315,9 +14318,6 @@ msgstr "Назначить проект…"
 msgid "Set Run"
 msgstr "Задать запуск"
 
-msgid "Set the model and language for the Superset mode in Superwhisper."
-msgstr "Настройте модель и язык для режима Superset в Superwhisper."
-
 msgid "Set this project"
 msgstr "Назначить этот проект"
 
@@ -15486,6 +15486,9 @@ msgstr "Терминал Superset Mobile на iPhone"
 
 msgid "Superset Mobile, cloud workspaces, automations, and priority support."
 msgstr "Superset Mobile, облачные рабочие пространства, автоматизации и приоритетная поддержка."
+
+msgid "Superset mode in Superwhisper"
+msgstr "Режим Superset в Superwhisper"
 
 msgid "Superset mode needs setup"
 msgstr "Режим Superset требует настройки"
@@ -16876,9 +16879,6 @@ msgstr "Найди причину нестабильного теста…"
 
 msgid "Tracking"
 msgstr "Отслеживание"
-
-msgid "Transcribe mobile dictation on {hostName}."
-msgstr "Расшифровывать мобильную диктовку на {hostName}."
 
 msgid "Transcription failed"
 msgstr "Ошибка расшифровки"

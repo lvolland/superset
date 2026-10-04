@@ -155,7 +155,8 @@ final class ComposerDictation {
 
   @MainActor
   func finishOnDetach() {
-    if case .recording = state { stop() }
+    if activeEngine == .file { settle(with: nil) }
+    else if case .recording = state { stop() }
     else if case .preparing = state { settle(with: nil) }
   }
 

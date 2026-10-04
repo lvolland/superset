@@ -146,7 +146,9 @@ describe("host Superwhisper procedures", () => {
 			router: createDictationRouter(f.adapter),
 			createContext: () => f.ctx,
 		});
-		const body = await response.json();
+		const body = (await response.json()) as {
+			error: { json: { data: { dictation: { kind: string } } } };
+		};
 		expect(body.error.json.data.dictation).toEqual({ kind: "DISABLED" });
 	});
 	it("requires authentication for new procedures", async () => {
