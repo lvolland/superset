@@ -20,8 +20,10 @@ export const RowHeader = memo(function RowHeader({
 }: RowHeaderProps) {
 	return (
 		<div
+			id={`spreadsheet-row-${row}-header`}
 			role="rowheader"
 			aria-colindex={1}
+			aria-selected={selected}
 			className={cn(
 				"absolute left-0 border-border border-r border-b pr-1.5 text-right text-[11px] tabular-nums leading-6",
 				selected

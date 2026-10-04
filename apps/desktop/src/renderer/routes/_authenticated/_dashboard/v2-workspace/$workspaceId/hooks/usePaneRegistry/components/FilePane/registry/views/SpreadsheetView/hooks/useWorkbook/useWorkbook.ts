@@ -27,7 +27,14 @@ export function useWorkbook(
 			setState({ status: "loading" });
 			return;
 		}
-		const client = new SheetWorkerClient(createWorker());
+		let worker: Worker;
+		try {
+			worker = createWorker();
+		} catch {
+			setState({ status: "error", reason: null });
+			return;
+		}
+		const client = new SheetWorkerClient(worker);
 		let cancelled = false;
 		setState({ status: "loading" });
 		client.request({ type: "open", source }).then(

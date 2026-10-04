@@ -149,7 +149,7 @@ export function parseOpenDocumentFrozenPanes(
 function openDocumentPanesByName(settingsXml: string): Map<string, FrozenPane> {
 	const result = new Map<string, FrozenPane>();
 	const tables =
-		/<(?:\w+:)?config-item-map-named\b[^>]*\bname=(["'])Tables\1[^>]*>/.exec(
+		/<(?:\w+:)?config-item-map-named\b[^>]*\bname\s*=\s*(["'])Tables\1[^>]*>/.exec(
 			settingsXml,
 		);
 	if (!tables) return result;

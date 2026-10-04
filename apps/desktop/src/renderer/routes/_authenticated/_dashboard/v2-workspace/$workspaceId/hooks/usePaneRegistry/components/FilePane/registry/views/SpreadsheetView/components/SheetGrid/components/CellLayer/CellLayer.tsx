@@ -22,6 +22,7 @@ interface CellLayerProps {
 	getCell: (row: number, col: number) => GridCell | null | undefined;
 	matchState: (row: number, col: number) => MatchState;
 	selection: CellRange | null;
+	ariaSelection: CellRange;
 	active: CellRange;
 	className?: string;
 }
@@ -49,6 +50,7 @@ export function CellLayer({
 	getCell,
 	matchState,
 	selection,
+	ariaSelection,
 	active,
 	className,
 }: CellLayerProps) {
@@ -98,6 +100,8 @@ export function CellLayer({
 	const selectionPart =
 		selection && rendered ? intersect(selection, rendered) : null;
 	const activePart = rendered ? intersect(active, rendered) : null;
+	const isSelected = (range: CellRange) =>
+		intersect(ariaSelection, range) !== null;
 
 	return (
 		<div
@@ -117,48 +121,53 @@ export function CellLayer({
 						}}
 					/>
 				))}
-			{rows.map((row) => (
-				// A static row adds no box: its cells stay placed by the layer.
-				<div key={row} role="row" aria-rowindex={row + 2}>
-					{cols.map((col) => {
-						if (covered(row, col)) return null;
-						return (
-							<SheetCell
-								key={col}
-								ariaColIndex={col + 2}
-								top={HEADER_HEIGHT + row * ROW_HEIGHT - originY}
-								left={gutter + (starts[col] ?? 0) - originX}
-								width={(starts[col + 1] ?? 0) - (starts[col] ?? 0) - 1}
-								height={ROW_HEIGHT - 1}
-								cell={getCell(row, col)}
-								match={matchState(row, col)}
-							/>
-						);
-					})}
-				</div>
-			))}
+			{rows.flatMap((row) =>
+				cols.map((col) => {
+					if (covered(row, col)) return null;
+					return (
+						<SheetCell
+							key={`${row}:${col}`}
+							id={`spreadsheet-row-${row}-cell-${col}`}
+							ariaColIndex={col + 2}
+							selected={isSelected({
+								top: row,
+								left: col,
+								bottom: row,
+								right: col,
+							})}
+							top={HEADER_HEIGHT + row * ROW_HEIGHT - originY}
+							left={gutter + (starts[col] ?? 0) - originX}
+							width={(starts[col + 1] ?? 0) - (starts[col] ?? 0) - 1}
+							height={ROW_HEIGHT - 1}
+							cell={getCell(row, col)}
+							match={matchState(row, col)}
+						/>
+					);
+				}),
+			)}
 			{ownMerges.map(({ merge, part }) => {
 				const rect = rectOf(part);
 				const ownsAnchor = part.top === merge.top && part.left === merge.left;
 				return (
-					<div
+					<SheetCell
 						key={`merge:${merge.top}:${merge.left}`}
-						role="row"
-						aria-rowindex={part.top + 2}
-					>
-						<SheetCell
-							ariaColIndex={part.left + 2}
-							rowSpan={part.bottom - part.top + 1}
-							colSpan={part.right - part.left + 1}
-							top={rect.top}
-							left={rect.left}
-							width={rect.width - 1}
-							height={rect.height - 1}
-							cell={ownsAnchor ? getCell(merge.top, merge.left) : null}
-							match={ownsAnchor ? matchState(merge.top, merge.left) : "none"}
-							merged
-						/>
-					</div>
+						id={
+							ownsAnchor
+								? `spreadsheet-row-${merge.top}-cell-${merge.left}`
+								: undefined
+						}
+						ariaColIndex={part.left + 2}
+						selected={isSelected(merge)}
+						rowSpan={part.bottom - part.top + 1}
+						colSpan={part.right - part.left + 1}
+						top={rect.top}
+						left={rect.left}
+						width={rect.width - 1}
+						height={rect.height - 1}
+						cell={ownsAnchor ? getCell(merge.top, merge.left) : null}
+						match={ownsAnchor ? matchState(merge.top, merge.left) : "none"}
+						merged
+					/>
 				);
 			})}
 			{selectionPart && (

@@ -43,6 +43,10 @@ const LITERAL_MARKS = /[\ue000-\uf8ff]/g;
 const TSV_NEEDS_QUOTES = /[\t\n\r"]/;
 const DELIMITED_HEADER: FrozenPane = { rows: 1, cols: 0 };
 
+export function presentIndexes<T>(values: T[]): number[] {
+	return Object.keys(values).map(Number);
+}
+
 export interface CopyLimits {
 	maxCells: number;
 	maxChars: number;
@@ -121,10 +125,10 @@ export function openWorkbook(source: WorkbookSource): WorkbookModel {
 			const matches: number[] = [];
 			const rows = sheets[sheetIndex]?.rows;
 			if (!needle || !rows) return { matches, truncated: false };
-			for (let r = 0; r < rows.length; r += 1) {
+			for (const r of presentIndexes(rows)) {
 				const row = rows[r];
 				if (!row) continue;
-				for (let c = 0; c < row.length; c += 1) {
+				for (const c of presentIndexes(row)) {
 					const text = display(row[c], numbers);
 					if (!text) continue;
 					const haystack = caseSensitive ? text : text.toLowerCase();

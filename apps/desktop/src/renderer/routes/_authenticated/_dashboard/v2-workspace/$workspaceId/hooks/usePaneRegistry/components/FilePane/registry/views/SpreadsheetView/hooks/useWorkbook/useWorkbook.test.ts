@@ -45,3 +45,19 @@ test("a workbook that fails to open releases its worker at once", async () => {
 	expect(hook.result.current).toEqual({ status: "error", reason: "password" });
 	expect(terminated).toBe(1);
 });
+
+test("a synchronous worker factory failure enters the error state", async () => {
+	const source: WorkbookSource = {
+		kind: "bytes",
+		bytes: new Uint8Array(),
+		fileName: "broken.xlsx",
+	};
+	const createWorker = () => {
+		throw new Error("Worker construction failed");
+	};
+	const hook = renderHook(() => useWorkbook(source, createWorker));
+	await act(async () => {
+		await Promise.resolve();
+	});
+	expect(hook.result.current).toEqual({ status: "error", reason: null });
+});

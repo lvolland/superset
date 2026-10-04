@@ -8,7 +8,9 @@ export type MatchState = "none" | "match" | "active";
 
 interface SheetCellProps {
 	/** 1-based, counting the row header column. */
+	id?: string;
 	ariaColIndex: number;
+	selected: boolean;
 	rowSpan?: number;
 	colSpan?: number;
 	top: number;
@@ -28,7 +30,9 @@ const ALIGN: Record<GridCell["kind"], string> = {
 };
 
 export const SheetCell = memo(function SheetCell({
+	id,
 	ariaColIndex,
+	selected,
 	rowSpan,
 	colSpan,
 	top,
@@ -41,8 +45,10 @@ export const SheetCell = memo(function SheetCell({
 }: SheetCellProps) {
 	return (
 		<div
+			id={id}
 			role="gridcell"
 			aria-colindex={ariaColIndex}
+			aria-selected={selected}
 			aria-rowspan={rowSpan}
 			aria-colspan={colSpan}
 			className={cn(

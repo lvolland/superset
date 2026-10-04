@@ -1,5 +1,9 @@
 import { expect, test } from "bun:test";
-import { parseFrozenPane, readFrozenPanes } from "./frozenPanes";
+import {
+	parseFrozenPane,
+	parseOpenDocumentFrozenPanes,
+	readFrozenPanes,
+} from "./frozenPanes";
 
 test("reads frozen rows and columns from the first sheet view only", () => {
 	expect(
@@ -64,4 +68,11 @@ test("skips the binary parts of an xlsb", () => {
 			"xl/workbook.bin": { content: new Uint8Array([0x83, 0x01, 0x00]) },
 		}),
 	).toEqual([]);
+});
+
+test("reads OpenDocument frozen panes when attributes have space around equals", () => {
+	const settings = `<config:config-item-map-named config:name = "Tables"><config:config-item-map-entry config:name = "Sheet1"><config:config-item config:name = "VerticalSplitMode">2</config:config-item><config:config-item config:name = "VerticalSplitPosition">3</config:config-item><config:config-item config:name = "HorizontalSplitMode">2</config:config-item><config:config-item config:name = "HorizontalSplitPosition">2</config:config-item></config:config-item-map-entry></config:config-item-map-named>`;
+	expect(parseOpenDocumentFrozenPanes(settings, ["Sheet1"])).toEqual([
+		{ rows: 3, cols: 2 },
+	]);
 });

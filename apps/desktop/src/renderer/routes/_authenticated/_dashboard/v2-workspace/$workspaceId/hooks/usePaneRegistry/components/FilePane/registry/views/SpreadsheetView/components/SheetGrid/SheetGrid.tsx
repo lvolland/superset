@@ -398,6 +398,7 @@ export function SheetGrid({
 		getCell,
 		matchState,
 		selection: isMultiCell ? selected : null,
+		ariaSelection: selected,
 		active,
 	};
 	const columnHeader = (col: number, left: number) => (
@@ -411,8 +412,26 @@ export function SheetGrid({
 			onResize={onColumnResize}
 		/>
 	);
-	const rowHeader = (row: number, top: number) => (
-		<div key={row} role="row" aria-rowindex={row + 2}>
+	const ariaCellId = (row: number, col: number) => {
+		const merge = merges.find(
+			(range) =>
+				row >= range.top &&
+				row <= range.bottom &&
+				col >= range.left &&
+				col <= range.right,
+		);
+		if (merge && merge.top !== row) return null;
+		return `spreadsheet-row-${merge?.top ?? row}-cell-${merge?.left ?? col}`;
+	};
+	const rowHeader = (row: number, top: number, cols: number[]) => (
+		<div
+			key={row}
+			role="row"
+			aria-rowindex={row + 2}
+			aria-owns={Array.from(
+				new Set(cols.map((col) => ariaCellId(row, col)).filter(Boolean)),
+			).join(" ")}
+		>
 			<RowHeader
 				row={row}
 				top={top}
@@ -481,7 +500,10 @@ export function SheetGrid({
 								)}
 							</div>
 							{pinnedRows.map((row) =>
-								rowHeader(row, HEADER_HEIGHT + row * ROW_HEIGHT),
+								rowHeader(row, HEADER_HEIGHT + row * ROW_HEIGHT, [
+									...pinnedCols,
+									...scrollCols,
+								]),
 							)}
 							{frozenRows > 0 && frozenCols > 0 && (
 								<CellLayer
@@ -546,7 +568,10 @@ export function SheetGrid({
 						style={{ width: stickyLeft, height: totalHeight - stickyTop }}
 					>
 						{scrollRows.map((row) =>
-							rowHeader(row, (row - frozenRows) * ROW_HEIGHT),
+							rowHeader(row, (row - frozenRows) * ROW_HEIGHT, [
+								...pinnedCols,
+								...scrollCols,
+							]),
 						)}
 						{frozenCols > 0 && (
 							<CellLayer
@@ -575,7 +600,7 @@ export function SheetGrid({
 			<div className="pointer-events-none absolute inset-0 z-30 peer-focus-visible:ring-1 peer-focus-visible:ring-ring peer-focus-visible:ring-inset" />
 			<div className="sr-only" aria-live="polite" aria-atomic>
 				{isMultiCell ? rangeAddress(selected) : cellAddress(selection.anchor)}{" "}
-				{activeCell?.text}
+				{activeCell?.formula ?? activeCell?.text}
 			</div>
 		</div>
 	);

@@ -3,6 +3,7 @@ import { getNumberSeparators } from "@superset/i18n/format";
 import { CFB, utils, type WorkSheet, write } from "xlsx";
 import {
 	openWorkbook,
+	presentIndexes,
 	UnreadableWorkbookError,
 	unreadableReason,
 } from "./workbookModel";
@@ -48,6 +49,13 @@ function withSheetXml(
 
 const text = (source: string, fileName = "a.csv") =>
 	openWorkbook({ kind: "text", fileName, text: source });
+
+test("lists only populated sparse array indexes", () => {
+	const entries: string[] = [];
+	entries[3] = "a";
+	entries[10_000] = "b";
+	expect(presentIndexes(entries)).toEqual([3, 10_000]);
+});
 
 describe("openWorkbook", () => {
 	test("reads a semicolon CSV with quotes and a BOM, keeping the text as written", () => {
