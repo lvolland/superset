@@ -545,9 +545,10 @@ listing. Workspaces branch off a host's checkout.
   name: string;
   repo: string;
   path: string;
+  collection: string | null;
   tags: string[];
 }>`}
-	humanColumns={["NAME", "REPO", "PATH", "TAGS", "ID"]}
+	humanColumns={["NAME", "REPO", "PATH", "COLLECTION", "TAGS", "ID"]}
 	quiet="project IDs"
 >
 List projects on a host. Defaults to this machine; pass `--host <id>` for

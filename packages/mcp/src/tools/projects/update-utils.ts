@@ -1,4 +1,7 @@
-import { normalizeWorkspaceTag, PROJECTS_TAG_SCOPE } from "@superset/shared/workspace-tags";
+import {
+	normalizeWorkspaceTag,
+	PROJECTS_TAG_SCOPE,
+} from "@superset/shared/workspace-tags";
 
 type ProjectCollectionSetting = {
 	scope: string;

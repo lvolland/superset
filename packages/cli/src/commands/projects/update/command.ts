@@ -4,10 +4,10 @@ import { command } from "../../../lib/command";
 import { resolveHostFilter, resolveHostTarget } from "../../../lib/host-target";
 import {
 	isMissingProcedureError,
-	projectCollectionsUnavailable,
-	validateProjectCollectionName,
-	resolveProjectCollectionName,
 	type ProjectCollectionSetting,
+	projectCollectionsUnavailable,
+	resolveProjectCollectionName,
+	validateProjectCollectionName,
 } from "../collection";
 
 export default command({
@@ -57,15 +57,19 @@ export default command({
 		} else {
 			let settings: ProjectCollectionSetting[];
 			try {
-				settings = (await target.client.tagFolders.list.query()) as ProjectCollectionSetting[];
+				settings =
+					(await target.client.tagFolders.list.query()) as ProjectCollectionSetting[];
 			} catch (error) {
-				if (isMissingProcedureError(error)) throw projectCollectionsUnavailable();
+				if (isMissingProcedureError(error))
+					throw projectCollectionsUnavailable();
 				throw error;
 			}
-			tags = [resolveProjectCollectionName(options.collection as string, settings)];
+			tags = [
+				resolveProjectCollectionName(options.collection as string, settings),
+			];
 		}
 		const projectId = args.projectId as string;
-		let result;
+		let result: unknown;
 		try {
 			result = await target.client.project.setTags.mutate({ projectId, tags });
 		} catch (error) {

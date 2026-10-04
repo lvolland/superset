@@ -5,10 +5,10 @@ import { resolveHostFilter, resolveHostTarget } from "../../../lib/host-target";
 import {
 	collectionDisplayName,
 	isMissingProcedureError,
+	type ProjectCollectionSetting,
 	projectCollectionsUnavailable,
 	resolveProjectCollectionName,
 	validateProjectCollectionName,
-	type ProjectCollectionSetting,
 } from "../collection";
 
 export default command({
@@ -45,18 +45,26 @@ export default command({
 			userJwt: ctx.bearer,
 			api: ctx.api,
 		});
-		let settings: ProjectCollectionSetting[];
+		const projects = await target.client.project.list.query();
+		let settings: ProjectCollectionSetting[] = [];
 		try {
-			settings = (await target.client.tagFolders.list.query()) as ProjectCollectionSetting[];
+			settings =
+				(await target.client.tagFolders.list.query()) as ProjectCollectionSetting[];
 		} catch (error) {
-			if (isMissingProcedureError(error)) throw projectCollectionsUnavailable();
-			throw error;
+			if (!isMissingProcedureError(error)) throw error;
+			if (options.collection !== undefined)
+				throw projectCollectionsUnavailable();
+		}
+		if (
+			options.collection !== undefined &&
+			!projects.every((project) => "tags" in project)
+		) {
+			throw projectCollectionsUnavailable();
 		}
 		const collection =
 			options.collection === undefined
 				? null
 				: resolveProjectCollectionName(options.collection, settings);
-		const projects = await target.client.project.list.query();
 
 		return projects
 			.filter(

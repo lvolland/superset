@@ -114,13 +114,14 @@ server lifecycle is handled by top-level `start`, `status`, and `stop`.
 ## Projects Commands
 
 `projects list` accepts `--host <id>` or `--local`, plus `--collection <name>`
-to filter by a normalized collection tag. Its JSON output includes `tags`, and
-its human output includes a `TAGS` column.
+to filter by a collection. It resolves a displayed collection name before a
+normalized tag. Its JSON output includes `collection` and `tags`, and its human
+output includes `COLLECTION` and `TAGS` columns.
 
 `projects update <projectId>` accepts `--host <id>` or `--local` and exactly
 one collection change: `--collection <name>` places the project in that
-collection, while `--clear-collection` removes it. Collection names are
-trimmed and lowercased before storage.
+collection, while `--clear-collection` removes it. It resolves a displayed
+collection name before a normalized tag.
 
 ## Global Options
 

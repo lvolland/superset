@@ -4,6 +4,7 @@ const PROJECT_ID = "b502bf30-8693-4815-be65-795035e0ce5f";
 const setTagsCalls: Array<{ projectId: string; tags: string[] }> = [];
 const listCalls: Array<undefined> = [];
 let missingProcedure: string | undefined;
+let projectTagsSupported = true;
 
 const projects = [
 	{
@@ -31,7 +32,9 @@ mock.module("../../../lib/host-target", () => ({
 				list: {
 					query: async () => {
 						listCalls.push(undefined);
-						return projects;
+						return projectTagsSupported
+							? projects
+							: projects.map(({ tags: _tags, ...project }) => project);
 					},
 				},
 				setTags: {
@@ -46,13 +49,18 @@ mock.module("../../../lib/host-target", () => ({
 			},
 			tagFolders: {
 				list: {
-					query: async () => [
-						{
-							scope: "projects",
-							tag: "dibsteur",
-							displayName: "Client work",
-						},
-					],
+					query: async () => {
+						if (missingProcedure === "tagFolders.list") {
+							throw new Error("No procedure found on path tagFolders.list");
+						}
+						return [
+							{
+								scope: "projects",
+								tag: "dibsteur",
+								displayName: "Client work",
+							},
+						];
+					},
 				},
 			},
 		},
@@ -93,6 +101,7 @@ afterEach(() => {
 	setTagsCalls.length = 0;
 	listCalls.length = 0;
 	missingProcedure = undefined;
+	projectTagsSupported = true;
 });
 
 describe("projects update", () => {
@@ -101,7 +110,9 @@ describe("projects update", () => {
 			data: { tags: string[] };
 		};
 
-		expect(setTagsCalls).toEqual([{ projectId: PROJECT_ID, tags: ["dibsteur"] }]);
+		expect(setTagsCalls).toEqual([
+			{ projectId: PROJECT_ID, tags: ["dibsteur"] },
+		]);
 		expect(result.data.tags).toEqual(["dibsteur"]);
 	});
 
@@ -167,5 +178,25 @@ describe("projects list", () => {
 			/Invalid --collection/,
 		);
 		expect(listCalls).toEqual([]);
+	});
+
+	test("lists projects when an older host has no tag folder procedure", async () => {
+		missingProcedure = "tagFolders.list";
+
+		const result = (await list({})) as Array<{ name: string; tags: string[] }>;
+
+		expect(result.map((project) => project.name)).toEqual([
+			"Roger",
+			"Superset",
+		]);
+		expect(result.every((project) => Array.isArray(project.tags))).toBe(true);
+	});
+
+	test("explains when filtering on a host without project tags", async () => {
+		projectTagsSupported = false;
+
+		await expect(list({ collection: "Client work" })).rejects.toThrow(
+			"does not support project collections",
+		);
 	});
 });

@@ -14,7 +14,8 @@ const options = {
 };
 
 test("resolves a collection display name before setting its tag", async () => {
-	const requests: Array<{ procedure: string; method: string; input: unknown }> = [];
+	const requests: Array<{ procedure: string; method: string; input: unknown }> =
+		[];
 
 	await updateProjectCollection(
 		{ hostId: "host-1", id: PROJECT_ID, collection: "Client work" },
@@ -45,7 +46,8 @@ test("resolves a collection display name before setting its tag", async () => {
 });
 
 test("removes a project from its collection", async () => {
-	const requests: Array<{ procedure: string; method: string; input: unknown }> = [];
+	const requests: Array<{ procedure: string; method: string; input: unknown }> =
+		[];
 
 	await updateProjectCollection(
 		{ hostId: "host-1", id: PROJECT_ID, collection: null },
