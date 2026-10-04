@@ -49,6 +49,7 @@ function fixture(
 		inputDuration?: number;
 		restoreDelay?: number;
 		userClipboard?: string;
+		superwhisperClipboard?: string;
 		staleLock?: boolean;
 	} = {},
 ) {
@@ -179,6 +180,8 @@ function fixture(
 			}
 			if (command.endsWith("open") && args[1]?.startsWith("superwhisper://")) {
 				const next = new URL(args[1]).searchParams.get("key") as string;
+				if (next !== "superset" && options.userClipboard !== undefined)
+					clipboard = options.userClipboard;
 				if (options.failRestore && next === "pro")
 					throw new Error("restore failed");
 				if (next === "pro" && options.restoreDelay) restoreAt = now;
@@ -198,7 +201,7 @@ function fixture(
 				submissions++;
 				submittedAt = now;
 				clipboard =
-					options.userClipboard ??
+					options.superwhisperClipboard ??
 					(options.timeout
 						? ""
 						: options.emptyResult
@@ -375,7 +378,7 @@ describe("SuperwhisperAdapter", () => {
 	it.each([
 		false,
 		true,
-	])("preserves Superset when it was already active (timeout: %s)", async (timeout) => {
+	])("restores default when Superset is active without a saved mode (timeout: %s)", async (timeout) => {
 		const f = fixture({ activeMode: "superset", timeout });
 		if (timeout) {
 			await expect(
@@ -384,7 +387,56 @@ describe("SuperwhisperAdapter", () => {
 		} else {
 			await f.adapter.transcribe(audio, "audio/mp4");
 		}
+		expect(f.mode()).toBe("default");
+	});
+	it("saves the original mode before activation and clears it after confirmed restoration", async () => {
+		const f = fixture({ restoreDelay: 500 });
+		const path = "/home/.superset-superwhisper.mode";
+		const run = f.deps.run;
+		f.deps.run = async (command, args, options) => {
+			if (command.endsWith("open") && args[1]?.startsWith("superwhisper://"))
+				expect(f.files.get(path)).toBe("pro");
+			if (command.endsWith("defaults") && f.mode() === "superset")
+				expect(f.files.get(path)).toBe("pro");
+			return run(command, args, options);
+		};
+		await f.adapter.transcribe(audio, "audio/mp4");
+		expect(f.mode()).toBe("pro");
+		expect(f.files.has(path)).toBe(false);
+	});
+	it("recovers the saved mode after a failed restoration in another adapter", async () => {
+		const options = { failRestore: true };
+		const f = fixture(options);
+		await f.adapter.transcribe(audio, "audio/mp4");
 		expect(f.mode()).toBe("superset");
+		expect(f.files.get("/home/.superset-superwhisper.mode")).toBe("pro");
+		options.failRestore = false;
+		await new SuperwhisperAdapter(f.deps).transcribe(audio, "audio/mp4");
+		expect(f.mode()).toBe("pro");
+		expect(f.files.has("/home/.superset-superwhisper.mode")).toBe(false);
+	});
+	it("keeps the saved mode until restoration is confirmed", async () => {
+		const f = fixture({ restoreDelay: 30_100 });
+		await f.adapter.transcribe(audio, "audio/mp4");
+		expect(f.mode()).toBe("superset");
+		expect(f.files.get("/home/.superset-superwhisper.mode")).toBe("pro");
+		expect(f.warnings).toHaveLength(1);
+	});
+	it("does not switch modes if saving the original mode fails", async () => {
+		const f = fixture();
+		const writeFile = f.deps.fs.writeFile;
+		f.deps.fs.writeFile = (async (path, ...args) => {
+			if (path === "/home/.superset-superwhisper.mode")
+				throw new Error("disk full");
+			return writeFile(path, ...args);
+		}) as typeof writeFile;
+		await expect(
+			f.adapter.transcribe(audio, "audio/mp4"),
+		).rejects.toMatchObject({
+			kind: "TRANSCRIPTION_FAILED",
+		});
+		expect(f.mode()).toBe("pro");
+		expect(f.commands.some((c) => c[0]?.endsWith("open"))).toBe(false);
 	});
 	it("passes integer command timeouts with a fractional monotonic clock", async () => {
 		const f = fixture();
@@ -428,6 +480,26 @@ describe("SuperwhisperAdapter", () => {
 		});
 		expect(f.mode()).toBe("pro");
 		expect(f.warnings).toEqual([]);
+	});
+	it("restores clipboard text after Superwhisper applies replacements", async () => {
+		const f = fixture({ superwhisperClipboard: "Replaced transcript\n" });
+		expect(await f.adapter.transcribe(audio, "audio/mp4")).toEqual({
+			text: "processed 1",
+		});
+		expect(f.clipboard()).toBe("original clipboard\n");
+	});
+	it("does not refresh the clipboard snapshot while waiting for LLM output", async () => {
+		const f = fixture({ llmMode: true, llmDelay: 500 });
+		const sleep = f.deps.sleep;
+		f.deps.sleep = async (ms) => {
+			await sleep(ms);
+			await f.deps.run("/usr/bin/pbcopy", [], {
+				timeoutMs: 1000,
+				input: "user copy",
+			});
+		};
+		await f.adapter.transcribe(audio, "audio/mp4");
+		expect(f.clipboard()).toBe("user copy");
 	});
 	it("preserves a copy made by the user during transcription", async () => {
 		const f = fixture({ userClipboard: "user copy" });

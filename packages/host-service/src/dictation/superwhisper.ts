@@ -377,10 +377,15 @@ export class SuperwhisperAdapter {
 		let directory: string | undefined;
 		let originalMode: string | undefined;
 		let clipboard: string | undefined;
+		let transcriptionClipboard: string | undefined;
+		let clipboardSnapshotTaken = false;
 		let modeChanged = false;
 		let textResult = "";
 		let hasResult = false;
-		const clipboardResults = new Set<string>();
+		const originalModePath = join(
+			this.deps.home,
+			".superset-superwhisper.mode",
+		);
 		let failure: unknown;
 		let restoreFailed = false;
 		try {
@@ -440,6 +445,21 @@ export class SuperwhisperAdapter {
 					"MODE_NOT_READY",
 					"Cannot read the active Superwhisper mode",
 				);
+			if (originalMode === "superset") {
+				let savedMode = "";
+				try {
+					savedMode = (
+						await this.deps.fs.readFile(originalModePath, "utf8")
+					).trim();
+				} catch (error) {
+					if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+				}
+				originalMode =
+					savedMode && savedMode !== "superset" ? savedMode : "default";
+			}
+			await this.deps.fs.writeFile(originalModePath, originalMode, {
+				mode: 0o600,
+			});
 			modeChanged = true;
 			await command("/usr/bin/open", [
 				"-g",
@@ -501,9 +521,14 @@ export class SuperwhisperAdapter {
 					);
 				const meta = matches[0];
 				if (meta) {
-					for (const text of [meta.result, meta.llmResult])
-						if (typeof text === "string" && text.trim())
-							clipboardResults.add(text);
+					if (clipboard !== undefined && !clipboardSnapshotTaken) {
+						clipboardSnapshotTaken = true;
+						try {
+							transcriptionClipboard = await command("/usr/bin/pbpaste", []);
+						} catch (error) {
+							if (error instanceof DictationError) throw error;
+						}
+					}
 					const llm =
 						typeof meta.llmResult === "string" ? meta.llmResult.trim() : "";
 					const raw = typeof meta.result === "string" ? meta.result.trim() : "";
@@ -543,6 +568,7 @@ export class SuperwhisperAdapter {
 			if (modeChanged && originalMode) {
 				try {
 					await this.restoreMode(originalMode);
+					await this.deps.fs.rm(originalModePath, { force: true });
 				} catch (error) {
 					restoreFailed = true;
 					this.deps.warn(
@@ -558,7 +584,7 @@ export class SuperwhisperAdapter {
 						timeoutMs: RESTORE_TIMEOUT_MS,
 						env,
 					});
-					if (!current || clipboardResults.has(current)) {
+					if (!current || current === transcriptionClipboard) {
 						await this.deps.run("/usr/bin/pbcopy", [], {
 							timeoutMs: RESTORE_TIMEOUT_MS,
 							input: clipboard,
