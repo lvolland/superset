@@ -114,3 +114,25 @@ test("placement store uses the public schema table identity", async () => {
 	const db = drizzle(h.sqlite);
 	expect(db.select().from(publicTable).all()[0]).toMatchObject(row);
 });
+
+test("rail positions survive reconciliation only while their project exists", () => {
+	const h = setup();
+	h.store().write(
+		[
+			{ ...row, key: "a", kind: "project" },
+			{ ...row, key: "rail:a", kind: "project" },
+			{ ...row, key: "rail:deleted", kind: "project" },
+		],
+		[],
+	);
+	h.store().reconcile(["a", "rail:a"]);
+	expect(
+		h
+			.store()
+			.list()
+			.map((row) => row.key)
+			.sort(),
+	).toEqual(["a", "rail:a"]);
+	h.store().reconcile([]);
+	expect(h.store().list()).toEqual([]);
+});

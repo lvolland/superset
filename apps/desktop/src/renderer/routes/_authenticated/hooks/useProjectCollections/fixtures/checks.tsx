@@ -15,7 +15,21 @@ const target = {
 	hostUrl: "local",
 	isLocal: true,
 };
-const projectHosts = [{ target, reachable: true, rows: [] }];
+const { normalizeHostProjectRow } = await import(
+	"renderer/hooks/host-projects/useHostProjects/useHostProjects.utils"
+);
+const projectHosts = [
+	{
+		target,
+		reachable: true,
+		rows: [] as ReturnType<typeof normalizeHostProjectRow>[],
+	},
+];
+let sidebarProjects: Array<{
+	projectId: string;
+	tabOrder: number;
+	isHidden: boolean;
+}> = [];
 const folderHosts = [
 	{
 		target,
@@ -79,11 +93,11 @@ const listUtils = {
 };
 const utils = { projectCollections: { list: listUtils } };
 mock.module("@tanstack/react-db", () => ({
-	useLiveQuery: () => ({ data: [] }),
+	useLiveQuery: () => ({ data: sidebarProjects }),
 }));
 mock.module("renderer/hooks/host-projects/useHostProjects", () => ({
 	useHostProjects: () => ({
-		projects: [],
+		projects: projectHosts.flatMap((host) => host.rows),
 		hostResults: projectHosts,
 		isReady: true,
 	}),
@@ -140,6 +154,25 @@ const { act, cleanup, render, waitFor } = await import(
 	"@testing-library/react"
 );
 const { useProjectCollections } = await import("../useProjectCollections");
+let isRail = false;
+mock.module("renderer/hooks/useActiveOrganizationId", () => ({
+	useActiveOrganizationId: () => "org",
+}));
+mock.module("renderer/stores/workspace-sidebar-state", () => ({
+	useWorkspaceSidebarStore: () => isRail,
+}));
+const { electronTrpc } = await import("renderer/lib/electron-trpc");
+Object.assign(electronTrpc, {
+	resourceMetrics: {
+		getSnapshot: {
+			useQuery: () => ({ data: null, refetch: () => {}, isFetching: false }),
+		},
+	},
+});
+const { useResourceSnapshot } = await import(
+	"../../../_dashboard/components/TopBar/components/ResourceConsumption/hooks/useResourceSnapshot/useResourceSnapshot"
+);
+const { renderHook } = await import("@testing-library/react");
 let hook: ReturnType<typeof useProjectCollections>;
 function Probe() {
 	hook = useProjectCollections();
@@ -195,4 +228,63 @@ test("restored workspace reveal waits for reconciliation and rapid chevrons keep
 	expect(invalidations).toEqual([]);
 	expect(localInvalidations).toEqual(["placements"]);
 	client.clear();
+});
+
+function rootProjectIds() {
+	return hook.rootItems
+		.filter((item) => item.type === "project")
+		.map((item) => item.project.id);
+}
+
+test("a new root project precedes persisted projects after renumbering", async () => {
+	const localHost = projectHosts[0];
+	if (!localHost) throw new Error("Missing local project host");
+	localHost.rows = ["a", "b", "new"].map((id) =>
+		normalizeHostProjectRow({ id, repoPath: `/${id}`, tags: [] }),
+	);
+	sidebarProjects = [
+		{ projectId: "a", tabOrder: 1, isHidden: false },
+		{ projectId: "b", tabOrder: 2, isHidden: false },
+		{ projectId: "new", tabOrder: 0, isHidden: false },
+	];
+	placements = [
+		{ key: "a", kind: "project", tabOrder: 0, isCollapsed: false },
+		{ key: "b", kind: "project", tabOrder: 1, isCollapsed: false },
+	];
+	const client = new QueryClient();
+	render(
+		<QueryClientProvider client={client}>
+			<Probe />
+		</QueryClientProvider>,
+	);
+	expect(rootProjectIds()).toEqual(["new", "a", "b"]);
+	await act(async () => {
+		expect(
+			await hook.mutate({ type: "collapse", tag: "team", isCollapsed: true }),
+		).toBe(true);
+	});
+	expect(rootProjectIds()).toEqual(["new", "a", "b"]);
+	client.clear();
+});
+
+test("resource consumption uses the same resolved root and rail positions", () => {
+	const wrapper = ({ children }: { children: React.ReactNode }) => (
+		<QueryClientProvider client={new QueryClient()}>
+			{children}
+		</QueryClientProvider>
+	);
+	const { result, unmount } = renderHook(() => useResourceSnapshot("v2"), {
+		wrapper,
+	});
+	expect(result.current.sidebarProjectOrder).toEqual(["new", "a", "b"]);
+	placements = [
+		...placements,
+		{ key: "rail:b", kind: "project", tabOrder: 0, isCollapsed: false },
+		{ key: "rail:new", kind: "project", tabOrder: 1, isCollapsed: false },
+		{ key: "rail:a", kind: "project", tabOrder: 2, isCollapsed: false },
+	];
+	isRail = true;
+	unmount();
+	const rail = renderHook(() => useResourceSnapshot("v2"), { wrapper });
+	expect(rail.result.current.sidebarProjectOrder).toEqual(["b", "new", "a"]);
 });

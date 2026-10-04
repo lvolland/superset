@@ -18,7 +18,12 @@ import { useCollections } from "renderer/routes/_authenticated/providers/Collect
 import { useHostWorkspaces } from "renderer/routes/_authenticated/providers/HostWorkspacesProvider";
 import { useLocalHostService } from "renderer/routes/_authenticated/providers/LocalHostServiceProvider";
 import type { ProjectCollectionPlacement } from "shared/project-collections";
-import { deriveProjectCollections } from "../../utils/projectCollections/projectCollections";
+import {
+	derivePlacedProjectCollections,
+	getProjectCollectionOrder,
+	projectRailPlacementKey,
+	resolveProjectCollectionPlacements,
+} from "../../utils/projectCollections/projectCollectionOrder";
 import {
 	enqueueProjectCollectionMutation,
 	mutateProjectCollection,
@@ -66,37 +71,11 @@ export function useProjectCollections(filter = "") {
 	};
 	const view = useMemo(
 		() =>
-			deriveProjectCollections({
+			derivePlacedProjectCollections({
 				projects: projects.projects,
 				hostResults: folders.hostResults,
-				placements: placements
-					.filter((row) => row.kind === "collection")
-					.map((row) => ({
-						sectionId: row.key,
-						projectId: PROJECTS_TAG_SCOPE,
-						tag: row.key.slice(`${PROJECTS_TAG_SCOPE}:`.length),
-						name: row.key,
-						createdAt: new Date(0),
-						color: null,
-						tabOrder: row.tabOrder,
-						isCollapsed: row.isCollapsed,
-					})),
-				projectPlacements: projects.projects.map((project) => {
-					const local = sidebarProjects.find(
-						(row) => row.projectId === project.id,
-					);
-					return {
-						projectId: project.id,
-						isHidden: local?.isHidden ?? false,
-						tabOrder:
-							placements.find(
-								(placement) =>
-									placement.kind === "project" && placement.key === project.id,
-							)?.tabOrder ??
-							local?.tabOrder ??
-							0,
-					};
-				}),
+				placements,
+				sidebarProjects,
 				workspaces,
 				sortMode: preferences.sidebarProjectSortMode,
 				hideEmpty: preferences.hideEmptyProjectCollections,
@@ -136,7 +115,10 @@ export function useProjectCollections(filter = "") {
 				keys: [
 					...new Set([
 						...current.current.projectHosts.flatMap((host) =>
-							(host.rows ?? []).map((row) => row.id),
+							(host.rows ?? []).flatMap((row) => [
+								row.id,
+								projectRailPlacementKey(row.id),
+							]),
 						),
 						...current.current.projectHosts.flatMap((host) =>
 							(host.rows ?? []).flatMap((row) =>
@@ -205,22 +187,17 @@ export function useProjectCollections(filter = "") {
 					{
 						read: () => ({
 							...baseline,
-							placements: [
-								...sidebarProjects
-									.filter(
-										(row) =>
-											!baseline.placements.some(
-												(placement) => placement.key === row.projectId,
-											),
-									)
-									.map((row) => ({
-										key: row.projectId,
-										kind: "project" as const,
-										tabOrder: row.tabOrder,
-										isCollapsed: false,
-									})),
-								...baseline.placements,
-							],
+							placements: resolveProjectCollectionPlacements({
+								projectIds: [
+									...new Set(
+										baseline.projectHosts.flatMap((host) =>
+											(host.rows ?? []).map((row) => row.id),
+										),
+									),
+								],
+								sidebarProjects,
+								placements: baseline.placements,
+							}),
 						}),
 						publish: (state) => {
 							current.current = state;
@@ -342,6 +319,11 @@ export function useProjectCollections(filter = "") {
 	);
 	return {
 		...view,
+		railProjectOrder: getProjectCollectionOrder(
+			view.rootItems,
+			placements,
+			true,
+		),
 		isReady:
 			projects.isReady &&
 			folders.isReady &&

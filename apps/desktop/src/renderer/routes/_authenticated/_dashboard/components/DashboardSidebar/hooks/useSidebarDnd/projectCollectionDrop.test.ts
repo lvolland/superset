@@ -152,7 +152,11 @@ test("icon rail reorder cannot add or remove project membership", () => {
 			"a",
 			"root-b",
 		),
-	).toEqual({ type: "reorder", keys: ["root-a", "b", "c", "root-b", "a"] });
+	).toEqual({
+		type: "reorder",
+		keys: ["root-a", "b", "c", "root-b", "a"],
+		isRail: true,
+	});
 	expect(
 		planProjectCollectionDrop(
 			{ ...layout, isRail: true } as ProjectCollectionDragLayout,
@@ -171,6 +175,35 @@ test("a root project on a legacy host cannot be dragged into a collection", () =
 			} as ProjectCollectionDragLayout,
 			"root-a",
 			collectionDropId("projects:team"),
+		),
+	).toBeNull();
+});
+
+for (const isRail of [false, true]) {
+	test(`an offline or legacy root project can reorder with rail=${isRail}`, () => {
+		expect(
+			planProjectCollectionDrop(
+				{ ...layout, isRail, immovableProjectIds: ["root-b"] },
+				"root-b",
+				"root-a",
+			)?.type,
+		).toBe("reorder");
+	});
+}
+
+test("an offline collection member can reorder without changing membership", () => {
+	expect(
+		planProjectCollectionDrop(
+			{ ...layout, immovableProjectIds: ["a"] },
+			"a",
+			"c",
+		),
+	).toEqual({ type: "reorder", keys: ["b", "c", "a"] });
+	expect(
+		planProjectCollectionDrop(
+			{ ...layout, immovableProjectIds: ["a"] },
+			"a",
+			"root-b",
 		),
 	).toBeNull();
 });

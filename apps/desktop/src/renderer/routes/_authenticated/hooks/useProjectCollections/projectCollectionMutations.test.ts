@@ -2,6 +2,9 @@ import { describe, expect, test } from "bun:test";
 import { PROJECTS_TAG_SCOPE } from "@superset/shared/workspace-tags";
 import { normalizeHostProjectRow } from "renderer/hooks/host-projects/useHostProjects/useHostProjects.utils";
 import type { HostTagFolderSetting } from "renderer/hooks/host-projects/useHostTagFolders/useHostTagFolders.utils";
+import { planProjectCollectionDrop } from "../../_dashboard/components/DashboardSidebar/hooks/useSidebarDnd/projectCollectionDrop";
+import { getProjectCollectionOrder } from "../../utils/projectCollections/projectCollectionOrder";
+import { deriveProjectCollections } from "../../utils/projectCollections/projectCollections";
 import {
 	enqueueProjectCollectionMutation,
 	mutateProjectCollection,
@@ -654,4 +657,118 @@ test("collection header drops append after hidden members", async () => {
 		(h.state().placements.find((row) => row.key === "a")?.tabOrder ?? -1) >
 			(h.state().placements.find((row) => row.key === "hidden")?.tabOrder ?? 0),
 	).toBe(true);
+});
+
+test("rail drops persist the exact flat order across a collection boundary", async () => {
+	const h = setup();
+	const state = h.state();
+	for (const host of state.projectHosts)
+		host.rows = [
+			normalizeHostProjectRow({ id: "root-a", repoPath: "/root-a", tags: [] }),
+			normalizeHostProjectRow({ id: "a", repoPath: "/a", tags: ["team"] }),
+			normalizeHostProjectRow({ id: "b", repoPath: "/b", tags: ["team"] }),
+			normalizeHostProjectRow({ id: "root-b", repoPath: "/root-b", tags: [] }),
+		];
+	for (const host of state.folderHosts)
+		host.settings = host.settings.filter((row) => row.tag === "team");
+	state.placements = ["root-a", "projects:team", "root-b"].map(
+		(key, tabOrder) => ({
+			key,
+			kind: key.startsWith("projects:") ? "collection" : "project",
+			tabOrder,
+			isCollapsed: false,
+		}),
+	);
+	h.adapter.publish(state);
+	const command = planProjectCollectionDrop(
+		{
+			isRail: true,
+			rootKeys: ["root-a", "projects:team", "root-b"],
+			collections: [
+				{ id: "projects:team", tag: "team", projectIds: ["a", "b"] },
+			],
+		},
+		"a",
+		"root-b",
+	);
+	if (!command) throw new Error("Missing rail command");
+	expect(await mutateProjectCollection(h.adapter, command)).toBe(true);
+	const next = h.state();
+	const view = deriveProjectCollections({
+		projects: next.projectHosts[0]?.rows ?? [],
+		hostResults: next.folderHosts,
+		placements: next.placements
+			.filter((row) => row.kind === "collection")
+			.map((row) => ({
+				sectionId: row.key,
+				projectId: "projects",
+				tag: "team",
+				name: "Team",
+				color: null,
+				createdAt: new Date(0),
+				tabOrder: row.tabOrder,
+				isCollapsed: false,
+			})),
+		projectPlacements: next.placements
+			.filter((row) => row.kind === "project")
+			.map((row) => ({
+				projectId: row.key,
+				tabOrder: row.tabOrder,
+				isHidden: false,
+			})),
+	});
+	expect(
+		getProjectCollectionOrder(view.rootItems, next.placements, true),
+	).toEqual(["root-a", "b", "root-b", "a"]);
+	expect(
+		(next.projectHosts[0]?.rows ?? []).find((row) => row.id === "a")?.tags,
+	).toEqual(["team"]);
+	expect(h.tagCalls).toHaveLength(0);
+});
+
+test("rail reorders use the saved flat order on subsequent drops", async () => {
+	const h = setup();
+	await mutateProjectCollection(h.adapter, {
+		type: "reorder",
+		keys: ["b", "a"],
+		isRail: true,
+	});
+	await mutateProjectCollection(h.adapter, {
+		type: "reorder",
+		keys: ["a", "b"],
+		isRail: true,
+	});
+	expect(
+		h
+			.state()
+			.placements.filter((row) => row.key.startsWith("rail:"))
+			.sort((a, b) => a.tabOrder - b.tabOrder)
+			.map((row) => row.key),
+	).toEqual(["rail:a", "rail:b"]);
+	expect(h.tagCalls).toHaveLength(0);
+});
+
+test("offline and legacy projects reorder without a host write", async () => {
+	const h = setup();
+	const state = h.state();
+	for (const host of state.projectHosts) {
+		host.reachable = false;
+		for (const row of host.rows ?? []) row.supportsProjectTags = false;
+	}
+	h.adapter.publish(state);
+	expect(
+		await mutateProjectCollection(h.adapter, {
+			type: "reorder",
+			keys: ["a", "b"],
+		}),
+	).toBe(true);
+	expect(
+		h
+			.state()
+			.placements.filter((row) => ["a", "b"].includes(row.key))
+			.sort((a, b) => a.tabOrder - b.tabOrder)
+			.map((row) => row.key),
+	).toEqual(["a", "b"]);
+	expect(h.tagCalls).toHaveLength(0);
+	expect(h.settingCalls).toHaveLength(0);
 });

@@ -803,10 +803,23 @@ export function useSidebarDnd({
 						droppableContainers: targets,
 					});
 					if (pointerHits.length) {
-						const collectionHits = pointerHits.filter((hit) =>
-							String(hit.id).startsWith("collection-drop:"),
-						);
-						return collectionHits.length ? collectionHits : pointerHits;
+						const collectionHits = pointerHits.filter((hit) => {
+							const id = String(hit.id);
+							if (!id.startsWith("collection-drop:")) return false;
+							const header = args.droppableRects.get(
+								id.slice("collection-drop:".length),
+							);
+							return (
+								!header ||
+								!args.pointerCoordinates ||
+								args.pointerCoordinates.y >= header.top + header.height / 2
+							);
+						});
+						return collectionHits.length
+							? collectionHits
+							: pointerHits.filter(
+									(hit) => !String(hit.id).startsWith("collection-drop:"),
+								);
 					}
 					if (args.pointerCoordinates) return [];
 				}

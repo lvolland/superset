@@ -7,6 +7,7 @@ export const collectionDropId = (id: string) => `collection-drop:${id}`;
 export interface ProjectCollectionDragLayout {
 	rootKeys: string[];
 	isRail?: boolean;
+	railProjectIds?: string[];
 	immovableProjectIds?: string[];
 	collections: Array<{
 		id: string;
@@ -22,17 +23,18 @@ export function planProjectCollectionDrop(
 	active: string,
 	over: string,
 ): ProjectCollectionCommand | null {
-	if (active === over || layout.immovableProjectIds?.includes(active))
-		return null;
+	if (active === over) return null;
 	if (layout.isRail) {
-		const keys = layout.rootKeys.flatMap(
-			(key) =>
-				layout.collections.find((row) => row.id === key)?.projectIds ?? [key],
-		);
+		const keys =
+			layout.railProjectIds ??
+			layout.rootKeys.flatMap(
+				(key) =>
+					layout.collections.find((row) => row.id === key)?.projectIds ?? [key],
+			);
 		const from = keys.indexOf(active);
 		const to = keys.indexOf(over);
 		return from >= 0 && to >= 0
-			? { type: "reorder", keys: arrayMove(keys, from, to) }
+			? { type: "reorder", keys: arrayMove(keys, from, to), isRail: true }
 			: null;
 	}
 	const source = layout.collections.find((row) =>
@@ -66,6 +68,7 @@ export function planProjectCollectionDrop(
 				),
 			};
 		}
+		if (layout.immovableProjectIds?.includes(active)) return null;
 		return {
 			type: "move",
 			projectIds: [active],
@@ -79,7 +82,8 @@ export function planProjectCollectionDrop(
 			? layout.rootKeys.length
 			: layout.rootKeys.indexOf(over);
 	if (index < 0) return null;
-	if (source)
+	if (source) {
+		if (layout.immovableProjectIds?.includes(active)) return null;
 		return {
 			type: "move",
 			projectIds: [active],
@@ -87,6 +91,7 @@ export function planProjectCollectionDrop(
 			index,
 			beforeKey: over !== PROJECT_COLLECTION_ROOT_DROP ? over : null,
 		};
+	}
 	const from = layout.rootKeys.indexOf(active);
 	const to = Math.min(index, layout.rootKeys.length - 1);
 	return from >= 0 && from !== to

@@ -10,6 +10,10 @@ import type {
 import { isMissingProcedureError } from "renderer/lib/isMissingProcedureError";
 import type { ProjectCollectionPlacement } from "shared/project-collections";
 import {
+	getProjectCollectionOrder,
+	projectRailPlacementKey,
+} from "../../utils/projectCollections/projectCollectionOrder";
+import {
 	deriveProjectCollections,
 	projectCollectionId,
 } from "../../utils/projectCollections/projectCollections";
@@ -27,7 +31,7 @@ export type ProjectCollectionCommand =
 	| { type: "color"; tag: string; color: string | null }
 	| { type: "delete"; tag: string }
 	| { type: "collapse"; tag: string; isCollapsed: boolean }
-	| { type: "reorder"; keys: string[] };
+	| { type: "reorder"; keys: string[]; isRail?: boolean };
 
 export interface ProjectCollectionMutationState {
 	projectHosts: HostProjectRowsResult[];
@@ -310,7 +314,29 @@ export async function mutateProjectCollection(
 			tabOrder: collection?.tabOrder ?? 0,
 			isCollapsed: command.isCollapsed,
 		});
-	if (command.type === "reorder") {
+	if (command.type === "reorder" && command.isRail) {
+		const projectIds = new Set(projectMap.keys());
+		if (!command.keys.every((key) => projectIds.has(key))) return false;
+		const prior = getProjectCollectionOrder(
+			view.rootItems,
+			before.placements,
+			true,
+		);
+		const requested = new Set(command.keys);
+		let index = 0;
+		const keys = prior.map((key) =>
+			requested.has(key) ? (command.keys[index++] ?? key) : key,
+		);
+		keys.forEach((key, tabOrder) => {
+			placements.set(projectRailPlacementKey(key), {
+				key: projectRailPlacementKey(key),
+				kind: "project",
+				tabOrder,
+				isCollapsed: false,
+			});
+		});
+	}
+	if (command.type === "reorder" && !command.isRail) {
 		const requested = new Set(command.keys);
 		const collection = view.collections.find((row) =>
 			command.keys.every((key) =>

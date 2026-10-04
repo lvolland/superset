@@ -293,13 +293,27 @@ export function DashboardSidebar({
 		() => buildSidebarCollectionView(sortedGroups, collectionRootItems, ""),
 		[sortedGroups, collectionRootItems],
 	);
-	const displayedGroups = collectionView.projects;
+	const displayedGroups = useMemo(() => {
+		if (!isCollapsed) return collectionView.projects;
+		const byId = new Map(
+			collectionView.projects.map((project) => [project.id, project]),
+		);
+		return projectCollections.railProjectOrder.flatMap((id) => {
+			const project = byId.get(id);
+			return project ? [project] : [];
+		});
+	}, [
+		collectionView.projects,
+		isCollapsed,
+		projectCollections.railProjectOrder,
+	]);
 	const displayedProjectIds = collectionView.rootItems.map((item) =>
 		item.type === "project" ? item.project.id : item.collection.id,
 	);
 	const collectionDragLayout = useMemo(
 		() => ({
 			isRail: isCollapsed,
+			railProjectIds: displayedGroups.map((project) => project.id),
 			immovableProjectIds: displayedGroups
 				.filter((project) => !projectCollections.canMoveProject(project.id))
 				.map((project) => project.id),
@@ -518,8 +532,8 @@ export function DashboardSidebar({
 			isCollapsed={isCollapsed}
 			isDragDisabled={
 				isProjectDragDisabled ||
-				!projectCollections.canMoveProject(project.id) ||
-				(sortMode !== "manual" &&
+				(!isCollapsed &&
+					sortMode !== "manual" &&
 					projectCollections.collectionByProjectId.has(project.id))
 			}
 			workspaceShortcutLabels={workspaceShortcutLabels}
