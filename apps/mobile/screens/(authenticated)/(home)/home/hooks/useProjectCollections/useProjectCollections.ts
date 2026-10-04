@@ -96,7 +96,9 @@ export function useProjectCollections(
 			if (!hostUrl) return;
 			const tags = tag ? [tag] : [];
 			await queryClient.cancelQueries({ queryKey: projectsKey });
-			const previous = queryClient.getQueryData<HostProjectRow[]>(projectsKey);
+			const previousTags = queryClient
+				.getQueryData<HostProjectRow[]>(projectsKey)
+				?.find((row) => row.id === projectId)?.tags;
 			queryClient.setQueryData<HostProjectRow[]>(projectsKey, (rows) =>
 				withProjectTags(rows, projectId, tags),
 			);
@@ -106,7 +108,10 @@ export function useProjectCollections(
 					tags,
 				});
 			} catch {
-				queryClient.setQueryData(projectsKey, previous);
+				if (previousTags)
+					queryClient.setQueryData<HostProjectRow[]>(projectsKey, (rows) =>
+						withProjectTags(rows, projectId, previousTags),
+					);
 				failed();
 			} finally {
 				void queryClient.invalidateQueries({ queryKey: projectsKey });
@@ -135,10 +140,9 @@ export function useProjectCollections(
 				queryClient.cancelQueries({ queryKey: projectsKey }),
 				queryClient.cancelQueries({ queryKey: settingsKey }),
 			]);
-			const previousProjects =
-				queryClient.getQueryData<HostProjectRow[]>(projectsKey);
-			const previousSettings =
-				queryClient.getQueryData<HostTagFolderRow[]>(settingsKey);
+			const previousTags = queryClient
+				.getQueryData<HostProjectRow[]>(projectsKey)
+				?.find((row) => row.id === projectId)?.tags;
 			queryClient.setQueryData<HostTagFolderRow[]>(settingsKey, (rows) =>
 				withCollectionSetting(rows, setting),
 			);
@@ -151,8 +155,15 @@ export function useProjectCollections(
 				settingSaved = true;
 				await client.project.setTags.mutate({ projectId, tags: [tag] });
 			} catch {
-				queryClient.setQueryData(projectsKey, previousProjects);
-				queryClient.setQueryData(settingsKey, previousSettings);
+				if (previousTags)
+					queryClient.setQueryData<HostProjectRow[]>(projectsKey, (rows) =>
+						withProjectTags(rows, projectId, previousTags),
+					);
+				queryClient.setQueryData<HostTagFolderRow[]>(settingsKey, (rows) =>
+					rows?.filter(
+						(row) => row.scope !== PROJECTS_TAG_SCOPE || row.tag !== tag,
+					),
+				);
 				if (settingSaved)
 					void client.tagFolders.delete
 						.mutate({ scope: PROJECTS_TAG_SCOPE, tag })
@@ -189,6 +200,7 @@ export function useProjectCollections(
 	return {
 		collections,
 		collectionByProjectId,
+		isSuccess: settingsQuery.isSuccess,
 		/** True once the settings answered or failed; tags alone still group. */
 		isReady:
 			!supported ||

@@ -1,3 +1,5 @@
+import { DERIVED_PROJECT_COLLECTION_TAB_ORDER_BASE } from "@superset/shared/project-collections";
+
 export function withProjectTags<Row extends { id: string; tags?: string[] }>(
 	rows: Row[] | undefined,
 	projectId: string,
@@ -20,5 +22,10 @@ export function withCollectionSetting<
 export function nextCollectionTabOrder(
 	settings: readonly { tabOrder: number | null }[],
 ): number {
-	return Math.max(0, ...settings.map((row) => row.tabOrder ?? 0)) + 1;
+	return (
+		Math.max(
+			DERIVED_PROJECT_COLLECTION_TAB_ORDER_BASE,
+			...settings.map((row) => row.tabOrder ?? 0),
+		) + 1
+	);
 }

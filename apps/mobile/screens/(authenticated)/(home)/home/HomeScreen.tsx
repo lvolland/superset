@@ -13,7 +13,7 @@ import { Stack, useFocusEffect, useRouter } from "expo-router";
 import { useHeaderHeight } from "expo-router/react-navigation";
 import { Box } from "lucide-react-native";
 import { useFeatureFlag } from "posthog-react-native";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	ActivityIndicator,
 	RefreshControl,
@@ -228,11 +228,16 @@ export function HomeScreen() {
 		useHostsTerminals(terminalHosts);
 
 	// Projects are fully local — served by the selected host, not the cloud.
-	const { projects, isReady: projectsReady } = useHostProjects(selectedHost);
+	const {
+		projects,
+		isReady: projectsReady,
+		isSuccess: projectsLoaded,
+	} = useHostProjects(selectedHost);
 	const {
 		collections,
 		collectionByProjectId,
 		isReady: collectionsReady,
+		isSuccess: collectionsLoaded,
 		moveProject,
 		newCollection,
 	} = useProjectCollections(selectedHost, projects);
@@ -282,6 +287,29 @@ export function HomeScreen() {
 	const toggleProject = useCollapsedProjectsStore(
 		(state) => state.toggleProject,
 	);
+	const pruneCollections = useCollapsedProjectsStore(
+		(state) => state.pruneCollections,
+	);
+	useEffect(() => {
+		if (
+			!selectedHost?.isOnline ||
+			!collapseHydrated ||
+			!projectsLoaded ||
+			!collectionsLoaded
+		)
+			return;
+		pruneCollections(
+			selectedHost.machineId,
+			collections.map((collection) => collection.tag),
+		);
+	}, [
+		selectedHost,
+		collapseHydrated,
+		projectsLoaded,
+		collectionsLoaded,
+		collections,
+		pruneCollections,
+	]);
 
 	// Recency ranks a workspace by its latest activity — the newest of its
 	// own and its terminals'.
@@ -449,7 +477,7 @@ export function HomeScreen() {
 				tag: group.collection.tag,
 				name: group.collection.name,
 				color: group.collection.color,
-				projectCount: group.sections.length,
+				projectCount: group.projectCount,
 				collapsed: isCollapsed,
 			});
 			if (isCollapsed) continue;

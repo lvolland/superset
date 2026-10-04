@@ -19,6 +19,23 @@ const shape = (groups: ReturnType<typeof groupProjectSections>) =>
 	);
 
 describe("groupProjectSections", () => {
+	test("counts collection members without a visible workspace section", () => {
+		const team = collection("team");
+		const groups = groupProjectSections(
+			[{ projectId: "active" }],
+			new Map([
+				["active", team],
+				["empty-a", team],
+				["empty-b", team],
+				["elsewhere", collection("other")],
+			]),
+		);
+		const group = groups[0];
+		expect(group?.kind).toBe("collection");
+		if (group?.kind !== "collection") throw new Error("Collection missing");
+		expect(group.projectCount).toBe(3);
+		expect(group.sections).toEqual([{ projectId: "active" }]);
+	});
 	test("a collection takes the place of its first project", () => {
 		const team = collection("team");
 		const groups = groupProjectSections(

@@ -54,6 +54,7 @@ export function hostProjectsQueryKey(host: WorkspacesHost | null) {
 
 export interface UseHostProjectsResult {
 	projects: HostProjectItem[];
+	isSuccess: boolean;
 	/** True once the host answered or failed. Gates empty states only. */
 	isReady: boolean;
 }
@@ -89,6 +90,7 @@ export function useHostProjects(
 
 	return {
 		projects,
+		isSuccess: query.isSuccess,
 		isReady:
 			query.isSuccess ||
 			query.isError ||

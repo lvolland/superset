@@ -6,6 +6,7 @@ export type GroupedProjectSection<Section> =
 			kind: "collection";
 			collection: ProjectCollectionSummary;
 			sections: Section[];
+			projectCount: number;
 	  };
 
 /**
@@ -16,6 +17,13 @@ export function groupProjectSections<Section extends { projectId: string }>(
 	sections: readonly Section[],
 	collectionByProjectId: ReadonlyMap<string, ProjectCollectionSummary>,
 ): GroupedProjectSection<Section>[] {
+	const projectCountByTag = new Map<string, number>();
+	for (const collection of collectionByProjectId.values()) {
+		projectCountByTag.set(
+			collection.tag,
+			(projectCountByTag.get(collection.tag) ?? 0) + 1,
+		);
+	}
 	const groups: GroupedProjectSection<Section>[] = [];
 	const groupByTag = new Map<string, Section[]>();
 	for (const section of sections) {
@@ -31,7 +39,12 @@ export function groupProjectSections<Section extends { projectId: string }>(
 		}
 		const created = [section];
 		groupByTag.set(collection.tag, created);
-		groups.push({ kind: "collection", collection, sections: created });
+		groups.push({
+			kind: "collection",
+			collection,
+			sections: created,
+			projectCount: projectCountByTag.get(collection.tag) ?? 0,
+		});
 	}
 	return groups;
 }

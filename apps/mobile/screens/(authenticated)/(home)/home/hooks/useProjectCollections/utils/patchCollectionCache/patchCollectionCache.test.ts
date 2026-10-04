@@ -47,9 +47,10 @@ describe("withCollectionSetting", () => {
 
 describe("nextCollectionTabOrder", () => {
 	test("orders a new collection after every placed one", () => {
-		expect(nextCollectionTabOrder([])).toBe(1);
-		expect(nextCollectionTabOrder([{ tabOrder: 4 }, { tabOrder: null }])).toBe(
-			5,
-		);
+		expect(nextCollectionTabOrder([])).toBeGreaterThanOrEqual(1_000_000);
+		expect(
+			nextCollectionTabOrder([{ tabOrder: 4 }, { tabOrder: null }]),
+		).toBeGreaterThanOrEqual(1_000_000);
+		expect(nextCollectionTabOrder([{ tabOrder: 1_000_004 }])).toBe(1_000_005);
 	});
 });
