@@ -6,6 +6,7 @@ import { ROW_HEIGHT } from "../../../../utils/gridGeometry";
 import { HEADER_SURFACE, HEADER_SURFACE_SELECTED } from "../../constants";
 
 interface RowHeaderProps {
+	gridId: string;
 	row: number;
 	top: number;
 	width: number;
@@ -13,6 +14,7 @@ interface RowHeaderProps {
 }
 
 export const RowHeader = memo(function RowHeader({
+	gridId,
 	row,
 	top,
 	width,
@@ -20,10 +22,9 @@ export const RowHeader = memo(function RowHeader({
 }: RowHeaderProps) {
 	return (
 		<div
-			id={`spreadsheet-row-${row}-header`}
+			id={`${gridId}-spreadsheet-row-${row}-header`}
 			role="rowheader"
 			aria-colindex={1}
-			aria-selected={selected}
 			className={cn(
 				"absolute left-0 border-border border-r border-b pr-1.5 text-right text-[11px] tabular-nums leading-6",
 				selected

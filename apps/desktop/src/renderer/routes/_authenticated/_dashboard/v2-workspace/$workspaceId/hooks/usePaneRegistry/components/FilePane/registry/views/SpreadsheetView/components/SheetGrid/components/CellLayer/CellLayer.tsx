@@ -24,6 +24,7 @@ interface CellLayerProps {
 	selection: CellRange | null;
 	ariaSelection: CellRange;
 	active: CellRange;
+	gridId: string;
 	className?: string;
 }
 
@@ -52,6 +53,7 @@ export function CellLayer({
 	selection,
 	ariaSelection,
 	active,
+	gridId,
 	className,
 }: CellLayerProps) {
 	const originX = gutter + (starts[region.left] ?? 0);
@@ -127,7 +129,7 @@ export function CellLayer({
 					return (
 						<SheetCell
 							key={`${row}:${col}`}
-							id={`spreadsheet-row-${row}-cell-${col}`}
+							id={`${gridId}-spreadsheet-row-${row}-cell-${col}`}
 							ariaColIndex={col + 2}
 							selected={isSelected({
 								top: row,
@@ -153,7 +155,7 @@ export function CellLayer({
 						key={`merge:${merge.top}:${merge.left}`}
 						id={
 							ownsAnchor
-								? `spreadsheet-row-${merge.top}-cell-${merge.left}`
+								? `${gridId}-spreadsheet-row-${merge.top}-cell-${merge.left}`
 								: undefined
 						}
 						ariaColIndex={part.left + 2}

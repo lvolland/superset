@@ -50,11 +50,13 @@ function withSheetXml(
 const text = (source: string, fileName = "a.csv") =>
 	openWorkbook({ kind: "text", fileName, text: source });
 
-test("lists only populated sparse array indexes", () => {
+test("iterates populated sparse array indexes lazily", () => {
 	const entries: string[] = [];
 	entries[3] = "a";
 	entries[10_000] = "b";
-	expect(presentIndexes(entries)).toEqual([3, 10_000]);
+	const indexes = presentIndexes(entries);
+	expect(Array.isArray(indexes)).toBe(false);
+	expect([...indexes]).toEqual([3, 10_000]);
 });
 
 describe("openWorkbook", () => {

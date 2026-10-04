@@ -43,8 +43,10 @@ const LITERAL_MARKS = /[\ue000-\uf8ff]/g;
 const TSV_NEEDS_QUOTES = /[\t\n\r"]/;
 const DELIMITED_HEADER: FrozenPane = { rows: 1, cols: 0 };
 
-export function presentIndexes<T>(values: T[]): number[] {
-	return Object.keys(values).map(Number);
+export function* presentIndexes<T>(values: T[]): Generator<number> {
+	for (const key in values) {
+		if (Object.hasOwn(values, key)) yield Number(key);
+	}
 }
 
 export interface CopyLimits {

@@ -8,6 +8,7 @@ import {
 	type Ref,
 	useCallback,
 	useEffect,
+	useId,
 	useImperativeHandle,
 	useMemo,
 	useRef,
@@ -84,6 +85,7 @@ export function SheetGrid({
 	matchKeys,
 	activeMatch,
 }: SheetGridProps) {
+	const gridId = useId();
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const drag = useRef<{ mode: DragMode; anchor: CellPosition } | null>(null);
 	const { rowCount, colCount, merges } = sheet;
@@ -400,6 +402,7 @@ export function SheetGrid({
 		selection: isMultiCell ? selected : null,
 		ariaSelection: selected,
 		active,
+		gridId,
 	};
 	const columnHeader = (col: number, left: number) => (
 		<ColumnHeader
@@ -421,8 +424,32 @@ export function SheetGrid({
 				col <= range.right,
 		);
 		if (merge && merge.top !== row) return null;
-		return `spreadsheet-row-${merge?.top ?? row}-cell-${merge?.left ?? col}`;
+		return `${gridId}-spreadsheet-row-${merge?.top ?? row}-cell-${merge?.left ?? col}`;
 	};
+	const mergeAnchorRows = Array.from(
+		new Set(visibleMerges.map((merge) => merge.top)),
+	).filter((row) => !pinnedRows.includes(row) && !scrollRows.includes(row));
+	const mergeAnchorRow = (row: number) => (
+		<div
+			key={row}
+			role="row"
+			aria-rowindex={row + 2}
+			aria-owns={visibleMerges
+				.filter((merge) => merge.top === row)
+				.map((merge) => ariaCellId(row, merge.left))
+				.filter(Boolean)
+				.join(" ")}
+			className="sr-only"
+		>
+			<RowHeader
+				gridId={gridId}
+				row={row}
+				top={0}
+				width={gutter}
+				selected={row >= selected.top && row <= selected.bottom}
+			/>
+		</div>
+	);
 	const rowHeader = (row: number, top: number, cols: number[]) => (
 		<div
 			key={row}
@@ -433,6 +460,7 @@ export function SheetGrid({
 			).join(" ")}
 		>
 			<RowHeader
+				gridId={gridId}
 				row={row}
 				top={top}
 				width={gutter}
@@ -478,6 +506,7 @@ export function SheetGrid({
 						top={stickyTop}
 						left={stickyLeft}
 					/>
+					{mergeAnchorRows.map(mergeAnchorRow)}
 					<div
 						className="sticky top-0 z-20 flex"
 						style={{ width: totalWidth, height: stickyTop }}
