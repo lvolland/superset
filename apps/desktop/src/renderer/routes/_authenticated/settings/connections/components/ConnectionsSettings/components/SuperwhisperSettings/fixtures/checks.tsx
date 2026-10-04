@@ -2,6 +2,7 @@ import { expect, mock, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderToStaticMarkup } from "react-dom/server";
 
+let updateSettings = async (_hostUrl: string) => settings;
 let cloudWorkspaces = false;
 let desktopPlatform = "darwin";
 let otherHosts = [
@@ -29,11 +30,11 @@ mock.module("renderer/lib/cloud-trpc", () => ({
 	},
 }));
 mock.module("renderer/lib/host-service-client", () => ({
-	getHostServiceClientByUrl: () => ({
+	getHostServiceClientByUrl: (hostUrl: string) => ({
 		settings: {
 			superwhisper: {
 				get: { query: () => new Promise(() => {}) },
-				set: { mutate: async () => settings },
+				set: { mutate: () => updateSettings(hostUrl) },
 			},
 		},
 	}),
@@ -205,4 +206,62 @@ test("selects a remote Mac from a Linux desktop and offers only macOS hosts", ()
 	expect(renderToStaticMarkup(<MacHostIds />)).toBe("remote");
 	desktopPlatform = "darwin";
 	expect(renderToStaticMarkup(<MacHostIds />)).toBe("local,remote");
+});
+
+test("updates only the submitted host cache after the selected Mac changes", async () => {
+	const { GlobalRegistrator } = await import("@happy-dom/global-registrator");
+	GlobalRegistrator.register();
+	(
+		globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+	).IS_REACT_ACT_ENVIRONMENT = true;
+	const { render, cleanup, act } = await import("@testing-library/react/pure");
+	const { SuperwhisperControls } = await import(
+		"../components/SuperwhisperControls/SuperwhisperControls"
+	);
+	let resolve!: (value: typeof settings) => void;
+	let started!: () => void;
+	const pending = new Promise<typeof settings>((yes) => {
+		resolve = yes;
+	});
+	const submitting = new Promise<void>((yes) => {
+		started = yes;
+	});
+	updateSettings = async (url) => {
+		expect(url).toBe("http://first");
+		started();
+		return pending;
+	};
+	const firstKey = ["host-superwhisper", "http://first"];
+	const secondKey = ["host-superwhisper", "http://second"];
+	const previous = { enabled: false, installed: true, modeReady: true };
+	const client = new QueryClient({
+		defaultOptions: {
+			queries: { retry: false, gcTime: Infinity, staleTime: Infinity },
+		},
+	});
+	client.setQueryData(firstKey, previous);
+	client.setQueryData(secondKey, previous);
+	const page = (url: string) => (
+		<QueryClientProvider client={client}>
+			<SuperwhisperControls hostUrl={url} enabled />
+		</QueryClientProvider>
+	);
+	try {
+		const rendered = render(page("http://first"));
+		await act(async () => {
+			rendered.getByRole("switch").click();
+			await submitting;
+		});
+		rendered.rerender(page("http://second"));
+		await act(async () => {
+			resolve(settings);
+			await pending;
+		});
+		expect(client.getQueryData<typeof settings>(firstKey)).toEqual(settings);
+		expect(client.getQueryData<typeof settings>(secondKey)).toEqual(previous);
+	} finally {
+		cleanup();
+		client.clear();
+		await GlobalRegistrator.unregister();
+	}
 });

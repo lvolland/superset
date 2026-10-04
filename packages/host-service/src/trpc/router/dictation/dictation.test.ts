@@ -86,6 +86,23 @@ describe("host Superwhisper procedures", () => {
 		await f.settings.set({ enabled: false });
 		expect(await f.settings.get()).toMatchObject({ enabled: false });
 	});
+	it.each([
+		true,
+		false,
+	])("returns persisted enablement if status fails (enabled: %s)", async (enabled) => {
+		const f = fixture();
+		f.adapter.status = async () => {
+			throw new Error("Cannot read preferences");
+		};
+		expect(await f.settings.set({ enabled })).toEqual({
+			enabled,
+			installed: false,
+			modeReady: false,
+		});
+		expect(
+			f.db.select().from(schema.hostSettings).get()?.superwhisperEnabled,
+		).toBe(enabled);
+	});
 	it("does not enable after preparation fails", async () => {
 		const f = fixture();
 		f.fail(new DictationError("MODE_NOT_READY", "missing mode"));

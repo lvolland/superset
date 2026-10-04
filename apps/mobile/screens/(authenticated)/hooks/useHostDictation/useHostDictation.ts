@@ -14,48 +14,69 @@ import {
 	useSyncExternalStore,
 } from "react";
 import { Alert } from "react-native";
+import { authClient, useSession } from "@/lib/auth/client";
 import { getHostServiceClientByUrl } from "@/lib/host-service/client";
 import { isTrpcErrorWithData } from "@/lib/host-service/errors";
 import { useComposerDraftsStore } from "@/screens/(authenticated)/stores/composerDraftsStore";
 import {
 	createDictationSession,
+	createDictationSessionRegistry,
 	type DictationAudio,
 	type DictationTarget,
 	dictationEngineFor,
+	dictationScopeKey,
 } from "./dictationSession";
 import { transcribeHostDictation } from "./transcribeHostDictation";
 
 const composers = new Map<string, RefObject<ComposerHandle | null>>();
-const sessions = new Map<string, ReturnType<typeof createDictationSession>>();
+const sessions = createDictationSessionRegistry();
+type AuthSession = {
+	data: {
+		user: { id: string };
+		session: { activeOrganizationId?: string | null };
+	} | null;
+};
+const authScope = (session: AuthSession) =>
+	dictationScopeKey(
+		session.data?.user.id ?? null,
+		session.data?.session.activeOrganizationId ?? null,
+	);
+let activeScope = authScope(authClient.$store.atoms.session.get());
+sessions.setScope(activeScope);
+authClient.$store.atoms.session.listen((session: AuthSession) => {
+	const next = authScope(session);
+	if (next === activeScope) return;
+	activeScope = next;
+	composers.clear();
+	sessions.setScope(next);
+});
 
-function sessionFor(key: string, queryClient: QueryClient) {
-	let session = sessions.get(key);
-	if (session) return session;
-	session = createDictationSession({
-		transcribe: (audio, target) =>
-			transcribeHostDictation(audio, target, {
-				queryClient,
-				readAudio: (uri) => new File(uri).base64(),
-				transcribe: (hostUrl, encoded) =>
-					getHostServiceClientByUrl(hostUrl).dictation.transcribe.mutate({
-						audio: encoded,
-						mediaType: "audio/mp4",
-					}),
-			}),
-		append: (text) => {
-			const composer = composers.get(key)?.current;
-			if (composer) {
-				composer.appendDraft(text);
-				return;
-			}
-			const store = useComposerDraftsStore.getState();
-			const previous = store.draftsByKey[key]?.text ?? "";
-			store.setText(key, previous ? `${previous} ${text}` : text);
-		},
-		remove: (uri) => new File(uri).delete(),
-	});
-	sessions.set(key, session);
-	return session;
+function sessionFor(draftKey: string, queryClient: QueryClient) {
+	return sessions.get(draftKey, (key) =>
+		createDictationSession({
+			transcribe: (audio, target) =>
+				transcribeHostDictation(audio, target, {
+					queryClient,
+					readAudio: (uri) => new File(uri).base64(),
+					transcribe: (hostUrl, encoded) =>
+						getHostServiceClientByUrl(hostUrl).dictation.transcribe.mutate({
+							audio: encoded,
+							mediaType: "audio/mp4",
+						}),
+				}),
+			append: async (text) => {
+				const composer = composers.get(key)?.current;
+				if (composer) {
+					await composer.appendDraft(text);
+					return;
+				}
+				const store = useComposerDraftsStore.getState();
+				const previous = store.draftsByKey[draftKey]?.text ?? "";
+				store.setText(draftKey, previous ? `${previous} ${text}` : text);
+			},
+			remove: (uri) => new File(uri).delete(),
+		}),
+	);
 }
 
 export function useHostDictation({
@@ -69,7 +90,15 @@ export function useHostDictation({
 }) {
 	const { t } = useLingui();
 	const queryClient = useQueryClient();
-	const recordingTarget = useRef<DictationTarget | null>(null);
+	const { data: authSession } = useSession();
+	const scope = dictationScopeKey(
+		authSession?.user.id ?? null,
+		authSession?.session.activeOrganizationId ?? null,
+	);
+	const recordingTarget = useRef<{
+		scope: string;
+		target: DictationTarget | null;
+	} | null>(null);
 	const query = useQuery({
 		queryKey: [
 			"host-service",
@@ -96,7 +125,7 @@ export function useHostDictation({
 			}
 		},
 	});
-	const session = sessionFor(draftKey, queryClient);
+	const { key: sessionKey, session } = sessionFor(draftKey, queryClient);
 	const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
 	const engine = dictationEngineFor(target, query);
 
@@ -155,11 +184,12 @@ export function useHostDictation({
 		if (state.status === "failed") onFailed();
 	}, [state]);
 	useEffect(() => {
-		composers.set(draftKey, composerRef);
+		composers.set(sessionKey, composerRef);
 		return () => {
-			if (composers.get(draftKey) === composerRef) composers.delete(draftKey);
+			if (composers.get(sessionKey) === composerRef)
+				composers.delete(sessionKey);
 		};
-	}, [draftKey, composerRef]);
+	}, [sessionKey, composerRef]);
 
 	const name =
 		state.status === "idle" ? target?.hostName : state.target.hostName;
@@ -178,11 +208,18 @@ export function useHostDictation({
 							: t({ message: "Checking dictation settings" })
 						: "",
 		onDictationStart: () => {
-			recordingTarget.current = target;
+			recordingTarget.current = { scope, target };
 		},
 		onDictationAudio: (audio: DictationAudio) => {
-			if (recordingTarget.current)
-				session.accept(audio, recordingTarget.current);
+			const recording = recordingTarget.current;
+			recordingTarget.current = null;
+			if (recording?.scope === activeScope && recording.target)
+				session.accept(audio, recording.target);
+			else {
+				try {
+					new File(audio.uri).delete();
+				} catch {}
+			}
 		},
 		onDictationStatusPress: () => {
 			if (state.status === "failed") showFailure();

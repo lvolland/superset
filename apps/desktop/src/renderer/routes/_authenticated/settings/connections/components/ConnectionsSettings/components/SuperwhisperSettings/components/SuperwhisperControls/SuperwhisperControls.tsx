@@ -32,16 +32,16 @@ export function SuperwhisperControls({
 		},
 	});
 	const setMutation = useMutation({
-		mutationFn: (nextEnabled: boolean) => {
-			if (!hostUrl) throw new Error("Host service unavailable");
+		mutationFn: (input: { hostUrl: string | null; enabled: boolean }) => {
+			if (!input.hostUrl) throw new Error("Host service unavailable");
 			return getHostServiceClientByUrl(
-				hostUrl,
+				input.hostUrl,
 			).settings.superwhisper.set.mutate({
-				enabled: nextEnabled,
+				enabled: input.enabled,
 			});
 		},
-		onSuccess: (settings) => {
-			queryClient.setQueryData(queryKey, settings);
+		onSuccess: (settings, input) => {
+			queryClient.setQueryData(["host-superwhisper", input.hostUrl], settings);
 		},
 		onError: (error) => {
 			toast.error(
@@ -79,7 +79,9 @@ export function SuperwhisperControls({
 					id="superwhisper-enabled"
 					checked={settings.enabled}
 					disabled={controlsDisabled}
-					onCheckedChange={(nextEnabled) => setMutation.mutate(nextEnabled)}
+					onCheckedChange={(nextEnabled) =>
+						setMutation.mutate({ hostUrl, enabled: nextEnabled })
+					}
 				/>
 			</SettingsRow>
 			<SettingsRow

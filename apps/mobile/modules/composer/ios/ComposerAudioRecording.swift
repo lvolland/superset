@@ -5,7 +5,8 @@ final class ComposerAudioRecording {
   let url = FileManager.default.temporaryDirectory
     .appendingPathComponent("dictation-\(UUID().uuidString).m4a")
   private let lock = NSLock()
-  private let converter: AVAudioConverter
+  private var converter: AVAudioConverter
+  private let outputFormat: AVAudioFormat
   private var file: AVAudioFile?
   private var frames: AVAudioFramePosition = 0
   private var failure: Error?
@@ -14,10 +15,18 @@ final class ComposerAudioRecording {
     guard let output = AVAudioFormat(
       commonFormat: .pcmFormatFloat32, sampleRate: 16_000,
       channels: 1, interleaved: false
-    ), let converter = AVAudioConverter(from: format, to: output) else {
+    ) else {
       throw NSError(domain: "ComposerAudioRecording", code: 1)
     }
-    self.converter = converter
+    var initialConverter: AVAudioConverter?
+    try ComposerExceptionGuard.run {
+      initialConverter = AVAudioConverter(from: format, to: output)
+    }
+    guard let initialConverter else {
+      throw NSError(domain: "ComposerAudioRecording", code: 1)
+    }
+    converter = initialConverter
+    outputFormat = output
     file = try AVAudioFile(forWriting: url, settings: [
       AVFormatIDKey: kAudioFormatMPEG4AAC,
       AVSampleRateKey: 16_000,
@@ -30,30 +39,45 @@ final class ComposerAudioRecording {
     lock.lock()
     defer { lock.unlock() }
     guard let file, failure == nil else { return }
-    let capacity = AVAudioFrameCount(
-      ceil(Double(input.frameLength) * 16_000 / input.format.sampleRate) + 32
-    )
-    guard let output = AVAudioPCMBuffer(
-      pcmFormat: converter.outputFormat, frameCapacity: capacity
-    ) else { return }
-    var supplied = false
-    var error: NSError?
-    let status = converter.convert(to: output, error: &error) { _, state in
-      if supplied {
-        state.pointee = .noDataNow
-        return nil
-      }
-      supplied = true
-      state.pointee = .haveData
-      return input
-    }
-    if status == .error {
-      failure = error ?? NSError(domain: "ComposerAudioRecording", code: 2)
-      return
-    }
-    let remaining = AVAudioFramePosition(16_000 * 300) - frames
-    output.frameLength = min(output.frameLength, AVAudioFrameCount(max(0, remaining)))
     do {
+      guard input.format.sampleRate > 0, input.format.channelCount > 0 else {
+        throw NSError(domain: "ComposerAudioRecording", code: 1)
+      }
+      if !converter.inputFormat.isEqual(input.format) {
+        var replacement: AVAudioConverter?
+        try ComposerExceptionGuard.run {
+          replacement = AVAudioConverter(from: input.format, to: outputFormat)
+        }
+        guard let replacement else {
+          throw NSError(domain: "ComposerAudioRecording", code: 1)
+        }
+        converter = replacement
+      }
+      let capacity = AVAudioFrameCount(
+        ceil(Double(input.frameLength) * 16_000 / input.format.sampleRate) + 32
+      )
+      guard let output = AVAudioPCMBuffer(
+        pcmFormat: outputFormat, frameCapacity: capacity
+      ) else { throw NSError(domain: "ComposerAudioRecording", code: 2) }
+      var supplied = false
+      var error: NSError?
+      var status: AVAudioConverterOutputStatus = .error
+      try ComposerExceptionGuard.run {
+        status = converter.convert(to: output, error: &error) { _, state in
+          if supplied {
+            state.pointee = .noDataNow
+            return nil
+          }
+          supplied = true
+          state.pointee = .haveData
+          return input
+        }
+      }
+      if status == .error {
+        throw error ?? NSError(domain: "ComposerAudioRecording", code: 2)
+      }
+      let remaining = AVAudioFramePosition(16_000 * 300) - frames
+      output.frameLength = min(output.frameLength, AVAudioFrameCount(max(0, remaining)))
       try file.write(from: output)
       frames += AVAudioFramePosition(output.frameLength)
     } catch {
@@ -67,12 +91,17 @@ final class ComposerAudioRecording {
     if failure == nil, let file,
       let tail = AVAudioPCMBuffer(pcmFormat: converter.outputFormat, frameCapacity: 512) {
       var error: NSError?
-      let status = converter.convert(to: tail, error: &error) { _, state in
-        state.pointee = .endOfStream
-        return nil
-      }
+      var status: AVAudioConverterOutputStatus = .error
+      do {
+        try ComposerExceptionGuard.run {
+          status = converter.convert(to: tail, error: &error) { _, state in
+            state.pointee = .endOfStream
+            return nil
+          }
+        }
+      } catch { failure = error }
       if status == .error {
-        failure = error ?? NSError(domain: "ComposerAudioRecording", code: 2)
+        failure = failure ?? error ?? NSError(domain: "ComposerAudioRecording", code: 2)
       } else {
         tail.frameLength = min(tail.frameLength, AVAudioFrameCount(max(0, 16_000 * 300 - frames)))
         do {

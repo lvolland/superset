@@ -84,7 +84,9 @@ describe("dictation session", () => {
 		const removed: string[] = [];
 		const session = createDictationSession({
 			transcribe: () => pending.promise,
-			append: (text) => appended.push(text),
+			append: (text) => {
+				appended.push(text);
+			},
 			remove: (uri) => removed.push(uri),
 		});
 		session.accept(audio, target);
@@ -92,11 +94,64 @@ describe("dictation session", () => {
 		expect(removed).toEqual([]);
 		pending.resolve("hello");
 		await pending.promise;
+		await Promise.resolve();
 		expect(appended).toEqual(["hello"]);
 		expect(removed).toEqual([audio.uri]);
 		expect(session.getSnapshot().status).toBe("idle");
 	});
 
+	test("waits for draft insertion before removing audio", async () => {
+		const insertion = deferred<void>();
+		const started = deferred<void>();
+		const removed: string[] = [];
+		const session = createDictationSession({
+			transcribe: async () => "hello",
+			append: () => {
+				started.resolve();
+				return insertion.promise;
+			},
+			remove: (uri) => removed.push(uri),
+		});
+		session.accept(audio, target);
+		await started.promise;
+		expect(session.getSnapshot().status).toBe("transcribing");
+		expect(removed).toEqual([]);
+		insertion.resolve();
+		await insertion.promise;
+		expect(removed).toEqual([audio.uri]);
+		expect(session.getSnapshot().status).toBe("idle");
+	});
+	test("keeps audio if native draft insertion rejects", async () => {
+		const failed = deferred<void>();
+		const removed: string[] = [];
+		const session = createDictationSession({
+			transcribe: async () => "hello",
+			append: () => failed.promise,
+			remove: (uri) => removed.push(uri),
+		});
+		session.accept(audio, target);
+		await Promise.resolve();
+		failed.reject(new Error("native view detached"));
+		await failed.promise.catch(() => {});
+		expect(removed).toEqual([]);
+		expect(session.getSnapshot().status).toBe("failed");
+	});
+	test("does not append an empty transcript", async () => {
+		const pending = deferred<string>();
+		const appended: string[] = [];
+		const session = createDictationSession({
+			transcribe: () => pending.promise,
+			append: (text) => {
+				appended.push(text);
+			},
+			remove: () => {},
+		});
+		session.accept(audio, target);
+		pending.resolve("");
+		await pending.promise;
+		expect(appended).toEqual([]);
+		expect(session.getSnapshot().status).toBe("idle");
+	});
 	test("retains the audio and original Mac on failure and retries once", async () => {
 		const first = deferred<string>();
 		const second = deferred<string>();
@@ -108,7 +163,9 @@ describe("dictation session", () => {
 				calls.push([recording, machine]);
 				return calls.length === 1 ? first.promise : second.promise;
 			},
-			append: (text) => appended.push(text),
+			append: (text) => {
+				appended.push(text);
+			},
 			remove: (uri) => removed.push(uri),
 		});
 		session.accept(audio, target);

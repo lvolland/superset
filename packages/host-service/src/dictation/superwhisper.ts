@@ -1,4 +1,4 @@
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import * as fs from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
@@ -34,8 +34,67 @@ export interface SuperwhisperDependencies {
 		args: string[],
 		options: { timeoutMs: number; input?: string; env?: NodeJS.ProcessEnv },
 	): Promise<string>;
+	acquireLock(path: string, timeoutMs: number): Promise<() => Promise<void>>;
+	warn(message: string, error: unknown): void;
 	now(): number;
 	sleep(ms: number): Promise<void>;
+}
+
+function acquireFileLock(
+	path: string,
+	timeoutMs: number,
+): Promise<() => Promise<void>> {
+	return new Promise((resolve, reject) => {
+		const child = spawn(
+			"/usr/bin/lockf",
+			[
+				"-k",
+				"-t",
+				String(Math.ceil(timeoutMs / 1000)),
+				path,
+				"/bin/sh",
+				"-c",
+				"printf ready; /bin/cat >/dev/null",
+			],
+			{ stdio: ["pipe", "pipe", "pipe"] },
+		);
+		let acquired = false;
+		let output = "";
+		let finish!: () => void;
+		const exited = new Promise<void>((done) => {
+			finish = done;
+		});
+		child.once("error", (error) => {
+			reject(error);
+			finish();
+		});
+		child.stdin.on("error", () => {});
+		child.stderr.resume();
+		child.once("exit", (code) => {
+			finish();
+			if (!acquired)
+				reject(
+					code === 75
+						? new DictationError(
+								"TIMEOUT",
+								"Superwhisper is busy with another dictation",
+							)
+						: new Error(
+								`Could not acquire the Superwhisper dictation lock (${code})`,
+							),
+				);
+		});
+		child.stdout.on("data", (chunk) => {
+			output += chunk.toString();
+			if (!acquired && output.includes("ready")) {
+				acquired = true;
+				resolve(async () => {
+					child.stdin.end();
+					await exited;
+				});
+			}
+		});
+	});
 }
 
 export const systemSuperwhisperDependencies: SuperwhisperDependencies = {
@@ -43,6 +102,8 @@ export const systemSuperwhisperDependencies: SuperwhisperDependencies = {
 	home: homedir(),
 	temporaryDirectory: tmpdir(),
 	fs,
+	acquireLock: acquireFileLock,
+	warn: (message, error) => console.warn(message, error),
 	now: () => performance.now(),
 	sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 	run: (command, args, { timeoutMs, input, env }) =>
@@ -69,7 +130,7 @@ export const systemSuperwhisperDependencies: SuperwhisperDependencies = {
 const APP = "/Applications/superwhisper.app";
 const DOMAIN = "com.superduper.superwhisper";
 const TIMEOUT_MS = 30_000;
-const RESTORE_TIMEOUT_MS = 2_000;
+const RESTORE_TIMEOUT_MS = TIMEOUT_MS;
 
 function modeIsSafe(value: unknown): boolean {
 	if (!value || typeof value !== "object") return false;
@@ -80,6 +141,12 @@ function modeIsSafe(value: unknown): boolean {
 		mode.autoPaste === false &&
 		mode.realtimeOutput !== true &&
 		mode.scriptEnabled !== true
+	);
+}
+
+function usesLanguageModel(value: Record<string, unknown>): boolean {
+	return [value.languageModelID, value.languageModelName].some(
+		(field) => typeof field === "string" && field.trim().length > 0,
 	);
 }
 
@@ -254,6 +321,31 @@ export class SuperwhisperAdapter {
 		mediaType: string,
 		deadline: number,
 	): Promise<{ text: string }> {
+		if (this.deps.platform !== "darwin")
+			throw new DictationError(
+				"UNAVAILABLE",
+				"Superwhisper is not installed on this Mac",
+			);
+		const lock = join(this.deps.home, ".superset-superwhisper.lock");
+		const ms = deadline - this.deps.now();
+		if (ms <= 0)
+			throw new DictationError(
+				"TIMEOUT",
+				"Superwhisper is busy with another dictation",
+			);
+		const release = await this.deps.acquireLock(lock, Math.ceil(ms));
+		try {
+			return await this.transcribeLocked(audio, mediaType, deadline);
+		} finally {
+			await release();
+		}
+	}
+
+	private async transcribeLocked(
+		audio: Buffer,
+		mediaType: string,
+		deadline: number,
+	): Promise<{ text: string }> {
 		const remaining = () => {
 			const ms = deadline - this.deps.now();
 			if (ms <= 0)
@@ -267,7 +359,7 @@ export class SuperwhisperAdapter {
 			try {
 				return await this.deps.run(name, args, {
 					timeoutMs: remaining(),
-					...(name === "/usr/bin/pbpaste" && {
+					...((name === "/usr/bin/pbpaste" || name === "/usr/bin/afinfo") && {
 						env: { ...process.env, LC_ALL: "en_US.UTF-8" },
 					}),
 				});
@@ -287,6 +379,8 @@ export class SuperwhisperAdapter {
 		let clipboard: string | undefined;
 		let modeChanged = false;
 		let textResult = "";
+		let hasResult = false;
+		const clipboardResults = new Set<string>();
 		let failure: unknown;
 		let restoreFailed = false;
 		try {
@@ -300,6 +394,20 @@ export class SuperwhisperAdapter {
 			const wav = join(directory, "converted.wav");
 			await this.deps.fs.writeFile(input, audio, { mode: 0o600 });
 			try {
+				const info = await command("/usr/bin/afinfo", ["-r", input]);
+				const seconds = Number(
+					info.match(/estimated duration:\s*([\d.]+)\s*sec/i)?.[1],
+				);
+				if (!Number.isFinite(seconds) || seconds <= 0)
+					throw new DictationError(
+						"INVALID_AUDIO",
+						"Cannot read the recorded audio duration",
+					);
+				if (seconds > 300)
+					throw new DictationError(
+						"INVALID_AUDIO",
+						"Dictation cannot exceed five minutes",
+					);
 				await command("/usr/bin/afconvert", [
 					"-f",
 					"WAVE",
@@ -332,7 +440,6 @@ export class SuperwhisperAdapter {
 					"MODE_NOT_READY",
 					"Cannot read the active Superwhisper mode",
 				);
-			if (originalMode === "superset") originalMode = "default";
 			modeChanged = true;
 			await command("/usr/bin/open", [
 				"-g",
@@ -350,6 +457,12 @@ export class SuperwhisperAdapter {
 				if (error instanceof DictationError) throw error;
 			}
 			await this.ensureModeIn(appDirectory);
+			const mode = JSON.parse(
+				await this.deps.fs.readFile(
+					join(appDirectory, "modes", "superset.json"),
+					"utf8",
+				),
+			) as Record<string, unknown>;
 			const previous = new Set(await this.listRecordings(recordings));
 			await command("/usr/bin/open", ["-g", "-a", APP, wav]);
 			while (true) {
@@ -387,51 +500,91 @@ export class SuperwhisperAdapter {
 						"More than one Superwhisper recording matches this dictation",
 					);
 				const meta = matches[0];
-				const text =
-					typeof meta?.llmResult === "string" && meta.llmResult.trim()
-						? meta.llmResult
-						: meta?.result;
-				if (typeof text === "string" && text.trim()) {
-					textResult = text.trim();
-					break;
+				if (meta) {
+					for (const text of [meta.result, meta.llmResult])
+						if (typeof text === "string" && text.trim())
+							clipboardResults.add(text);
+					const llm =
+						typeof meta.llmResult === "string" ? meta.llmResult.trim() : "";
+					const raw = typeof meta.result === "string" ? meta.result.trim() : "";
+					const completed =
+						typeof meta.processingTime === "number" &&
+						Number.isFinite(meta.processingTime);
+					if (llm || raw || completed) {
+						textResult = llm || raw;
+						hasResult = true;
+						if (
+							llm ||
+							(!raw && completed) ||
+							!(usesLanguageModel(mode) || usesLanguageModel(meta))
+						)
+							break;
+					}
 				}
 				await pause();
 			}
 		} catch (error) {
-			failure =
-				error instanceof DictationError
-					? error
-					: new DictationError(
-							"TRANSCRIPTION_FAILED",
-							"Superwhisper could not transcribe this recording",
-						);
+			if (
+				!(
+					hasResult &&
+					error instanceof DictationError &&
+					error.kind === "TIMEOUT"
+				)
+			) {
+				failure =
+					error instanceof DictationError
+						? error
+						: new DictationError(
+								"TRANSCRIPTION_FAILED",
+								"Superwhisper could not transcribe this recording",
+							);
+			}
 		} finally {
 			if (modeChanged && originalMode) {
 				try {
 					await this.restoreMode(originalMode);
-				} catch {
+				} catch (error) {
 					restoreFailed = true;
+					this.deps.warn(
+						"Could not restore the Superwhisper mode after dictation",
+						error,
+					);
 				}
 			}
 			if (clipboard !== undefined) {
 				try {
-					await this.deps.run("/usr/bin/pbcopy", [], {
+					const env = { ...process.env, LC_ALL: "en_US.UTF-8" };
+					const current = await this.deps.run("/usr/bin/pbpaste", [], {
 						timeoutMs: RESTORE_TIMEOUT_MS,
-						input: clipboard,
-						env: { ...process.env, LC_ALL: "en_US.UTF-8" },
+						env,
 					});
-				} catch {
+					if (!current || clipboardResults.has(current)) {
+						await this.deps.run("/usr/bin/pbcopy", [], {
+							timeoutMs: RESTORE_TIMEOUT_MS,
+							input: clipboard,
+							env,
+						});
+					}
+				} catch (error) {
 					restoreFailed = true;
+					this.deps.warn(
+						"Could not restore the clipboard after dictation",
+						error,
+					);
 				}
 			}
 			try {
 				if (directory)
 					await this.deps.fs.rm(directory, { recursive: true, force: true });
-			} catch {
+			} catch (error) {
 				restoreFailed = true;
+				this.deps.warn(
+					"Could not remove dictation audio after transcription",
+					error,
+				);
 			}
 		}
-		if (restoreFailed)
+		if (restoreFailed && !hasResult)
 			throw new DictationError(
 				"RESTORE_FAILED",
 				"Could not restore the Superwhisper mode or clipboard after dictation",

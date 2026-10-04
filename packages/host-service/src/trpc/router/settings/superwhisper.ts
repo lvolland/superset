@@ -33,7 +33,12 @@ export function createSuperwhisperSettingsRouter(
 							set: { superwhisperEnabled: input.enabled },
 						})
 						.run();
-					return { enabled: input.enabled, ...(await adapter.status()) };
+					return {
+						enabled: input.enabled,
+						...(await adapter
+							.status()
+							.catch(() => ({ installed: false, modeReady: false }))),
+					};
 				} catch (error) {
 					throw dictationTrpcError(error);
 				}

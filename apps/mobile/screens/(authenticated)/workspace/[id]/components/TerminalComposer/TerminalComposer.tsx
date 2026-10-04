@@ -141,7 +141,10 @@ export const TerminalComposer = forwardRef<
 		focus: () => composerRef.current?.focus(),
 		blur: () => composerRef.current?.blur(),
 		clear: () => composerRef.current?.clear(),
-		appendDraft: (text: string) => composerRef.current?.appendDraft(text),
+		appendDraft: async (text: string) => {
+			if (!composerRef.current) throw new Error("Composer is not mounted");
+			await composerRef.current.appendDraft(text);
+		},
 	}));
 
 	const draftKey = workspaceDraftKey(workspaceId);

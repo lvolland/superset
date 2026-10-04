@@ -1,8 +1,12 @@
 import { describe, expect, it } from "bun:test";
+import * as realFs from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
 	DictationError,
 	SuperwhisperAdapter,
 	type SuperwhisperDependencies,
+	systemSuperwhisperDependencies,
 	wavDurationMs,
 } from "./superwhisper";
 
@@ -38,6 +42,14 @@ function fixture(
 		appFolder?: string;
 		missingAppFolder?: boolean;
 		failPaste?: boolean;
+		emptyResult?: boolean;
+		llmMode?: boolean;
+		llmMeta?: boolean;
+		llmDelay?: number;
+		inputDuration?: number;
+		restoreDelay?: number;
+		userClipboard?: string;
+		staleLock?: boolean;
 	} = {},
 ) {
 	const appFolder = options.appFolder || "/home";
@@ -46,6 +58,9 @@ function fixture(
 	let mode = options.activeMode ?? "pro";
 	let clipboard = "original clipboard\n";
 	let submissions = 0;
+	let submittedAt = 0;
+	let restoreAt: number | undefined;
+	const warnings: unknown[] = [];
 	const commands: string[][] = [];
 	const files = new Map<string, string | Buffer>();
 	files.set("/Applications/superwhisper.app", "");
@@ -62,19 +77,51 @@ function fixture(
 	if (!options.missingMode)
 		files.set(
 			`${appFolder}/superwhisper/modes/superset.json`,
-			JSON.stringify({ key: "superset", name: "Superset", autoPaste: false }),
+			JSON.stringify({
+				key: "superset",
+				name: "Superset",
+				autoPaste: false,
+				languageModelID: options.llmMode ? "model" : "",
+			}),
 		);
 	if (options.missingApp) files.delete("/Applications/superwhisper.app");
 	if (options.missingDefault)
 		files.delete(`${appFolder}/superwhisper/modes/default.json`);
 	const enoent = () => Object.assign(new Error("missing"), { code: "ENOENT" });
 	const deps: SuperwhisperDependencies = {
+		acquireLock: async (path, timeoutMs) => {
+			const deadline = now + timeoutMs;
+			while (files.has(path) && files.get(path) !== "dead") {
+				if (now >= deadline) throw new DictationError("TIMEOUT", "locked");
+				await deps.sleep(Math.min(100, deadline - now));
+			}
+			files.set(path, "locked");
+			return async () => {
+				files.delete(path);
+			};
+		},
 		platform: "darwin",
 		home: "/home",
 		temporaryDirectory: "/temp",
 		now: () => now,
+		warn: (...args: unknown[]) => warnings.push(args),
 		sleep: async (ms) => {
 			now += ms;
+			if (
+				restoreAt !== undefined &&
+				now - restoreAt >= (options.restoreDelay ?? 0)
+			)
+				mode = "pro";
+			if (
+				options.llmDelay !== undefined &&
+				submissions &&
+				now - submittedAt >= options.llmDelay
+			) {
+				const path = `${appFolder}/superwhisper/recordings/${submissions}/meta.json`;
+				const meta = JSON.parse(files.get(path) as string);
+				meta.llmResult = "final text";
+				files.set(path, JSON.stringify(meta));
+			}
 		},
 		fs: {
 			access: async (path: string) => {
@@ -105,11 +152,14 @@ function fixture(
 			],
 			rm: async (path: string) => {
 				for (const key of files.keys())
-					if (key.startsWith(`${path}/`)) files.delete(key);
+					if (key === path || key.startsWith(`${path}/`)) files.delete(key);
 			},
 		} as unknown as SuperwhisperDependencies["fs"],
 		run: async (command, args, config) => {
 			commands.push([command, ...args]);
+			if (command.endsWith("afinfo"))
+				return `estimated duration: ${(options.inputDuration ?? 1000) / 1000} sec`;
+
 			if (command.endsWith("afconvert")) {
 				files.set(args.at(-1) as string, wav());
 				return "";
@@ -131,7 +181,8 @@ function fixture(
 				const next = new URL(args[1]).searchParams.get("key") as string;
 				if (options.failRestore && next === "pro")
 					throw new Error("restore failed");
-				mode = next;
+				if (next === "pro" && options.restoreDelay) restoreAt = now;
+				else mode = next;
 				return "";
 			}
 			if (command.endsWith("open") && args.includes("-a")) {
@@ -145,15 +196,31 @@ function fixture(
 				).toBe(false);
 				if (options.failOpen) throw new Error("open failed");
 				submissions++;
-				clipboard = "transcription";
+				submittedAt = now;
+				clipboard =
+					options.userClipboard ??
+					(options.timeout
+						? ""
+						: options.emptyResult
+							? ""
+							: options.noLlm || options.llmDelay !== undefined
+								? "raw text"
+								: ` processed ${submissions} `);
 				if (!options.timeout) {
 					files.set(
 						`${appFolder}/superwhisper/recordings/${submissions}/meta.json`,
 						JSON.stringify({
 							modeName: "Superset",
 							duration: 1000,
-							llmResult: options.noLlm ? " " : ` processed ${submissions} `,
-							result: "raw text",
+							processingTime: 10,
+							languageModelName: options.llmMeta ? "LLM" : "",
+							llmResult:
+								options.emptyResult ||
+								options.noLlm ||
+								options.llmDelay !== undefined
+									? " "
+									: ` processed ${submissions} `,
+							result: options.emptyResult ? " " : "raw text",
 						}),
 					);
 					if (options.ambiguous)
@@ -170,7 +237,9 @@ function fixture(
 			return "";
 		},
 	};
+	if (options.staleLock) files.set("/home/.superset-superwhisper.lock", "dead");
 	return {
+		warnings,
 		deps,
 		adapter: new SuperwhisperAdapter(deps),
 		files,
@@ -178,6 +247,7 @@ function fixture(
 		mode: () => mode,
 		clipboard: () => clipboard,
 		now: () => now,
+		warn: (...args: unknown[]) => warnings.push(args),
 		setAppFolder: (folder: string) => {
 			configuredFolder = folder;
 		},
@@ -288,12 +358,13 @@ describe("SuperwhisperAdapter", () => {
 		const run = f.deps.run;
 		const text = "Été à Tokyo 東京\n";
 		let copied = "";
+		let reads = 0;
 		f.deps.run = async (command, args, options) => {
 			if (command.endsWith("pbpaste") || command.endsWith("pbcopy")) {
 				expect(options).toMatchObject({
 					env: { LC_ALL: "en_US.UTF-8", PATH: process.env.PATH },
 				});
-				if (command.endsWith("pbpaste")) return text;
+				if (command.endsWith("pbpaste")) return reads++ === 0 ? text : "";
 				copied = options.input ?? "";
 			}
 			return run(command, args, options);
@@ -304,7 +375,7 @@ describe("SuperwhisperAdapter", () => {
 	it.each([
 		false,
 		true,
-	])("restores default when Superset was already active (timeout: %s)", async (timeout) => {
+	])("preserves Superset when it was already active (timeout: %s)", async (timeout) => {
 		const f = fixture({ activeMode: "superset", timeout });
 		if (timeout) {
 			await expect(
@@ -313,7 +384,7 @@ describe("SuperwhisperAdapter", () => {
 		} else {
 			await f.adapter.transcribe(audio, "audio/mp4");
 		}
-		expect(f.mode()).toBe("default");
+		expect(f.mode()).toBe("superset");
 	});
 	it("passes integer command timeouts with a fractional monotonic clock", async () => {
 		const f = fixture();
@@ -334,6 +405,101 @@ describe("SuperwhisperAdapter", () => {
 		expect(await f.adapter.transcribe(audio, "audio/mp4")).toEqual({
 			text: "raw text",
 		});
+	});
+	it("returns an empty completed transcript without waiting", async () => {
+		const f = fixture({ emptyResult: true });
+		expect(await f.adapter.transcribe(audio, "audio/mp4")).toEqual({
+			text: "",
+		});
+		expect(f.now()).toBe(0);
+	});
+	it("does not change modes if the original mode cannot be read", async () => {
+		const f = fixture({ activeMode: "" });
+		await expect(
+			f.adapter.transcribe(audio, "audio/mp4"),
+		).rejects.toMatchObject({ kind: "MODE_NOT_READY" });
+		expect(f.commands.some((c) => c[0]?.endsWith("open"))).toBe(false);
+		expect(f.mode()).toBe("");
+	});
+	it("gives mode restoration the same budget as activation", async () => {
+		const f = fixture({ restoreDelay: 3000 });
+		expect(await f.adapter.transcribe(audio, "audio/mp4")).toEqual({
+			text: "processed 1",
+		});
+		expect(f.mode()).toBe("pro");
+		expect(f.warnings).toEqual([]);
+	});
+	it("preserves a copy made by the user during transcription", async () => {
+		const f = fixture({ userClipboard: "user copy" });
+		await f.adapter.transcribe(audio, "audio/mp4");
+		expect(f.clipboard()).toBe("user copy");
+	});
+	it("does not overwrite a user copy that differs only in whitespace", async () => {
+		const f = fixture({ noLlm: true, userClipboard: "raw text\n\n" });
+		await f.adapter.transcribe(audio, "audio/mp4");
+		expect(f.clipboard()).toBe("raw text\n\n");
+	});
+	it.each([
+		{ llmMode: true },
+		{ llmMeta: true },
+	])("waits for LLM output declared by mode or recording (%j)", async (options) => {
+		const f = fixture({ ...options, llmDelay: 500 });
+		expect(await f.adapter.transcribe(audio, "audio/mp4")).toEqual({
+			text: "final text",
+		});
+		expect(f.now()).toBe(500);
+	});
+	it("falls back to the transcript at the LLM deadline", async () => {
+		const f = fixture({ llmMode: true, noLlm: true });
+		expect(await f.adapter.transcribe(audio, "audio/mp4")).toEqual({
+			text: "raw text",
+		});
+		expect(f.now()).toBe(30000);
+	});
+	it("keeps the raw transcript when the LLM deadline expires between polls", async () => {
+		const f = fixture({ llmMode: true, noLlm: true });
+		let checks = 0;
+		f.deps.now = () => f.now() + (f.now() >= 29900 && ++checks >= 2 ? 100 : 0);
+		expect(await f.adapter.transcribe(audio, "audio/mp4")).toEqual({
+			text: "raw text",
+		});
+	});
+	it("rejects audio over five minutes before conversion", async () => {
+		const f = fixture({ inputDuration: 300001 });
+		await expect(
+			f.adapter.transcribe(audio, "audio/mp4"),
+		).rejects.toMatchObject({ kind: "INVALID_AUDIO" });
+		expect(f.commands.some((c) => c[0]?.endsWith("afconvert"))).toBe(false);
+	});
+	it("keeps the file lock through restoration across adapters", async () => {
+		const f = fixture({ restoreDelay: 500 });
+		const other = new SuperwhisperAdapter(f.deps);
+		expect(
+			await Promise.all([
+				f.adapter.transcribe(audio, "audio/mp4"),
+				other.transcribe(audio, "audio/mp4"),
+			]),
+		).toEqual([{ text: "processed 1" }, { text: "processed 2" }]);
+		expect(f.mode()).toBe("pro");
+		expect(f.clipboard()).toBe("original clipboard\n");
+		expect(f.files.has("/home/.superset-superwhisper.lock")).toBe(false);
+	});
+	it("times out behind a live lock without changing Mac state", async () => {
+		const f = fixture();
+		f.files.set("/home/.superset-superwhisper.lock", "live");
+		await expect(
+			f.adapter.transcribe(audio, "audio/mp4"),
+		).rejects.toMatchObject({ kind: "TIMEOUT" });
+		expect(f.mode()).toBe("pro");
+		expect(f.clipboard()).toBe("original clipboard\n");
+		expect(f.files.get("/home/.superset-superwhisper.lock")).toBe("live");
+	});
+	it("recovers a stale file lock", async () => {
+		const f = fixture({ staleLock: true });
+		expect(await f.adapter.transcribe(audio, "audio/mp4")).toEqual({
+			text: "processed 1",
+		});
+		expect(f.files.has("/home/.superset-superwhisper.lock")).toBe(false);
 	});
 	it("creates only a safe dedicated mode and preserves default", async () => {
 		const f = fixture({ missingMode: true });
@@ -408,9 +574,10 @@ describe("SuperwhisperAdapter", () => {
 	});
 	it("still restores clipboard when mode restoration fails", async () => {
 		const f = fixture({ failRestore: true });
-		await expect(
-			f.adapter.transcribe(audio, "audio/mp4"),
-		).rejects.toMatchObject({ kind: "RESTORE_FAILED" });
+		expect(await f.adapter.transcribe(audio, "audio/mp4")).toEqual({
+			text: "processed 1",
+		});
+		expect(f.warnings).toHaveLength(1);
 		expect(f.clipboard()).toBe("original clipboard\n");
 	});
 	it("serializes overlapping requests and ignores prior recordings", async () => {
@@ -491,3 +658,31 @@ it("validates converted WAV duration and malformed audio", () => {
 	expect(() => wavDurationMs(Buffer.from("invalid"))).toThrow(DictationError);
 	expect(() => wavDurationMs(wav().subarray(0, 45))).toThrow(DictationError);
 });
+
+it.skipIf(process.platform !== "darwin")(
+	"uses a kernel lock that excludes other hosts and recovers an abandoned file",
+	async () => {
+		const directory = await realFs.mkdtemp(
+			join(tmpdir(), "superset-lock-test-"),
+		);
+		const path = join(directory, "dictation.lock");
+		try {
+			await realFs.writeFile(path, "stale owner");
+			const release = await systemSuperwhisperDependencies.acquireLock(path, 0);
+			try {
+				await expect(
+					systemSuperwhisperDependencies.acquireLock(path, 0),
+				).rejects.toMatchObject({ kind: "TIMEOUT" });
+			} finally {
+				await release();
+			}
+			const releaseAgain = await systemSuperwhisperDependencies.acquireLock(
+				path,
+				0,
+			);
+			await releaseAgain();
+		} finally {
+			await realFs.rm(directory, { recursive: true, force: true });
+		}
+	},
+);
