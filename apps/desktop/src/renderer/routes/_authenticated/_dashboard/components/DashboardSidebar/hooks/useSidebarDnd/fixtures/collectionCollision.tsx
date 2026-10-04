@@ -1,5 +1,9 @@
 import { afterAll, expect, mock, test } from "bun:test";
-import type { CollisionDetection } from "@dnd-kit/core";
+import {
+	type CollisionDetection,
+	type DragStartEvent,
+	MeasuringStrategy,
+} from "@dnd-kit/core";
 import { GlobalRegistrator } from "@happy-dom/global-registrator";
 
 const registered = GlobalRegistrator.isRegistered;
@@ -16,12 +20,57 @@ mock.module(
 mock.module("renderer/stores/workspace-creates", () => ({
 	useWorkspaceTransactionsStore: () => ({}),
 }));
-const { cleanup, renderHook } = await import("@testing-library/react");
+const { act, cleanup, renderHook } = await import("@testing-library/react");
 const { useSidebarDnd } = await import("../useSidebarDnd");
 
 afterAll(async () => {
 	cleanup();
 	if (!registered) await GlobalRegistrator.unregister();
+});
+
+test("only collection drags discard measurements taken before dragging", async () => {
+	const { result } = renderHook(() =>
+		useSidebarDnd({
+			projects: [{ id: "root", children: [] }] as unknown as Parameters<
+				typeof useSidebarDnd
+			>[0]["projects"],
+			pinnedWorkspaces: [],
+			sessionChildren: [],
+			onReorderProjects: () => {},
+			collectionLayout: {
+				rootKeys: ["projects:team", "root"],
+				collections: [{ id: "projects:team", tag: "team", projectIds: [] }],
+			},
+		}),
+	);
+	expect(result.current.measuring.droppable.strategy).toBe(
+		MeasuringStrategy.Always,
+	);
+	await act(async () => {
+		result.current.handlers.onDragStart({
+			active: { id: "projects:team" },
+		} as DragStartEvent);
+	});
+	expect(result.current.measuring.droppable.strategy).toBe(
+		MeasuringStrategy.WhileDragging,
+	);
+	await act(async () => {
+		result.current.handlers.onDragCancel();
+	});
+	expect(result.current.measuring.droppable.strategy).toBe(
+		MeasuringStrategy.Always,
+	);
+	await act(async () => {
+		result.current.handlers.onDragStart({
+			active: { id: "root" },
+		} as DragStartEvent);
+	});
+	expect(result.current.measuring.droppable.strategy).toBe(
+		MeasuringStrategy.Always,
+	);
+	await act(async () => {
+		result.current.handlers.onDragCancel();
+	});
 });
 
 test("the upper half of a collection label accepts a root reorder", () => {

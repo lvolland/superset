@@ -8,10 +8,17 @@ if (!alreadyRegistered) GlobalRegistrator.register();
 (
 	globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
-const { act, cleanup, fireEvent, render, within } = await import(
+const { act, cleanup, fireEvent, render, renderHook, within } = await import(
 	"@testing-library/react"
 );
-const { DndContext } = await import("@dnd-kit/core");
+const { DndContext, useDndContext } = await import("@dnd-kit/core");
+const { SortableContext, verticalListSortingStrategy } = await import(
+	"@dnd-kit/sortable"
+);
+const { measuring, collectionMeasuring } = await import(
+	"../../hooks/useSidebarDnd/useSidebarDnd"
+);
+const { useLayoutEffect, useState } = await import("react");
 const { DashboardSidebarCollection } = await import(
 	"./DashboardSidebarCollection"
 );
@@ -176,6 +183,97 @@ test("the first inline name mints the readable CLI tag", async () => {
 		replacementTag: "perso",
 	});
 	expect(setNewCollectionTag).toHaveBeenCalledWith(null);
+});
+
+test("collection sorting measures header gaps after expanded members disappear", async () => {
+	const measuredPositions: number[] = [];
+	const { result } = renderHook(
+		() => {
+			const context = useDndContext();
+			useLayoutEffect(() => {
+				if (
+					context.active &&
+					!document.body.textContent?.includes("Member project")
+				) {
+					const top = context.droppableRects.get("projects:home")?.top;
+					if (top !== undefined) measuredPositions.push(top);
+				}
+			}, [context]);
+			return context;
+		},
+		{
+			wrapper: ({ children }) => {
+				const [isCollectionDragActive, setCollectionDragActive] =
+					useState(false);
+				const config = isCollectionDragActive ? collectionMeasuring : measuring;
+				return (
+					<DndContext
+						onDragStart={() => setCollectionDragActive(true)}
+						onDragEnd={() => setCollectionDragActive(false)}
+						measuring={{
+							...config,
+							droppable: {
+								...config.droppable,
+								measure: (node) => {
+									const top = node.textContent?.includes("Perso")
+										? document.body.textContent?.includes("Member project")
+											? 148
+											: 28
+										: 0;
+									return {
+										top,
+										bottom: top + 28,
+										left: 0,
+										right: 240,
+										width: 240,
+										height: 28,
+									};
+								},
+							},
+						}}
+					>
+						<SortableContext
+							items={[collection.id, "projects:home"]}
+							strategy={verticalListSortingStrategy}
+						>
+							<DashboardSidebarCollection
+								collection={{ ...collection, isCollapsed: false }}
+								isDragDisabled={false}
+							>
+								<span>Member project</span>
+							</DashboardSidebarCollection>
+							<DashboardSidebarCollection
+								collection={{
+									...collection,
+									id: "projects:home",
+									name: "Perso",
+									isCollapsed: false,
+								}}
+								isDragDisabled={false}
+							>
+								<span>Other member</span>
+							</DashboardSidebarCollection>
+						</SortableContext>
+						{children}
+					</DndContext>
+				);
+			},
+		},
+	);
+	expect(result.current.droppableRects.get("projects:home")?.top).toBe(148);
+	const header = within(document.body)
+		.getByText("Dibsteur")
+		.closest('[role="button"]');
+	if (!header) throw new Error("Missing collection header");
+	await act(async () => {
+		fireEvent.pointerDown(header, { isPrimary: true, button: 0 });
+	});
+	expect(measuredPositions).not.toContain(148);
+	expect(result.current.droppableRects.get("projects:home")?.top).toBe(28);
+	await act(async () => {
+		fireEvent.pointerUp(document);
+	});
+	expect(result.current.droppableRects.get("projects:home")?.top).toBe(148);
 });
 
 test("dragging a collection hides the members of every collection", async () => {

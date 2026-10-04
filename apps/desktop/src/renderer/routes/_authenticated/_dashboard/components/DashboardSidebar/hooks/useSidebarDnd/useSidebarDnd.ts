@@ -162,6 +162,10 @@ export const measuring = {
 	droppable: { strategy: MeasuringStrategy.Always as const },
 };
 
+export const collectionMeasuring = {
+	droppable: { strategy: MeasuringStrategy.WhileDragging as const },
+};
+
 // ── Build flat list from project children ────────────────────────────
 
 function buildFlatItems(
@@ -1271,7 +1275,8 @@ export function useSidebarDnd({
 
 	return {
 		sensors,
-		measuring,
+		measuring:
+			activeItem?.type === "collection" ? collectionMeasuring : measuring,
 		collisionDetection,
 		activeItem,
 		// Per-pointer-move value, consumed only by the provider's DragOverlay so
