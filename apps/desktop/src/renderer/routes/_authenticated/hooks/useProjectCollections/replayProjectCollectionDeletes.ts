@@ -8,16 +8,21 @@ export function withoutPendingProjectCollections(
 	pending: readonly ProjectCollectionPendingDelete[],
 ): HostTagFoldersResult[] {
 	return hosts.map((host) => {
-		const tags = new Set(
-			pending
-				.filter((row) => row.machineId === host.target.machineId)
-				.map((row) => row.tag),
+		const deletions = pending.filter(
+			(row) => row.machineId === host.target.machineId,
 		);
 		return {
 			...host,
-			settings: host.settings.filter(
-				(row) => row.scope !== PROJECTS_TAG_SCOPE || !tags.has(row.tag),
-			),
+			settings: host.settings.filter((setting) => {
+				if (setting.scope !== PROJECTS_TAG_SCOPE) return true;
+				const deletion = deletions.find((row) => row.tag === setting.tag);
+				return (
+					!deletion ||
+					(deletion.deletedAt !== undefined &&
+						setting.updatedAt !== undefined &&
+						setting.updatedAt > deletion.deletedAt)
+				);
+			}),
 		};
 	});
 }
@@ -33,7 +38,11 @@ export async function replayProjectCollectionDeletes({
 }: {
 	hosts: HostTagFoldersResult[];
 	pending: readonly ProjectCollectionPendingDelete[];
-	remove: (hostUrl: string, tag: string) => Promise<unknown>;
+	remove: (
+		hostUrl: string,
+		tag: string,
+		deletedAt?: number,
+	) => Promise<unknown>;
 	acknowledge: (row: ProjectCollectionPendingDelete) => Promise<unknown>;
 	enqueue?: (work: () => Promise<void>) => Promise<void>;
 	readPending?: () => readonly ProjectCollectionPendingDelete[];
@@ -52,12 +61,14 @@ export async function replayProjectCollectionDeletes({
 				if (
 					!readPending().some(
 						(entry) =>
-							entry.machineId === row.machineId && entry.tag === row.tag,
+							entry.machineId === row.machineId &&
+							entry.tag === row.tag &&
+							entry.deletedAt === row.deletedAt,
 					)
 				)
 					return;
 				try {
-					await remove(host.target.hostUrl as string, row.tag);
+					await remove(host.target.hostUrl as string, row.tag, row.deletedAt);
 					touched.set(row.machineId, host);
 				} catch (error) {
 					const code =

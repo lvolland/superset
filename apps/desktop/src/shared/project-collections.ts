@@ -19,6 +19,7 @@ export const projectCollectionPlacementScopeSchema = z.object({
 export const projectCollectionPendingDeleteSchema = z.object({
 	machineId: z.string().min(1),
 	tag: z.string().min(1),
+	deletedAt: z.number().int().nonnegative().optional(),
 });
 
 export type ProjectCollectionPendingDelete = z.infer<

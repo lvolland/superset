@@ -164,7 +164,7 @@ test("a missing router on an error host discards the author presentation", async
 });
 
 for (const current of ["newer", "deleted"] as const) {
-	test(`D3 replay does not overwrite a ${current} host presentation`, async () => {
+	test(`replay lets the host settle a ${current} presentation`, async () => {
 		const row = entry("ready");
 		Object.assign(row.setting, { updatedAt: 10, create: false });
 		if (!hosts[2]) throw new Error("Missing host");
@@ -190,7 +190,7 @@ for (const current of ["newer", "deleted"] as const) {
 			},
 			invalidate: () => {},
 		});
-		expect(calls).toBe(0);
+		expect(calls).toBe(1);
 		expect(acknowledged).toBe(true);
 	});
 }
@@ -295,4 +295,30 @@ test("an acknowledgement failure is retried with backoff instead of being forgot
 	time = 1000;
 	await replay();
 	expect(attempts).toBe(2);
+});
+
+test("replay writes when a move has copied the pending presentation into the host cache", async () => {
+	const row = entry("ready");
+	const host = hosts[2];
+	if (!host) throw new Error("Missing host");
+	const overlaid = withPendingProjectCollectionPresentations([host], [row])[0];
+	if (!overlaid) throw new Error("Missing overlay");
+	let storedName = "Old";
+	let acknowledged = false;
+	await replayProjectCollectionPresentations({
+		hosts: [host],
+		pending: [row],
+		readPending: () => [row],
+		readHost: () => overlaid,
+		enqueue: (work) => work(),
+		upsert: async (_host, pending) => {
+			storedName = pending.setting.displayName ?? "";
+		},
+		acknowledge: async () => {
+			acknowledged = true;
+		},
+		invalidate: () => {},
+	});
+	expect(storedName).toBe("New");
+	expect(acknowledged).toBe(true);
 });

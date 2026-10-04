@@ -181,28 +181,43 @@ export function useProjectCollectionsState() {
 				});
 			},
 			pending: utils.projectCollections.pendingDeletes.getData(scope) ?? [],
-			remove: (url, tag) =>
-				getHostServiceClientByUrl(url).tagFolders.delete.mutate({
+			remove: async (url, tag, deletedAt) => {
+				const response = await getHostServiceClientByUrl(
+					url,
+				).tagFolders.delete.mutate({
 					scope: PROJECTS_TAG_SCOPE,
 					tag,
-				}),
-			acknowledge: async (row) => {
-				const queryKey = [
-					"host-tag-folders",
-					scope.organizationId,
-					row.machineId,
-				];
-				queryClient.setQueryData<HostTagFolderSetting[]>(queryKey, (settings) =>
-					settings?.filter(
-						(setting) =>
-							setting.scope !== PROJECTS_TAG_SCOPE || setting.tag !== row.tag,
-					),
+					deletedAt,
+				});
+				const host = folders.hostResults.find(
+					(host) => host.target.hostUrl === url,
 				);
+				if (host)
+					queryClient.setQueryData<HostTagFolderSetting[]>(
+						[
+							"host-tag-folders",
+							host.target.organizationId,
+							host.target.machineId,
+						],
+						(settings) => [
+							...(settings ?? []).filter(
+								(setting) => setting.scope !== PROJECTS_TAG_SCOPE,
+							),
+							...response.tagSettings.map((setting) => ({
+								...setting,
+								scope: PROJECTS_TAG_SCOPE,
+							})),
+						],
+					);
+			},
+			acknowledge: async (row) => {
 				await acknowledge.mutateAsync({ ...scope, rows: [row] });
 				utils.projectCollections.pendingDeletes.setData(scope, (rows) =>
 					rows?.filter(
 						(entry) =>
-							entry.machineId !== row.machineId || entry.tag !== row.tag,
+							entry.machineId !== row.machineId ||
+							entry.tag !== row.tag ||
+							entry.deletedAt !== row.deletedAt,
 					),
 				);
 			},
@@ -552,7 +567,7 @@ export function useProjectCollectionsState() {
 								return settled;
 							}
 						},
-						setSetting: (url, tag, setting) =>
+						setSetting: (url, tag, setting, deletedAt) =>
 							setting
 								? getHostServiceClientByUrl(url).tagFolders.upsert.mutate(
 										setting,
@@ -560,6 +575,7 @@ export function useProjectCollectionsState() {
 								: getHostServiceClientByUrl(url).tagFolders.delete.mutate({
 										scope: PROJECTS_TAG_SCOPE,
 										tag,
+										deletedAt,
 									}),
 						writePlacements: async (
 							rows,

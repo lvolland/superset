@@ -264,10 +264,23 @@ mock.module("renderer/lib/host-service-client", () => ({
 				},
 			},
 			delete: {
-				mutate: async ({ tag }: { tag: string }) => {
+				mutate: async ({
+					tag,
+					deletedAt,
+				}: {
+					tag: string;
+					deletedAt?: number;
+				}) => {
 					const host = folderHosts.find((host) => host.target.hostUrl === url);
 					if (!host) throw new Error("Offline host");
-					host.settings = host.settings.filter((row) => row.tag !== tag);
+					host.settings = host.settings.filter(
+						(row) =>
+							row.tag !== tag ||
+							(deletedAt !== undefined &&
+								row.updatedAt !== undefined &&
+								row.updatedAt > deletedAt),
+					);
+					return { tagSettings: host.settings };
 				},
 			},
 		},
@@ -1029,4 +1042,43 @@ test("D5 optimistic rename is visible while the local host is closed and remote 
 	client.clear();
 	local.status = "ready";
 	folderHosts.splice(1);
+});
+
+test("replayed deletion keeps a newer host setting in the canonical cache", async () => {
+	const remote = {
+		target: {
+			...target,
+			machineId: "remote",
+			hostUrl: "remote",
+			isLocal: false,
+		},
+		status: "ready" as const,
+		settings: [
+			{
+				scope: "projects",
+				tag: "team",
+				displayName: "Recreated",
+				color: null,
+				tabOrder: 0,
+				updatedAt: 200,
+			},
+		],
+	};
+	folderHosts.push(remote);
+	pending = [{ machineId: "remote", tag: "team", deletedAt: 100 }];
+	const client = new QueryClient();
+	client.setQueryData(["host-tag-folders", "org", "remote"], remote.settings);
+	const wrapper = ({ children }: { children: React.ReactNode }) => (
+		<QueryClientProvider client={client}>
+			<ProjectCollectionsProvider>{children}</ProjectCollectionsProvider>
+		</QueryClientProvider>
+	);
+	const { unmount } = renderHook(() => useProjectCollections(), { wrapper });
+	await waitFor(() => expect(pending).toEqual([]));
+	expect(
+		client.getQueryData(["host-tag-folders", "org", "remote"]),
+	).toMatchObject([{ displayName: "Recreated", updatedAt: 200 }]);
+	unmount();
+	folderHosts.splice(1);
+	client.clear();
 });

@@ -71,19 +71,9 @@ export async function replayProjectCollectionPresentations({
 					return;
 				}
 				const currentHost = readHost(host);
-				const current = currentHost.settings.find(
-					(setting) => setting.scope === "projects" && setting.tag === row.tag,
-				);
 				if (currentHost.status !== "ready" && currentHost.status !== "error")
 					return;
-				if (
-					currentHost.status === "ready" &&
-					(row.setting.updatedAt === undefined ||
-						(current
-							? current.updatedAt !== undefined &&
-								row.setting.updatedAt <= current.updatedAt
-							: !row.setting.create))
-				) {
+				if (row.setting.updatedAt === undefined) {
 					await acknowledge(row);
 					return;
 				}

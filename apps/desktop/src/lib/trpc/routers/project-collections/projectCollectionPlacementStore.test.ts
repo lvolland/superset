@@ -41,6 +41,15 @@ function setup() {
 			"utf8",
 		),
 	);
+	sqlite.run(
+		readFileSync(
+			resolve(
+				import.meta.dir,
+				"../../../../../../../packages/local-db/drizzle/0061_project_collection_delete_dates.sql",
+			),
+			"utf8",
+		),
+	);
 	const db = drizzle(sqlite, {
 		schema: { projectCollectionPlacements },
 	}) as unknown as LocalDb;
@@ -275,4 +284,24 @@ test("pending presentations are capped at 128 per host and refreshed entries are
 			.pendingPresentations()
 			.some((row) => row.tag === "tag-1"),
 	).toBe(false);
+});
+
+test("pending deletion dates survive persistence and replace an older deletion", () => {
+	const h = setup();
+	h.store().write(
+		[],
+		[],
+		[{ machineId: "remote", tag: "team", deletedAt: 123 }],
+	);
+	expect(h.store().pendingDeletes()[0]?.deletedAt).toBe(123);
+	h.store().write(
+		[],
+		[],
+		[{ machineId: "remote", tag: "team", deletedAt: 456 }],
+	);
+	expect(h.store().pendingDeletes()[0]?.deletedAt).toBe(456);
+	h.store().acknowledgeDeletes([
+		{ machineId: "remote", tag: "team", deletedAt: 123 },
+	]);
+	expect(h.store().pendingDeletes()[0]?.deletedAt).toBe(456);
 });

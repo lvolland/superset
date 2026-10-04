@@ -139,3 +139,51 @@ test("a host with a missing folder router discards a previously queued deletion"
 	});
 	expect(pending).toEqual([]);
 });
+
+test("a deletion replay forwards its original author date", async () => {
+	const pending = [{ machineId: "ready", tag: "team", deletedAt: 123 }];
+	let removedAt: number | undefined;
+	await replayProjectCollectionDeletes({
+		hosts: [host("ready", "ready")],
+		pending,
+		remove: async (_url, _tag, deletedAt) => {
+			removedAt = deletedAt;
+		},
+		acknowledge: async () => {},
+	});
+	expect(removedAt).toBe(123);
+});
+test("a superseded deletion is not replayed with its old date", async () => {
+	const row = { machineId: "ready", tag: "team", deletedAt: 123 };
+	let removed = false;
+	await replayProjectCollectionDeletes({
+		hosts: [host("ready", "ready")],
+		pending: [row],
+		readPending: () => [{ ...row, deletedAt: 456 }],
+		remove: async () => {
+			removed = true;
+		},
+		acknowledge: async () => {},
+	});
+	expect(removed).toBe(false);
+});
+
+test("a pending deletion does not hide a newer host presentation", () => {
+	const ready = host("ready", "ready");
+	ready.settings = ready.settings.map((setting) => ({
+		...setting,
+		updatedAt: 200,
+	}));
+	expect(
+		withoutPendingProjectCollections(
+			[ready],
+			[{ machineId: "ready", tag: "team", deletedAt: 100 }],
+		)[0]?.settings,
+	).toHaveLength(2);
+	expect(
+		withoutPendingProjectCollections(
+			[ready],
+			[{ machineId: "ready", tag: "team", deletedAt: 200 }],
+		)[0]?.settings,
+	).toHaveLength(1);
+});

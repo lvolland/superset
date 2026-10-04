@@ -3,7 +3,7 @@ import {
 	projectCollectionPendingPresentations,
 	projectCollectionPlacements,
 } from "@superset/local-db";
-import { and, eq, inArray, like, notInArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, like, notInArray, sql } from "drizzle-orm";
 import type { LocalDb } from "main/lib/local-db";
 import type {
 	ProjectCollectionPendingDelete,
@@ -62,7 +62,11 @@ export function projectCollectionPlacementStore(
 				.select()
 				.from(projectCollectionPendingDeletes)
 				.where(pendingScope())
-				.all(),
+				.all()
+				.map(({ deletedAt, ...row }) => ({
+					...row,
+					...(deletedAt === null ? {} : { deletedAt }),
+				})),
 		acknowledgeDeletes: (rows: ProjectCollectionPendingDelete[]) =>
 			db.transaction((tx) => {
 				for (const row of rows)
@@ -72,6 +76,12 @@ export function projectCollectionPlacementStore(
 								pendingScope(),
 								eq(projectCollectionPendingDeletes.machineId, row.machineId),
 								eq(projectCollectionPendingDeletes.tag, row.tag),
+								row.deletedAt === undefined
+									? isNull(projectCollectionPendingDeletes.deletedAt)
+									: eq(
+											projectCollectionPendingDeletes.deletedAt,
+											row.deletedAt,
+										),
 							),
 						)
 						.run();
@@ -115,7 +125,7 @@ export function projectCollectionPlacementStore(
 					table:
 						| typeof projectCollectionPendingDeletes
 						| typeof projectCollectionPendingPresentations,
-					row: ProjectCollectionPendingDelete,
+					row: Pick<ProjectCollectionPendingDelete, "machineId" | "tag">,
 				) =>
 					tx
 						.delete(table)
@@ -136,7 +146,15 @@ export function projectCollectionPlacementStore(
 					deletePending(projectCollectionPendingPresentations, row);
 					tx.insert(projectCollectionPendingDeletes)
 						.values({ ...scope, ...row })
-						.onConflictDoNothing()
+						.onConflictDoUpdate({
+							target: [
+								projectCollectionPendingDeletes.organizationId,
+								projectCollectionPendingDeletes.userId,
+								projectCollectionPendingDeletes.machineId,
+								projectCollectionPendingDeletes.tag,
+							],
+							set: { deletedAt: row.deletedAt ?? null },
+						})
 						.run();
 				}
 				for (const row of pendingPresentations) {

@@ -545,6 +545,7 @@ export const projectCollectionPendingDeletes = sqliteTable(
 		userId: text("user_id").notNull(),
 		machineId: text("machine_id").notNull(),
 		tag: text("tag").notNull(),
+		deletedAt: integer("deleted_at"),
 	},
 	(table) => [
 		primaryKey({

@@ -51,6 +51,7 @@ export interface ProjectCollectionMutationAdapter {
 		hostUrl: string,
 		tag: string,
 		setting: HostTagFolderSetting | null,
+		deletedAt?: number,
 	): Promise<unknown>;
 	writePlacements(
 		rows: ProjectCollectionPlacement[],
@@ -240,6 +241,14 @@ export async function mutateProjectCollection(
 		if (updates.length && host.target.hostUrl)
 			tagWrites.push({ url: host.target.hostUrl, updates, rollback });
 	}
+	const updatedAt = Math.max(
+		Date.now(),
+		...before.folderHosts.flatMap((host) =>
+			host.settings
+				.filter((row) => row.scope === PROJECTS_TAG_SCOPE)
+				.map((row) => (row.updatedAt ?? 0) + 1),
+		),
+	);
 	const pendingDeletes: ProjectCollectionPendingDelete[] = [];
 	if (command.type === "delete" && tag)
 		for (const host of next.folderHosts) {
@@ -252,19 +261,15 @@ export async function mutateProjectCollection(
 						projects.rows?.some((row) => row.supportsProjectTags === true),
 				);
 			if (host.status === "error" && !supportsProjectScope) continue;
-			pendingDeletes.push({ machineId: host.target.machineId, tag });
+			pendingDeletes.push({
+				machineId: host.target.machineId,
+				tag,
+				deletedAt: updatedAt,
+			});
 			host.settings = host.settings.filter(
 				(row) => row.scope !== PROJECTS_TAG_SCOPE || row.tag !== tag,
 			);
 		}
-	const updatedAt = Math.max(
-		Date.now(),
-		...before.folderHosts.flatMap((host) =>
-			host.settings
-				.filter((row) => row.scope === PROJECTS_TAG_SCOPE)
-				.map((row) => (row.updatedAt ?? 0) + 1),
-		),
-	);
 	const pendingPresentations: ProjectCollectionPendingPresentation[] = [];
 	const clearPendingSettings: ProjectCollectionPendingDelete[] = [];
 	const settingWrites: Array<{
@@ -345,7 +350,11 @@ export async function mutateProjectCollection(
 						},
 					});
 				if (replacementTag && replacementTag !== tag)
-					pendingDeletes.push({ machineId: host.target.machineId, tag });
+					pendingDeletes.push({
+						machineId: host.target.machineId,
+						tag,
+						deletedAt: updatedAt,
+					});
 				continue;
 			}
 			settingWrites.push({
@@ -485,7 +494,12 @@ export async function mutateProjectCollection(
 		const settings = await Promise.allSettled(
 			settingWrites.map(async (write) => {
 				try {
-					await adapter.setSetting(write.url, write.tag, write.setting);
+					await adapter.setSetting(
+						write.url,
+						write.tag,
+						write.setting,
+						write.setting ? undefined : updatedAt,
+					);
 				} catch (error) {
 					if (!isUnsupportedProjectScope(error)) throw error;
 					clearPendingSettings.push({
@@ -515,6 +529,7 @@ export async function mutateProjectCollection(
 									updatedAt: Math.max(Date.now(), updatedAt + 1),
 								}
 							: null,
+						write.rollback ? undefined : Math.max(Date.now(), updatedAt + 1),
 					),
 				);
 				return true;

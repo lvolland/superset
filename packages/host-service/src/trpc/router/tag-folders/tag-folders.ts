@@ -99,6 +99,7 @@ export const tagFoldersRouter = router({
 			z.object({
 				scope: tagFolderScopeInputSchema,
 				tag: workspaceTagInputSchema,
+				deletedAt: z.number().int().nonnegative().optional(),
 			}),
 		)
 		.mutation(({ ctx, input }) => {
@@ -107,6 +108,7 @@ export const tagFoldersRouter = router({
 				{ db: ctx.db, eventBus: ctx.eventBus, userId: ctx.userId },
 				input.scope,
 				input.tag,
+				input.deletedAt,
 			);
 			if (settings === undefined) {
 				throw new TRPCError({

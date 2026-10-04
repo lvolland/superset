@@ -836,7 +836,9 @@ test("deleting an empty collection records a durable deletion for its offline ho
 	expect(
 		await mutateProjectCollection(h.adapter, { type: "delete", tag: "team" }),
 	).toBe(true);
-	expect(pendingDeletes).toEqual([{ machineId: "remote", tag: "team" }]);
+	expect(pendingDeletes).toEqual([
+		{ machineId: "remote", tag: "team", deletedAt: expect.any(Number) },
+	]);
 	expect(
 		h.state().folderHosts[1]?.settings.some((row) => row.tag === "team"),
 	).toBe(false);
@@ -928,7 +930,15 @@ for (const status of ["error", "offline", "pending"] as const) {
 			}),
 		).toBe(true);
 		expect(pending).toEqual(
-			status === "error" ? [] : [{ machineId: "remote", tag: "other" }],
+			status === "error"
+				? []
+				: [
+						{
+							machineId: "remote",
+							tag: "other",
+							deletedAt: expect.any(Number),
+						},
+					],
 		);
 	});
 }
@@ -1051,4 +1061,29 @@ test("a closed host keeps create intent across author rename and color", async (
 		color: "blue",
 	});
 	expect(pending[0]?.setting.create).toBe(true);
+});
+
+test("deletions use one date above observed writes on ready and queued hosts", async () => {
+	const h = setup();
+	const state = h.state();
+	const local = state.folderHosts[0];
+	const remote = state.folderHosts[1];
+	if (!local || !remote || !local.settings[0]) throw new Error("Missing hosts");
+	const observed = Date.now() + 300_000;
+	local.settings[0].updatedAt = observed;
+	remote.status = "offline";
+	state.projectHosts = [];
+	let directDate: number | undefined;
+	let queuedDate: number | undefined;
+	h.adapter.setSetting = async (_url, _tag, _setting, deletedAt) => {
+		directDate = deletedAt;
+	};
+	h.adapter.writePlacements = async (_rows, _keys, deletes) => {
+		queuedDate = deletes?.[0]?.deletedAt;
+	};
+	expect(
+		await mutateProjectCollection(h.adapter, { type: "delete", tag: "team" }),
+	).toBe(true);
+	expect(directDate).toBe(observed + 1);
+	expect(queuedDate).toBe(observed + 1);
 });

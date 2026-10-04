@@ -225,4 +225,34 @@ describe("tag folders router integration", () => {
 			"Client X",
 		);
 	});
+	test("dated project deletes preserve newer writes and reject stale creations", async () => {
+		host = await createTestHost();
+		const future = Date.now() + 300_000;
+		await host.trpc.tagFolders.delete.mutate({
+			scope: "projects",
+			tag: "client",
+			deletedAt: future + 1,
+		});
+		await host.trpc.tagFolders.replayPresentation.mutate({
+			tag: "client",
+			displayName: "Stale",
+			updatedAt: future,
+			create: true,
+		});
+		expect(await host.trpc.tagFolders.list.query()).toEqual([]);
+		await host.trpc.tagFolders.upsert.mutate({
+			scope: "projects",
+			tag: "client",
+			displayName: "Newer",
+			updatedAt: future + 2,
+		});
+		await host.trpc.tagFolders.delete.mutate({
+			scope: "projects",
+			tag: "client",
+			deletedAt: future + 1,
+		});
+		expect((await host.trpc.tagFolders.list.query())[0]?.displayName).toBe(
+			"Newer",
+		);
+	});
 });

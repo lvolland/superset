@@ -4,7 +4,7 @@ import {
 	PROJECTS_TAG_SCOPE,
 	SESSIONS_TAG_SCOPE,
 } from "@superset/shared/workspace-tags";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, notInArray } from "drizzle-orm";
 import type { HostDb } from "../db";
 import {
 	projectCollectionDeletions,
@@ -79,6 +79,29 @@ function toSnapshot(row: TagFolderSettingRow): TagSettingSnapshot {
 		color: row.color,
 		tabOrder: row.tabOrder,
 	};
+}
+
+function pruneProjectCollectionDeletions(
+	tx: Parameters<Parameters<HostDb["transaction"]>[0]>[0],
+	createdByUserId: string,
+) {
+	const retained = tx
+		.select({ tag: projectCollectionDeletions.tag })
+		.from(projectCollectionDeletions)
+		.where(eq(projectCollectionDeletions.createdByUserId, createdByUserId))
+		.orderBy(
+			desc(projectCollectionDeletions.deletedAt),
+			projectCollectionDeletions.tag,
+		)
+		.limit(1024);
+	tx.delete(projectCollectionDeletions)
+		.where(
+			and(
+				eq(projectCollectionDeletions.createdByUserId, createdByUserId),
+				notInArray(projectCollectionDeletions.tag, retained),
+			),
+		)
+		.run();
 }
 
 export function hasTagFolderScope(db: HostDb, scope: string): boolean {
@@ -181,6 +204,8 @@ export function upsertTagFolderSetting(
 		]),
 	);
 	ctx.db.transaction((tx) => {
+		if (scope === PROJECTS_TAG_SCOPE)
+			pruneProjectCollectionDeletions(tx, createdByUserId);
 		const candidates = tx
 			.select()
 			.from(tagFolderSettings)
@@ -265,6 +290,7 @@ export function deleteTagFolderSetting(
 	ctx: TagFolderStoreContext,
 	scope: string,
 	rawTag: string,
+	deletedAt?: number,
 ): TagSettingSnapshot[] | undefined {
 	const tag = normalizeWorkspaceTag(rawTag);
 	if (tag == null) return undefined;
@@ -303,25 +329,39 @@ export function deleteTagFolderSetting(
 					),
 				)
 				.all();
-			const deletedAt = Math.max(
-				Date.now(),
-				...existing.map((row) => row.updatedAt + 1),
+			if (
+				deletedAt !== undefined &&
+				existing.some((row) => row.updatedAt > deletedAt)
+			)
+				return;
+			const effectiveDeletedAt = Math.max(
+				deletedAt ?? Date.now(),
+				...(deletedAt === undefined
+					? existing.map((row) => row.updatedAt + 1)
+					: []),
 				...priorDeletions.map((row) => row.deletedAt),
 			);
-			for (const creator of new Set([
+			const affectedCreators = new Set([
 				toStoredCreator(ctx.userId),
 				...existing.map((row) => row.createdByUserId),
-			]))
+			]);
+			for (const creator of affectedCreators)
 				tx.insert(projectCollectionDeletions)
-					.values({ tag, createdByUserId: creator, deletedAt })
+					.values({
+						tag,
+						createdByUserId: creator,
+						deletedAt: effectiveDeletedAt,
+					})
 					.onConflictDoUpdate({
 						target: [
 							projectCollectionDeletions.tag,
 							projectCollectionDeletions.createdByUserId,
 						],
-						set: { deletedAt },
+						set: { deletedAt: effectiveDeletedAt },
 					})
 					.run();
+			for (const creator of affectedCreators)
+				pruneProjectCollectionDeletions(tx, creator);
 		}
 		tx.delete(tagFolderSettings)
 			.where(
