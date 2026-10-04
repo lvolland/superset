@@ -1,5 +1,6 @@
 import { PROJECTS_TAG_SCOPE } from "@superset/shared/workspace-tags";
 import type { HostTagFoldersResult } from "renderer/hooks/host-projects/useHostTagFolders/useHostTagFolders.utils";
+import { isMissingProcedureError } from "renderer/lib/isMissingProcedureError";
 import type { ProjectCollectionPendingDelete } from "shared/project-collections";
 
 export function withoutPendingProjectCollections(
@@ -34,9 +35,21 @@ export async function replayProjectCollectionDeletes({
 }) {
 	for (const row of pending) {
 		const host = hosts.find((host) => host.target.machineId === row.machineId);
-		if (!host?.target.hostUrl || host.status !== "ready") continue;
+		if (
+			!host?.target.hostUrl ||
+			(host.status !== "ready" && host.status !== "error")
+		)
+			continue;
 		try {
-			await remove(host.target.hostUrl, row.tag);
+			try {
+				await remove(host.target.hostUrl, row.tag);
+			} catch (error) {
+				const code =
+					error && typeof error === "object"
+						? (error as { data?: { code?: string } }).data?.code
+						: undefined;
+				if (!isMissingProcedureError(error) && code !== "BAD_REQUEST") continue;
+			}
 			await acknowledge(row);
 		} catch {}
 	}

@@ -2,7 +2,7 @@ import {
 	projectCollectionPendingDeletes,
 	projectCollectionPlacements,
 } from "@superset/local-db";
-import { and, eq, inArray, notInArray } from "drizzle-orm";
+import { and, eq, inArray, like, notInArray, sql } from "drizzle-orm";
 import type { LocalDb } from "main/lib/local-db";
 import type {
 	ProjectCollectionPendingDelete,
@@ -56,6 +56,14 @@ export function projectCollectionPlacementStore(
 			removePendingDeleteTags: string[] = [],
 		) =>
 			db.transaction((tx) => {
+				tx.delete(projectCollectionPlacements)
+					.where(
+						and(
+							belongsToScope(),
+							like(projectCollectionPlacements.key, "rail:%"),
+						),
+					)
+					.run();
 				if (removePendingDeleteTags.length)
 					tx.delete(projectCollectionPendingDeletes)
 						.where(
@@ -78,14 +86,24 @@ export function projectCollectionPlacementStore(
 						.select()
 						.from(projectCollectionPendingDeletes)
 						.where(pendingScope())
+						.orderBy(sql`rowid DESC`)
 						.all();
 					const counts = new Map<string, number>();
 					for (const row of pending) {
 						const count = (counts.get(row.machineId) ?? 0) + 1;
 						if (count > 128)
-							throw new Error(
-								"Too many pending collection deletions for this host",
-							);
+							tx.delete(projectCollectionPendingDeletes)
+								.where(
+									and(
+										pendingScope(),
+										eq(
+											projectCollectionPendingDeletes.machineId,
+											row.machineId,
+										),
+										eq(projectCollectionPendingDeletes.tag, row.tag),
+									),
+								)
+								.run();
 						counts.set(row.machineId, count);
 					}
 				}
@@ -99,7 +117,7 @@ export function projectCollectionPlacementStore(
 							),
 						)
 						.run();
-				for (const row of rows)
+				for (const row of rows.filter((row) => !row.key.startsWith("rail:")))
 					tx.insert(projectCollectionPlacements)
 						.values({ ...scope, ...row })
 						.onConflictDoUpdate({

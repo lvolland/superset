@@ -15,7 +15,6 @@ import {
 	derivePlacedProjectCollections,
 	getProjectCollectionOrder,
 } from "renderer/routes/_authenticated/utils/projectCollections/projectCollectionOrder";
-import { useWorkspaceSidebarStore } from "renderer/stores/workspace-sidebar-state";
 import {
 	getResourceMonitorRefetchInterval,
 	shouldQueryResourceMonitor,
@@ -127,7 +126,6 @@ export function useResourceSnapshot(
 	const folders = useHostTagFolders();
 	const { preferences } = useV2UserPreferences();
 	const { data: session } = authClient.useSession();
-	const isRail = useWorkspaceSidebarStore((state) => state.isCollapsed());
 	const { data: placements = [] } =
 		electronTrpc.projectCollections.list.useQuery(
 			{ organizationId: organizationId ?? "", userId: session?.user.id ?? "" },
@@ -144,7 +142,7 @@ export function useResourceSnapshot(
 			sortMode: preferences.sidebarProjectSortMode,
 			hideEmpty: preferences.hideEmptyProjectCollections,
 		});
-		return getProjectCollectionOrder(view.rootItems, placements, isRail);
+		return getProjectCollectionOrder(view.rootItems);
 	}, [
 		isV2,
 		rawSidebarProjects,
@@ -154,7 +152,6 @@ export function useResourceSnapshot(
 		rawV2Workspaces,
 		preferences.sidebarProjectSortMode,
 		preferences.hideEmptyProjectCollections,
-		isRail,
 	]);
 
 	const shouldQueryMetrics = shouldQueryResourceMonitor({

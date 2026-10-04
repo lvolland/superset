@@ -5,9 +5,6 @@ import {
 	type ProjectCollectionRootItem,
 } from "./projectCollections";
 
-export const projectRailPlacementKey = (projectId: string) =>
-	`rail:${projectId}`;
-
 export function resolveProjectCollectionPlacements({
 	projectIds,
 	sidebarProjects,
@@ -17,6 +14,7 @@ export function resolveProjectCollectionPlacements({
 	sidebarProjects: ReadonlyArray<{ projectId: string; tabOrder: number }>;
 	placements: readonly ProjectCollectionPlacement[];
 }): ProjectCollectionPlacement[] {
+	placements = placements.filter((row) => !row.key.startsWith("rail:"));
 	const stored = new Set(
 		placements.filter((row) => row.kind === "project").map((row) => row.key),
 	);
@@ -30,15 +28,8 @@ export function resolveProjectCollectionPlacements({
 				(legacyOrder.get(a) ?? 0) - (legacyOrder.get(b) ?? 0) ||
 				a.localeCompare(b),
 		);
-	const hasProjectOrder = placements.some(
-		(row) => !row.key.startsWith("rail:"),
-	);
-	const first = Math.min(
-		0,
-		...placements
-			.filter((row) => !row.key.startsWith("rail:"))
-			.map((row) => row.tabOrder),
-	);
+	const hasProjectOrder = placements.length > 0;
+	const first = Math.min(0, ...placements.map((row) => row.tabOrder));
 	return [
 		...placements,
 		...missing.map((key, index) => ({
@@ -54,31 +45,12 @@ export function resolveProjectCollectionPlacements({
 
 export function getProjectCollectionOrder<Project extends { id: string }>(
 	items: readonly ProjectCollectionRootItem<Project>[],
-	placements: readonly ProjectCollectionPlacement[],
-	isRail = false,
 ): string[] {
-	const keys = items.flatMap((item) =>
+	return items.flatMap((item) =>
 		item.type === "project"
 			? [item.project.id]
 			: item.collection.projects.map((project) => project.id),
 	);
-	if (!isRail) return keys;
-	const order = new Map(
-		placements
-			.filter((row) => row.key.startsWith("rail:"))
-			.map((row) => [row.key.slice("rail:".length), row.tabOrder]),
-	);
-	if (!order.size) return keys;
-	const fallback = new Map(keys.map((key, index) => [key, index]));
-	return keys.sort((a, b) => {
-		const aOrder = order.get(a);
-		const bOrder = order.get(b);
-		if (aOrder === undefined && bOrder === undefined)
-			return (fallback.get(a) ?? 0) - (fallback.get(b) ?? 0);
-		if (aOrder === undefined) return -1;
-		if (bOrder === undefined) return 1;
-		return aOrder - bOrder || (fallback.get(a) ?? 0) - (fallback.get(b) ?? 0);
-	});
 }
 
 export function derivePlacedProjectCollections<

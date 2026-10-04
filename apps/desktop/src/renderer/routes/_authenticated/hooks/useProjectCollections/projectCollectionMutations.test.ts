@@ -659,7 +659,7 @@ test("collection header drops append after hidden members", async () => {
 	).toBe(true);
 });
 
-test("rail drops persist the exact flat order across a collection boundary", async () => {
+test("rail drops stop at their own collection boundary", async () => {
 	const h = setup();
 	const state = h.state();
 	for (const host of state.projectHosts)
@@ -717,34 +717,43 @@ test("rail drops persist the exact flat order across a collection boundary", asy
 				isHidden: false,
 			})),
 	});
-	expect(
-		getProjectCollectionOrder(view.rootItems, next.placements, true),
-	).toEqual(["root-a", "b", "root-b", "a"]);
+	expect(getProjectCollectionOrder(view.rootItems)).toEqual([
+		"root-a",
+		"b",
+		"a",
+		"root-b",
+	]);
 	expect(
 		(next.projectHosts[0]?.rows ?? []).find((row) => row.id === "a")?.tags,
 	).toEqual(["team"]);
 	expect(h.tagCalls).toHaveLength(0);
 });
 
-test("rail reorders use the saved flat order on subsequent drops", async () => {
+test("repeated rail drops update the shared container order", async () => {
 	const h = setup();
-	await mutateProjectCollection(h.adapter, {
-		type: "reorder",
-		keys: ["b", "a"],
+	const layout = {
 		isRail: true,
-	});
-	await mutateProjectCollection(h.adapter, {
-		type: "reorder",
-		keys: ["a", "b"],
-		isRail: true,
-	});
+		rootKeys: ["projects:team"],
+		collections: [{ id: "projects:team", tag: "team", projectIds: ["b", "a"] }],
+	};
+	const first = planProjectCollectionDrop(layout, "a", "b");
+	if (!first) throw new Error("Missing first drop");
+	await mutateProjectCollection(h.adapter, first);
+	const collection = layout.collections[0];
+	if (!collection) throw new Error("Missing collection");
+	collection.projectIds = ["a", "b"];
+	const second = planProjectCollectionDrop(layout, "b", "a");
+	if (!second) throw new Error("Missing second drop");
+	await mutateProjectCollection(h.adapter, second);
 	expect(
 		h
 			.state()
-			.placements.filter((row) => row.key.startsWith("rail:"))
+			.placements.filter(
+				(row) => row.kind === "project" && ["a", "b"].includes(row.key),
+			)
 			.sort((a, b) => a.tabOrder - b.tabOrder)
 			.map((row) => row.key),
-	).toEqual(["rail:a", "rail:b"]);
+	).toEqual(["b", "a"]);
 	expect(h.tagCalls).toHaveLength(0);
 });
 
@@ -821,3 +830,69 @@ test("a failed deletion queue write restores online settings and local placement
 			.map((call) => call.setting?.displayName ?? null),
 	).toEqual([null, "Team"]);
 });
+
+function orderFromState(state: ProjectCollectionMutationState) {
+	const view = deriveProjectCollections({
+		projects: state.projectHosts[0]?.rows ?? [],
+		hostResults: state.folderHosts,
+		projectPlacements: state.placements
+			.filter((row) => row.kind === "project")
+			.map((row) => ({
+				projectId: row.key,
+				tabOrder: row.tabOrder,
+				isHidden: false,
+			})),
+	});
+	return getProjectCollectionOrder(view.rootItems);
+}
+
+test("rail and expanded reorders share project order without collections", async () => {
+	const h = setup();
+	for (const host of h.state().projectHosts)
+		host.rows = ["a", "b", "c"].map((id) =>
+			normalizeHostProjectRow({ id, repoPath: `/${id}`, tags: [] }),
+		);
+	for (const host of h.state().folderHosts) host.settings = [];
+	h.state().placements = ["a", "b", "c"].map((key, tabOrder) => ({
+		key,
+		tabOrder,
+		kind: "project",
+		isCollapsed: false,
+	}));
+	const layout = { isRail: true, rootKeys: ["a", "b", "c"], collections: [] };
+	const command = planProjectCollectionDrop(layout, "a", "b");
+	if (!command) throw new Error("Missing rail drop");
+	await mutateProjectCollection(h.adapter, command);
+	expect(orderFromState(h.state())).toEqual(["b", "a", "c"]);
+	await mutateProjectCollection(h.adapter, {
+		type: "reorder",
+		keys: ["c", "b", "a"],
+	});
+	expect(orderFromState(h.state())).toEqual(["c", "b", "a"]);
+	expect(h.state().placements.some((row) => row.key.startsWith("rail:"))).toBe(
+		false,
+	);
+});
+
+for (const status of ["error", "offline"] as const) {
+	test(`deletion does not queue a ${status} host without project scope support`, async () => {
+		const h = setup();
+		const remote = h.state().folderHosts[1];
+		const projects = h.state().projectHosts[1];
+		if (!remote || !projects) throw new Error("Missing host");
+		remote.status = status;
+		remote.settings = [];
+		projects.rows = [];
+		let pending: unknown;
+		h.adapter.writePlacements = async (_rows, _keys, rows) => {
+			pending = rows;
+		};
+		expect(
+			await mutateProjectCollection(h.adapter, {
+				type: "delete",
+				tag: "other",
+			}),
+		).toBe(true);
+		expect(pending).toEqual([]);
+	});
+}

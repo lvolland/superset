@@ -154,8 +154,7 @@ test("icon rail reorder cannot add or remove project membership", () => {
 		),
 	).toEqual({
 		type: "reorder",
-		keys: ["root-a", "b", "c", "root-b", "a"],
-		isRail: true,
+		keys: ["b", "c", "a"],
 	});
 	expect(
 		planProjectCollectionDrop(
@@ -207,3 +206,22 @@ test("an offline collection member can reorder without changing membership", () 
 		),
 	).toBeNull();
 });
+
+for (const [active, over, expected] of [
+	["a", "root-a", null],
+	["c", "root-a", ["c", "a", "b"]],
+	["a", "root-b", ["b", "c", "a"]],
+	["c", "root-b", null],
+	["root-a", "b", ["projects:team", "root-a", "root-b", "projects:personal"]],
+	["root-b", "b", ["root-a", "root-b", "projects:team", "projects:personal"]],
+] as const) {
+	test(`rail drop ${active} over ${over} stays in its own container`, () => {
+		const command = planProjectCollectionDrop(
+			{ ...layout, isRail: true },
+			active,
+			over,
+		);
+		if (expected === null) expect(command).toBeNull();
+		else expect(command).toEqual({ type: "reorder", keys: [...expected] });
+	});
+}

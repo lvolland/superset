@@ -124,26 +124,26 @@ test("placement store uses the public schema table identity", async () => {
 	expect(db.select().from(publicTable).all()[0]).toMatchObject(row);
 });
 
-test("rail positions survive reconciliation only while their project exists", () => {
+test("placement writes retire old rail keys only for the current scope", () => {
 	const h = setup();
-	h.store().write(
-		[
-			{ ...row, key: "a", kind: "project" },
-			{ ...row, key: "rail:a", kind: "project" },
-			{ ...row, key: "rail:deleted", kind: "project" },
-		],
-		[],
-	);
-	h.store().reconcile(["a", "rail:a"]);
+	for (const userId of ["alice", "bob"])
+		h.sqlite.run(
+			"INSERT INTO project_collection_placements (organization_id, user_id, key, kind, tab_order, is_collapsed) VALUES ('org', ?, 'rail:a', 'project', 0, 0)",
+			[userId],
+		);
+	h.store().write([{ ...row, key: "a", kind: "project" }], []);
 	expect(
 		h
 			.store()
 			.list()
-			.map((row) => row.key)
-			.sort(),
-	).toEqual(["a", "rail:a"]);
-	h.store().reconcile([]);
-	expect(h.store().list()).toEqual([]);
+			.map((row) => row.key),
+	).toEqual(["a"]);
+	expect(
+		h
+			.store("org", "bob")
+			.list()
+			.map((row) => row.key),
+	).toEqual(["rail:a"]);
 });
 
 test("pending deletions persist with placements, isolate scopes and are acknowledged by host", () => {
@@ -169,7 +169,7 @@ test("pending deletions persist with placements, isolate scopes and are acknowle
 	expect(h.store().pendingDeletes()).toEqual([]);
 });
 
-test("the per-host deletion cap rejects the batch without evicting pending deletions", () => {
+test("the per-host deletion cap evicts the oldest deletion without blocking the batch", () => {
 	const h = setup();
 	const pending = Array.from({ length: 128 }, (_, i) => ({
 		machineId: "remote",
@@ -179,11 +179,21 @@ test("the per-host deletion cap rejects the batch without evicting pending delet
 	const first = pending[0];
 	if (!first) throw new Error("Missing first deletion");
 	h.store().write([], [], [first]);
-	expect(() =>
-		h.store().write([], [row.key], [{ machineId: "remote", tag: "overflow" }]),
-	).toThrow("Too many pending");
+	h.store().write([], [row.key], [{ machineId: "remote", tag: "overflow" }]);
 	expect(h.store().pendingDeletes()).toHaveLength(128);
-	expect(h.store().list()).toHaveLength(1);
+	expect(h.store().list()).toHaveLength(0);
+	expect(
+		h
+			.store()
+			.pendingDeletes()
+			.some((row) => row.tag === "tag-0"),
+	).toBe(false);
+	expect(
+		h
+			.store()
+			.pendingDeletes()
+			.some((row) => row.tag === "overflow"),
+	).toBe(true);
 	h.store().write([], [], [{ machineId: "another", tag: "team" }]);
 	expect(h.store().pendingDeletes()).toHaveLength(129);
 });

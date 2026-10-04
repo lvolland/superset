@@ -358,7 +358,7 @@ test("resource consumption uses the same resolved root and rail positions", () =
 	isRail = true;
 	unmount();
 	const rail = renderHook(() => useResourceSnapshot("v2"), { wrapper });
-	expect(rail.result.current.sidebarProjectOrder).toEqual(["b", "new", "a"]);
+	expect(rail.result.current.sidebarProjectOrder).toEqual(["new", "a", "b"]);
 });
 
 let activeWorkspaceId = "active";

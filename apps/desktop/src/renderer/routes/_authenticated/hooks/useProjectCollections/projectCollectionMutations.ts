@@ -13,10 +13,6 @@ import type {
 	ProjectCollectionPlacement,
 } from "shared/project-collections";
 import {
-	getProjectCollectionOrder,
-	projectRailPlacementKey,
-} from "../../utils/projectCollections/projectCollectionOrder";
-import {
 	deriveProjectCollections,
 	projectCollectionId,
 } from "../../utils/projectCollections/projectCollections";
@@ -34,7 +30,7 @@ export type ProjectCollectionCommand =
 	| { type: "color"; tag: string; color: string | null }
 	| { type: "delete"; tag: string }
 	| { type: "collapse"; tag: string; isCollapsed: boolean }
-	| { type: "reorder"; keys: string[]; isRail?: boolean };
+	| { type: "reorder"; keys: string[] };
 
 export interface ProjectCollectionMutationState {
 	projectHosts: HostProjectRowsResult[];
@@ -121,7 +117,11 @@ export async function mutateProjectCollection(
 				tags: [...new Set([...(previous?.tags ?? []), ...(row.tags ?? [])])],
 			});
 		}
-	const placements = new Map(next.placements.map((row) => [row.key, row]));
+	const placements = new Map(
+		next.placements
+			.filter((row) => !row.key.startsWith("rail:"))
+			.map((row) => [row.key, row]),
+	);
 	const view = deriveProjectCollections({
 		projects: [...projectMap.values()],
 		hostResults: before.folderHosts,
@@ -138,7 +138,7 @@ export async function mutateProjectCollection(
 				isCollapsed: row.isCollapsed,
 			})),
 		projectPlacements: before.placements
-			.filter((row) => row.kind === "project")
+			.filter((row) => row.kind === "project" && !row.key.startsWith("rail:"))
 			.map((row) => ({
 				projectId: row.key,
 				isHidden: false,
@@ -237,6 +237,14 @@ export async function mutateProjectCollection(
 	if (command.type === "delete" && tag)
 		for (const host of next.folderHosts) {
 			if (host.target.hostUrl && host.status === "ready") continue;
+			const supportsProjectScope =
+				host.settings.some((row) => row.scope === PROJECTS_TAG_SCOPE) ||
+				next.projectHosts.some(
+					(projects) =>
+						projects.target.machineId === host.target.machineId &&
+						projects.rows?.some((row) => row.supportsProjectTags === true),
+				);
+			if (!supportsProjectScope) continue;
 			pendingDeletes.push({ machineId: host.target.machineId, tag });
 			host.settings = host.settings.filter(
 				(row) => row.scope !== PROJECTS_TAG_SCOPE || row.tag !== tag,
@@ -328,29 +336,7 @@ export async function mutateProjectCollection(
 			tabOrder: collection?.tabOrder ?? 0,
 			isCollapsed: command.isCollapsed,
 		});
-	if (command.type === "reorder" && command.isRail) {
-		const projectIds = new Set(projectMap.keys());
-		if (!command.keys.every((key) => projectIds.has(key))) return false;
-		const prior = getProjectCollectionOrder(
-			view.rootItems,
-			before.placements,
-			true,
-		);
-		const requested = new Set(command.keys);
-		let index = 0;
-		const keys = prior.map((key) =>
-			requested.has(key) ? (command.keys[index++] ?? key) : key,
-		);
-		keys.forEach((key, tabOrder) => {
-			placements.set(projectRailPlacementKey(key), {
-				key: projectRailPlacementKey(key),
-				kind: "project",
-				tabOrder,
-				isCollapsed: false,
-			});
-		});
-	}
-	if (command.type === "reorder" && !command.isRail) {
+	if (command.type === "reorder") {
 		const requested = new Set(command.keys);
 		const collection = view.collections.find((row) =>
 			command.keys.every((key) =>

@@ -24,7 +24,6 @@ import type {
 import {
 	derivePlacedProjectCollections,
 	getProjectCollectionOrder,
-	projectRailPlacementKey,
 	resolveProjectCollectionPlacements,
 } from "../../utils/projectCollections/projectCollectionOrder";
 import {
@@ -201,10 +200,7 @@ export function useProjectCollectionsState() {
 				keys: [
 					...new Set([
 						...current.current.projectHosts.flatMap((host) =>
-							(host.rows ?? []).flatMap((row) => [
-								row.id,
-								projectRailPlacementKey(row.id),
-							]),
+							(host.rows ?? []).map((row) => row.id),
 						),
 						...current.current.projectHosts.flatMap((host) =>
 							(host.rows ?? []).flatMap((row) =>
@@ -440,17 +436,13 @@ export function useProjectCollectionsState() {
 		],
 	);
 	const projectOrder = useMemo(
-		() => getProjectCollectionOrder(view.rootItems, placements),
-		[view.rootItems, placements],
-	);
-	const railProjectOrder = useMemo(
-		() => getProjectCollectionOrder(view.rootItems, placements, true),
-		[view.rootItems, placements],
+		() => getProjectCollectionOrder(view.rootItems),
+		[view.rootItems],
 	);
 	return {
 		...view,
 		projectOrder,
-		railProjectOrder,
+		railProjectOrder: projectOrder,
 		isReady:
 			projects.isReady &&
 			folders.isReady &&

@@ -33,8 +33,36 @@ export function planProjectCollectionDrop(
 			);
 		const from = keys.indexOf(active);
 		const to = keys.indexOf(over);
-		return from >= 0 && to >= 0
-			? { type: "reorder", keys: arrayMove(keys, from, to), isRail: true }
+		if (from < 0 || to < 0) return null;
+		const source = layout.collections.find((row) =>
+			row.projectIds.includes(active),
+		);
+		if (source) {
+			const targetIndex = source.projectIds.indexOf(over);
+			const index =
+				targetIndex >= 0
+					? targetIndex
+					: to < from
+						? 0
+						: source.projectIds.length - 1;
+			const sourceIndex = source.projectIds.indexOf(active);
+			return sourceIndex !== index
+				? {
+						type: "reorder",
+						keys: arrayMove(source.projectIds, sourceIndex, index),
+					}
+				: null;
+		}
+		const target = layout.collections.find((row) =>
+			row.projectIds.includes(over),
+		);
+		const sourceIndex = layout.rootKeys.indexOf(active);
+		const targetIndex = layout.rootKeys.indexOf(target?.id ?? over);
+		return sourceIndex >= 0 && targetIndex >= 0 && sourceIndex !== targetIndex
+			? {
+					type: "reorder",
+					keys: arrayMove(layout.rootKeys, sourceIndex, targetIndex),
+				}
 			: null;
 	}
 	const source = layout.collections.find((row) =>

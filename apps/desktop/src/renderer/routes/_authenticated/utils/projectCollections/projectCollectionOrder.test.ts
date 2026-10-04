@@ -43,7 +43,7 @@ describe("project collection order", () => {
 					{ projectId: "new", tabOrder: legacyOrder, isHidden: false },
 				],
 			});
-			expect(getProjectCollectionOrder(view.rootItems, [])).toEqual([
+			expect(getProjectCollectionOrder(view.rootItems)).toEqual([
 				"new",
 				"a",
 				"b",
@@ -60,7 +60,7 @@ describe("project collection order", () => {
 		expect(placements.find((row) => row.key === "new")?.tabOrder).toBe(-6);
 	});
 
-	test("a rail-only reorder does not migrate root projects onto the rail scale", () => {
+	test("retired rail placements are discarded when resolving legacy order", () => {
 		const resolved = resolveProjectCollectionPlacements({
 			projectIds: ["a", "b"],
 			sidebarProjects: [
@@ -69,17 +69,13 @@ describe("project collection order", () => {
 			],
 			placements: [placement("rail:b", 0), placement("rail:a", 1)],
 		});
-		expect(
-			resolved
-				.filter((row) => !row.key.startsWith("rail:"))
-				.map((row) => [row.key, row.tabOrder]),
-		).toEqual([
+		expect(resolved.map((row) => [row.key, row.tabOrder])).toEqual([
 			["a", 3],
 			["b", 9],
 		]);
 	});
 
-	test("new rail projects precede persisted positions and hidden projects stay hidden", () => {
+	test("retired rail positions do not override shared order or hidden projects", () => {
 		const placements = [
 			placement("a", 0),
 			placement("hidden", 1),
@@ -94,10 +90,12 @@ describe("project collection order", () => {
 			placements,
 			sidebarProjects: [{ projectId: "hidden", tabOrder: 0, isHidden: true }],
 		});
-		expect(getProjectCollectionOrder(view.rootItems, placements, true)).toEqual(
-			["new", "b", "a"],
-		);
-		expect(getProjectCollectionOrder(view.rootItems, placements)).toEqual([
+		expect(getProjectCollectionOrder(view.rootItems)).toEqual([
+			"new",
+			"a",
+			"b",
+		]);
+		expect(getProjectCollectionOrder(view.rootItems)).toEqual([
 			"new",
 			"a",
 			"b",

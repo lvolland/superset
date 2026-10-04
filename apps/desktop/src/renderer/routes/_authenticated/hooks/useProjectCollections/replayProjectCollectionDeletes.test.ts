@@ -104,3 +104,38 @@ test("an acknowledgment failure retries the idempotent host deletion", async () 
 	expect(removals).toBe(2);
 	expect(pending).toEqual([]);
 });
+
+for (const error of [
+	Object.assign(new Error("Invalid scope"), { data: { code: "BAD_REQUEST" } }),
+	new Error("No procedure found on path tagFolders.delete"),
+]) {
+	test(`permanent deletion rejection is acknowledged: ${error.message}`, async () => {
+		let pending = [{ machineId: "legacy", tag: "team" }];
+		await replayProjectCollectionDeletes({
+			hosts: [host("legacy", "ready")],
+			pending,
+			remove: async () => {
+				throw error;
+			},
+			acknowledge: async () => {
+				pending = [];
+			},
+		});
+		expect(pending).toEqual([]);
+	});
+}
+
+test("a host with a missing folder router discards a previously queued deletion", async () => {
+	let pending = [{ machineId: "legacy", tag: "team" }];
+	await replayProjectCollectionDeletes({
+		hosts: [host("legacy", "error")],
+		pending,
+		remove: async () => {
+			throw new Error("No procedure found on path tagFolders.delete");
+		},
+		acknowledge: async () => {
+			pending = [];
+		},
+	});
+	expect(pending).toEqual([]);
+});
