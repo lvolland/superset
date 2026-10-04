@@ -537,3 +537,18 @@ export const projectCollectionPlacements = sqliteTable(
 		primaryKey({ columns: [table.organizationId, table.userId, table.key] }),
 	],
 );
+
+export const projectCollectionPendingDeletes = sqliteTable(
+	"project_collection_pending_deletes",
+	{
+		organizationId: text("organization_id").notNull(),
+		userId: text("user_id").notNull(),
+		machineId: text("machine_id").notNull(),
+		tag: text("tag").notNull(),
+	},
+	(table) => [
+		primaryKey({
+			columns: [table.organizationId, table.userId, table.machineId, table.tag],
+		}),
+	],
+);

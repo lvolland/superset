@@ -772,3 +772,52 @@ test("offline and legacy projects reorder without a host write", async () => {
 	expect(h.tagCalls).toHaveLength(0);
 	expect(h.settingCalls).toHaveLength(0);
 });
+
+test("deleting an empty collection records a durable deletion for its offline host", async () => {
+	const h = setup();
+	const before = structuredClone(h.state());
+	const remote = before.folderHosts[1];
+	const remoteProjects = before.projectHosts[1];
+	if (!remote || !remoteProjects) throw new Error("Missing remote host");
+	remote.status = "offline";
+	remote.target.hostUrl = null;
+	remoteProjects.rows = [];
+	remoteProjects.reachable = false;
+	h.adapter.publish(before);
+	let pendingDeletes: unknown;
+	const write = h.adapter.writePlacements;
+	h.adapter.writePlacements = async (...args) => {
+		pendingDeletes = args[2];
+		return write(...args);
+	};
+	expect(
+		await mutateProjectCollection(h.adapter, { type: "delete", tag: "team" }),
+	).toBe(true);
+	expect(pendingDeletes).toEqual([{ machineId: "remote", tag: "team" }]);
+	expect(
+		h.state().folderHosts[1]?.settings.some((row) => row.tag === "team"),
+	).toBe(false);
+});
+
+test("a failed deletion queue write restores online settings and local placements", async () => {
+	const h = setup();
+	const before = structuredClone(h.state());
+	const remote = before.folderHosts[1];
+	const remoteProjects = before.projectHosts[1];
+	if (!remote || !remoteProjects) throw new Error("Missing remote host");
+	remote.status = "offline";
+	remoteProjects.rows = [];
+	h.adapter.publish(before);
+	h.adapter.writePlacements = async () => {
+		throw new Error("Queue is full");
+	};
+	await expect(
+		mutateProjectCollection(h.adapter, { type: "delete", tag: "team" }),
+	).rejects.toThrow("Queue is full");
+	expect(h.state()).toEqual(before);
+	expect(
+		h.settingCalls
+			.filter((call) => call.tag === "team")
+			.map((call) => call.setting?.displayName ?? null),
+	).toEqual([null, "Team"]);
+});

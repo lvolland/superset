@@ -414,6 +414,13 @@
       "when": 1791069001210,
       "tag": "0058_project_collection_placements",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "6",
+      "when": 1791080146173,
+      "tag": "0059_project_collection_pending_deletes",
+      "breakpoints": true
     }
   ]
 }

@@ -23,6 +23,15 @@ function setup() {
 			"utf8",
 		),
 	);
+	sqlite.run(
+		readFileSync(
+			resolve(
+				import.meta.dir,
+				"../../../../../../../packages/local-db/drizzle/0059_project_collection_pending_deletes.sql",
+			),
+			"utf8",
+		),
+	);
 	const db = drizzle(sqlite, {
 		schema: { projectCollectionPlacements },
 	}) as unknown as LocalDb;
@@ -135,4 +144,46 @@ test("rail positions survive reconciliation only while their project exists", ()
 	).toEqual(["a", "rail:a"]);
 	h.store().reconcile([]);
 	expect(h.store().list()).toEqual([]);
+});
+
+test("pending deletions persist with placements, isolate scopes and are acknowledged by host", () => {
+	const h = setup();
+	h.store().write(
+		[],
+		[],
+		[
+			{ machineId: "remote", tag: "team" },
+			{ machineId: "other-host", tag: "team" },
+		],
+	);
+	h.store("org", "bob").write([], [], [{ machineId: "remote", tag: "team" }]);
+	h.store("other").write([], [], [{ machineId: "remote", tag: "team" }]);
+	expect(h.store().pendingDeletes()).toHaveLength(2);
+	h.store().acknowledgeDeletes([{ machineId: "remote", tag: "team" }]);
+	expect(h.store().pendingDeletes()).toMatchObject([
+		{ machineId: "other-host", tag: "team" },
+	]);
+	expect(h.store("org", "bob").pendingDeletes()).toHaveLength(1);
+	expect(h.store("other").pendingDeletes()).toHaveLength(1);
+	h.store().write([], [], [], ["team"]);
+	expect(h.store().pendingDeletes()).toEqual([]);
+});
+
+test("the per-host deletion cap rejects the batch without evicting pending deletions", () => {
+	const h = setup();
+	const pending = Array.from({ length: 128 }, (_, i) => ({
+		machineId: "remote",
+		tag: `tag-${i}`,
+	}));
+	h.store().write([row], [], pending);
+	const first = pending[0];
+	if (!first) throw new Error("Missing first deletion");
+	h.store().write([], [], [first]);
+	expect(() =>
+		h.store().write([], [row.key], [{ machineId: "remote", tag: "overflow" }]),
+	).toThrow("Too many pending");
+	expect(h.store().pendingDeletes()).toHaveLength(128);
+	expect(h.store().list()).toHaveLength(1);
+	h.store().write([], [], [{ machineId: "another", tag: "team" }]);
+	expect(h.store().pendingDeletes()).toHaveLength(129);
 });

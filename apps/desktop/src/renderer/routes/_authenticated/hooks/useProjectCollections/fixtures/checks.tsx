@@ -2,7 +2,10 @@ import { afterAll, afterEach, expect, mock, test } from "bun:test";
 import { GlobalRegistrator } from "@happy-dom/global-registrator";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
-import type { ProjectCollectionPlacement } from "shared/project-collections";
+import type {
+	ProjectCollectionPendingDelete,
+	ProjectCollectionPlacement,
+} from "shared/project-collections";
 
 const registered = GlobalRegistrator.isRegistered;
 if (!registered) GlobalRegistrator.register();
@@ -12,7 +15,7 @@ if (!registered) GlobalRegistrator.register();
 const target = {
 	organizationId: "org",
 	machineId: "local",
-	hostUrl: "local",
+	hostUrl: "local" as string | null,
 	isLocal: true,
 };
 const { normalizeHostProjectRow } = await import(
@@ -68,9 +71,31 @@ const reconcileGate = new Promise<void>((resolve) => {
 	release = resolve;
 });
 const localInvalidations: string[] = [];
+let pending: ProjectCollectionPendingDelete[] = [];
+let pendingUpdate: (rows: ProjectCollectionPendingDelete[]) => void;
+const pendingUtils = {
+	getData: () => pending,
+	setData: (_scope: unknown, rows: ProjectCollectionPendingDelete[]) => {
+		pending = rows;
+		pendingUpdate([...rows]);
+	},
+	invalidate: async () => pendingUpdate([...pending]),
+};
 const write = {
-	mutateAsync: async ({ rows }: { rows: ProjectCollectionPlacement[] }) => {
+	mutateAsync: async ({
+		rows,
+		pendingDeletes = [],
+		removePendingDeleteTags = [],
+	}: {
+		rows: ProjectCollectionPlacement[];
+		pendingDeletes?: ProjectCollectionPendingDelete[];
+		removePendingDeleteTags?: string[];
+	}) => {
 		placements = rows;
+		pending = [
+			...pending.filter((row) => !removePendingDeleteTags.includes(row.tag)),
+			...pendingDeletes,
+		];
 	},
 };
 const reconcile = {
@@ -91,7 +116,12 @@ const listUtils = {
 		update(placements);
 	},
 };
-const utils = { projectCollections: { list: listUtils } };
+const utils = {
+	projectCollections: {
+		list: listUtils,
+		pendingDeletes: pendingUtils,
+	},
+};
 mock.module("@tanstack/react-db", () => ({
 	useLiveQuery: () => ({ data: sidebarProjects }),
 }));
@@ -123,20 +153,53 @@ mock.module(
 );
 mock.module(
 	"renderer/routes/_authenticated/providers/HostWorkspacesProvider",
-	() => ({ useHostWorkspaces: () => ({ workspaces: [], isReady: true }) }),
+	() => ({ useHostWorkspaces: () => ({ workspaces: [], isReady: false }) }),
 );
 mock.module(
 	"renderer/routes/_authenticated/providers/LocalHostServiceProvider",
 	() => ({ useLocalHostService: () => ({ activeOrganizationId: "org" }) }),
 );
 mock.module("renderer/lib/host-service-client", () => ({
-	getHostServiceClientByUrl: () => {
-		throw new Error("Collapse reached a host");
-	},
+	getHostServiceClientByUrl: (url: string) => ({
+		tagFolders: {
+			delete: {
+				mutate: async ({ tag }: { tag: string }) => {
+					const host = folderHosts.find((host) => host.target.hostUrl === url);
+					if (!host) throw new Error("Offline host");
+					host.settings = host.settings.filter((row) => row.tag !== tag);
+				},
+			},
+		},
+	}),
 }));
 mock.module("renderer/lib/electron-trpc", () => ({
 	electronTrpc: {
 		projectCollections: {
+			pendingDeletes: {
+				useQuery: () => {
+					const [data, setData] = useState(pending);
+					pendingUpdate = setData;
+					return { data, isSuccess: true };
+				},
+			},
+			acknowledgeDeletes: {
+				useMutation: () => ({
+					mutateAsync: async ({
+						rows,
+					}: {
+						rows: ProjectCollectionPendingDelete[];
+					}) => {
+						pending = pending.filter(
+							(row) =>
+								!rows.some(
+									(removed) =>
+										removed.machineId === row.machineId &&
+										removed.tag === row.tag,
+								),
+						);
+					},
+				}),
+			},
 			list: {
 				useQuery: () => {
 					const [data, setData] = useState(placements);
@@ -154,6 +217,9 @@ const { act, cleanup, render, waitFor } = await import(
 	"@testing-library/react"
 );
 const { useProjectCollections } = await import("../useProjectCollections");
+const { ProjectCollectionsProvider } = await import(
+	"../../../providers/ProjectCollectionsProvider"
+);
 let isRail = false;
 mock.module("renderer/hooks/useActiveOrganizationId", () => ({
 	useActiveOrganizationId: () => "org",
@@ -199,7 +265,11 @@ test("restored workspace reveal waits for reconciliation and rapid chevrons keep
 	};
 	render(
 		<QueryClientProvider client={client}>
-			<Probe />
+			<ProjectCollectionsProvider>
+				<Probe />
+				<Probe />
+				<Probe />
+			</ProjectCollectionsProvider>
 		</QueryClientProvider>,
 	);
 	await waitFor(() => expect(reconcileStarted).toBe(true));
@@ -254,7 +324,9 @@ test("a new root project precedes persisted projects after renumbering", async (
 	const client = new QueryClient();
 	render(
 		<QueryClientProvider client={client}>
-			<Probe />
+			<ProjectCollectionsProvider>
+				<Probe />
+			</ProjectCollectionsProvider>
 		</QueryClientProvider>,
 	);
 	expect(rootProjectIds()).toEqual(["new", "a", "b"]);
@@ -287,4 +359,118 @@ test("resource consumption uses the same resolved root and rail positions", () =
 	unmount();
 	const rail = renderHook(() => useResourceSnapshot("v2"), { wrapper });
 	expect(rail.result.current.sidebarProjectOrder).toEqual(["b", "new", "a"]);
+});
+
+let activeWorkspaceId = "active";
+let navigatedWorkspaceId: string | null = null;
+mock.module("@tanstack/react-router", () => ({
+	useNavigate:
+		() =>
+		async ({ params }: { params?: { workspaceId: string } }) => {
+			navigatedWorkspaceId = params?.workspaceId ?? null;
+		},
+	useMatchRoute: () => () => ({ workspaceId: activeWorkspaceId }),
+}));
+mock.module("renderer/hooks/useCloudWorkspaces", () => ({
+	useCloudWorkspaces: () => ({ workspaces: [] }),
+}));
+mock.module("renderer/routes/_authenticated/utils/workspaceTagFolders", () => ({
+	useTagFolderContext: () => ({
+		tagSettings: [],
+		hiddenTagsByProject: new Map(),
+	}),
+}));
+mock.module(
+	"../../../_dashboard/components/DashboardSidebar/utils/getFlattenedV2WorkspaceIds",
+	() => ({
+		getFlattenedV2WorkspaceIds: () => ["active", "next", "last"],
+	}),
+);
+mock.module("../../../_dashboard/utils/workspace-navigation", () => ({
+	navigateToV2Workspace: async (workspaceId: string) => {
+		navigatedWorkspaceId = workspaceId;
+	},
+}));
+const { useNavigateAwayFromWorkspace } = await import(
+	"../../../_dashboard/components/DashboardSidebar/hooks/useNavigateAwayFromWorkspace/useNavigateAwayFromWorkspace"
+);
+
+test("workspace removal callback stays stable and reads the current route", () => {
+	const wrapper = ({ children }: { children: React.ReactNode }) => (
+		<QueryClientProvider client={new QueryClient()}>
+			<ProjectCollectionsProvider>{children}</ProjectCollectionsProvider>
+		</QueryClientProvider>
+	);
+	const { result, rerender } = renderHook(
+		() => useNavigateAwayFromWorkspace(),
+		{ wrapper },
+	);
+	const first = result.current.navigateAwayFromWorkspace;
+	activeWorkspaceId = "next";
+	rerender();
+	expect(result.current.navigateAwayFromWorkspace).toBe(first);
+	first("next");
+	expect(navigatedWorkspaceId).toBe("last");
+});
+
+test("an offline collection deletion stays hidden after remount and replays on reconnect", async () => {
+	const localProjects = projectHosts[0];
+	const localFolders = folderHosts[0];
+	if (!localProjects || !localFolders) throw new Error("Missing local host");
+	localProjects.rows = [];
+	localFolders.settings = [
+		{
+			scope: "projects",
+			tag: "team",
+			displayName: "Team",
+			color: null,
+			tabOrder: 0,
+		},
+	];
+	const remote = {
+		target: {
+			...target,
+			machineId: "remote",
+			hostUrl: null as string | null,
+			isLocal: false,
+		},
+		status: "offline",
+		settings: [
+			{
+				scope: "projects",
+				tag: "team",
+				displayName: "Team",
+				color: null,
+				tabOrder: 1,
+			},
+		],
+	};
+	folderHosts.push(remote);
+	placements = [];
+	pending = [];
+	const client = new QueryClient();
+	const wrapper = ({ children }: { children: React.ReactNode }) => (
+		<QueryClientProvider client={client}>
+			<ProjectCollectionsProvider>{children}</ProjectCollectionsProvider>
+		</QueryClientProvider>
+	);
+	const first = renderHook(() => useProjectCollections(), { wrapper });
+	await act(async () =>
+		expect(
+			await first.result.current.mutate({ type: "delete", tag: "team" }),
+		).toBe(true),
+	);
+	expect(pending.map(({ machineId, tag }) => ({ machineId, tag }))).toEqual([
+		{ machineId: "remote", tag: "team" },
+	]);
+	first.unmount();
+	const second = renderHook(() => useProjectCollections(), { wrapper });
+	expect(second.result.current.collections).toEqual([]);
+	remote.target.hostUrl = "new-remote-url";
+	remote.status = "ready";
+	second.rerender();
+	await waitFor(() => expect(pending).toEqual([]));
+	expect(remote.settings).toEqual([]);
+	expect(second.result.current.collections).toEqual([]);
+	client.clear();
 });

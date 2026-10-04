@@ -1,5 +1,5 @@
 import { useMatchRoute, useNavigate } from "@tanstack/react-router";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { useActiveOrganizationId } from "renderer/hooks/useActiveOrganizationId";
 import { useCloudWorkspaces } from "renderer/hooks/useCloudWorkspaces";
 import { authClient } from "renderer/lib/auth-client";
@@ -32,11 +32,7 @@ export function useNavigateAwayFromWorkspace() {
 	const matchRoute = useMatchRoute();
 	const collections = useCollections();
 	const projectCollections = useProjectCollections();
-	const projectOrder = projectCollections.rootItems.flatMap((item) =>
-		item.type === "project"
-			? [item.project.id]
-			: item.collection.projects.map((project) => project.id),
-	);
+	const projectOrder = projectCollections.projectOrder;
 	const { workspaces, isReady } = useHostWorkspaces();
 	const tagFolderContext = useTagFolderContext();
 	const workspaceIds = useMemo(
@@ -64,11 +60,44 @@ export function useNavigateAwayFromWorkspace() {
 		].map((workspace) => workspace.id);
 	}, [cloudWorkspaces, cloudSidebarState, userId]);
 
+	const current = useRef({
+		collections,
+		cloudWorkspaceIds,
+		workspaceIds,
+		workspaces,
+		tagFolderContext,
+		projectOrder,
+		matchRoute,
+		navigate,
+		isReady,
+	});
+	current.current = {
+		collections,
+		cloudWorkspaceIds,
+		workspaceIds,
+		workspaces,
+		tagFolderContext,
+		projectOrder,
+		matchRoute,
+		navigate,
+		isReady,
+	};
 	const navigateAwayFromWorkspace = useCallback(
 		(
 			workspaceId: string,
 			additionalDeletingWorkspaceIds?: ReadonlySet<string>,
 		) => {
+			const {
+				collections,
+				cloudWorkspaceIds,
+				workspaceIds,
+				workspaces,
+				tagFolderContext,
+				projectOrder,
+				matchRoute,
+				navigate,
+				isReady,
+			} = current.current;
 			const workspaceMatch = matchRoute({
 				to: "/v2-workspace/$workspaceId",
 				fuzzy: true,
@@ -117,17 +146,7 @@ export function useNavigateAwayFromWorkspace() {
 			);
 			return target;
 		},
-		[
-			collections,
-			cloudWorkspaceIds,
-			workspaceIds,
-			workspaces,
-			tagFolderContext,
-			projectOrder,
-			matchRoute,
-			navigate,
-			isReady,
-		],
+		[],
 	);
 
 	return { navigateAwayFromWorkspace };

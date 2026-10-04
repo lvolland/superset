@@ -8,7 +8,10 @@ import type {
 	HostTagFoldersResult,
 } from "renderer/hooks/host-projects/useHostTagFolders/useHostTagFolders.utils";
 import { isMissingProcedureError } from "renderer/lib/isMissingProcedureError";
-import type { ProjectCollectionPlacement } from "shared/project-collections";
+import type {
+	ProjectCollectionPendingDelete,
+	ProjectCollectionPlacement,
+} from "shared/project-collections";
 import {
 	getProjectCollectionOrder,
 	projectRailPlacementKey,
@@ -54,6 +57,8 @@ export interface ProjectCollectionMutationAdapter {
 	writePlacements(
 		rows: ProjectCollectionPlacement[],
 		removeKeys: string[],
+		pendingDeletes?: ProjectCollectionPendingDelete[],
+		removePendingDeleteTags?: string[],
 	): Promise<unknown>;
 	invalidate(): void | Promise<void>;
 }
@@ -228,6 +233,15 @@ export async function mutateProjectCollection(
 		if (updates.length && host.target.hostUrl)
 			tagWrites.push({ url: host.target.hostUrl, updates, rollback });
 	}
+	const pendingDeletes: ProjectCollectionPendingDelete[] = [];
+	if (command.type === "delete" && tag)
+		for (const host of next.folderHosts) {
+			if (host.target.hostUrl && host.status === "ready") continue;
+			pendingDeletes.push({ machineId: host.target.machineId, tag });
+			host.settings = host.settings.filter(
+				(row) => row.scope !== PROJECTS_TAG_SCOPE || row.tag !== tag,
+			);
+		}
 	const settingWrites: Array<{
 		url: string;
 		tag: string;
@@ -458,6 +472,8 @@ export async function mutateProjectCollection(
 			before.placements
 				.filter((row) => !placements.has(row.key))
 				.map((row) => row.key),
+			pendingDeletes,
+			command.type === "create" && tag ? [tag] : [],
 		);
 		return true;
 	} catch (error) {

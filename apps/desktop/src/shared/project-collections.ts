@@ -15,3 +15,12 @@ export const projectCollectionPlacementScopeSchema = z.object({
 	organizationId: z.string().min(1),
 	userId: z.string().min(1),
 });
+
+export const projectCollectionPendingDeleteSchema = z.object({
+	machineId: z.string().min(1),
+	tag: z.string().min(1),
+});
+
+export type ProjectCollectionPendingDelete = z.infer<
+	typeof projectCollectionPendingDeleteSchema
+>;
