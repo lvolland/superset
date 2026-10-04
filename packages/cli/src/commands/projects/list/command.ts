@@ -1,16 +1,23 @@
 import { boolean, CLIError, string, table } from "@superset/cli-framework";
 import { getHostId } from "@superset/shared/host-info";
-import { normalizeWorkspaceTag } from "@superset/shared/workspace-tags";
 import { command } from "../../../lib/command";
 import { resolveHostFilter, resolveHostTarget } from "../../../lib/host-target";
+import {
+	collectionDisplayName,
+	isMissingProcedureError,
+	projectCollectionsUnavailable,
+	resolveProjectCollectionName,
+	validateProjectCollectionName,
+	type ProjectCollectionSetting,
+} from "../collection";
 
 export default command({
 	description: "List projects on a host (default: this machine)",
 	display: (data) =>
 		table(
 			data as Record<string, unknown>[],
-			["name", "repo", "path", "tags", "id"],
-			["NAME", "REPO", "PATH", "TAGS", "ID"],
+			["name", "repo", "path", "collection", "tags", "id"],
+			["NAME", "REPO", "PATH", "COLLECTION", "TAGS", "ID"],
 		),
 	options: {
 		host: string().desc("List projects on a specific host machineId"),
@@ -23,14 +30,9 @@ export default command({
 			throw new CLIError("No active organization", "Run: superset auth login");
 		}
 
-		const collection = normalizeWorkspaceTag(options.collection);
-		if (options.collection !== undefined && collection == null) {
-			throw new CLIError(
-				"Invalid --collection value",
-				"Collections are 1-64 characters after trimming",
-			);
+		if (options.collection !== undefined) {
+			validateProjectCollectionName(options.collection);
 		}
-
 		const hostId =
 			resolveHostFilter({
 				host: options.host ?? undefined,
@@ -43,6 +45,17 @@ export default command({
 			userJwt: ctx.bearer,
 			api: ctx.api,
 		});
+		let settings: ProjectCollectionSetting[];
+		try {
+			settings = (await target.client.tagFolders.list.query()) as ProjectCollectionSetting[];
+		} catch (error) {
+			if (isMissingProcedureError(error)) throw projectCollectionsUnavailable();
+			throw error;
+		}
+		const collection =
+			options.collection === undefined
+				? null
+				: resolveProjectCollectionName(options.collection, settings);
 		const projects = await target.client.project.list.query();
 
 		return projects
@@ -54,6 +67,7 @@ export default command({
 				name: project.name,
 				repo: project.repoUrl ?? "-",
 				path: project.repoPath,
+				collection: collectionDisplayName(project.tags ?? [], settings),
 				tags: project.tags ?? [],
 				id: project.id,
 			}))

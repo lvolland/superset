@@ -3,6 +3,7 @@ import { afterEach, describe, expect, mock, test } from "bun:test";
 const PROJECT_ID = "b502bf30-8693-4815-be65-795035e0ce5f";
 const setTagsCalls: Array<{ projectId: string; tags: string[] }> = [];
 const listCalls: Array<undefined> = [];
+let missingProcedure: string | undefined;
 
 const projects = [
 	{
@@ -35,9 +36,23 @@ mock.module("../../../lib/host-target", () => ({
 				},
 				setTags: {
 					mutate: async (input: { projectId: string; tags: string[] }) => {
+						if (missingProcedure === "project.setTags") {
+							throw new Error("No procedure found on path project.setTags");
+						}
 						setTagsCalls.push(input);
 						return { id: input.projectId, tags: input.tags };
 					},
+				},
+			},
+			tagFolders: {
+				list: {
+					query: async () => [
+						{
+							scope: "projects",
+							tag: "dibsteur",
+							displayName: "Client work",
+						},
+					],
 				},
 			},
 		},
@@ -77,24 +92,38 @@ function list(options: Record<string, unknown>) {
 afterEach(() => {
 	setTagsCalls.length = 0;
 	listCalls.length = 0;
+	missingProcedure = undefined;
 });
 
 describe("projects update", () => {
-	test("sets the normalized collection tag", async () => {
-		const result = (await update({ collection: " Dibsteur " })) as {
+	test("resolves a collection display name before setting its tag", async () => {
+		const result = (await update({ collection: " CLIENT WORK " })) as {
 			data: { tags: string[] };
 		};
 
-		expect(setTagsCalls).toEqual([
-			{ projectId: PROJECT_ID, tags: [" Dibsteur "] },
-		]);
-		expect(result.data.tags).toEqual([" Dibsteur "]);
+		expect(setTagsCalls).toEqual([{ projectId: PROJECT_ID, tags: ["dibsteur"] }]);
+		expect(result.data.tags).toEqual(["dibsteur"]);
 	});
 
 	test("clears the collection tag", async () => {
 		await update({ clearCollection: true });
 
 		expect(setTagsCalls).toEqual([{ projectId: PROJECT_ID, tags: [] }]);
+	});
+
+	test("rejects an empty collection before calling the host", async () => {
+		await expect(update({ collection: "   " })).rejects.toThrow(
+			"Invalid --collection value",
+		);
+		expect(setTagsCalls).toEqual([]);
+	});
+
+	test("explains when the host does not support project collections", async () => {
+		missingProcedure = "project.setTags";
+
+		await expect(update({ collection: "Client work" })).rejects.toThrow(
+			"does not support project collections",
+		);
 	});
 
 	test("rejects conflicting collection options before calling the host", async () => {
@@ -111,12 +140,13 @@ describe("projects update", () => {
 });
 
 describe("projects list", () => {
-	test("filters with the normalized collection name and returns tags", async () => {
-		const result = (await list({ collection: " DIBSTEUR " })) as Array<{
+	test("resolves display names when filtering and includes the collection name", async () => {
+		const result = (await list({ collection: " CLIENT WORK " })) as Array<{
 			name: string;
 			repo: string;
 			path: string;
 			tags: string[];
+			collection: string | null;
 			id: string;
 		}>;
 
@@ -126,6 +156,7 @@ describe("projects list", () => {
 				repo: "https://github.com/superset/superset",
 				path: "/projects/superset",
 				tags: ["dibsteur"],
+				collection: "Client work",
 				id: PROJECT_ID,
 			},
 		]);

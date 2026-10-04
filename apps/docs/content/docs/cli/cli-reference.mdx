@@ -567,8 +567,8 @@ another host.
 	]}
 >
 Move a project into a collection or remove it from one. Pass exactly one of
-`--collection <name>` and `--clear-collection`. Collection names are normalized
-as trimmed lowercase tags.
+`--collection <name>` and `--clear-collection`. The collection name shown in the
+sidebar resolves first, then the normalized tag.
 
 ```bash
 superset projects update 47c31b04-… --local --collection dibsteur
