@@ -177,3 +177,51 @@ test("the first inline name mints the readable CLI tag", async () => {
 	});
 	expect(setNewCollectionTag).toHaveBeenCalledWith(null);
 });
+
+test("dragging a collection hides the members of every collection", async () => {
+	const value = {
+		editingTag: null,
+		newCollectionTag: null,
+		setNewCollectionTag,
+		collections: [collection],
+		setEditingTag,
+		run,
+	} as unknown as SidebarProjectCollectionsValue;
+	render(
+		<DashboardSidebarProjectCollectionsProvider value={value}>
+			<DndContext>
+				<DashboardSidebarCollection
+					collection={{ ...collection, isCollapsed: false }}
+					isDragDisabled={false}
+				>
+					<span>Member project</span>
+				</DashboardSidebarCollection>
+				<DashboardSidebarCollection
+					collection={{
+						...collection,
+						id: "projects:home",
+						tag: "home",
+						name: "Perso",
+						isCollapsed: false,
+					}}
+					isDragDisabled={false}
+				>
+					<span>Other member</span>
+				</DashboardSidebarCollection>
+			</DndContext>
+		</DashboardSidebarProjectCollectionsProvider>,
+	);
+	const page = within(document.body);
+	const header = page.getByText("Dibsteur").closest('[role="button"]');
+	if (!header) throw new Error("Missing collection header");
+	await act(async () => {
+		fireEvent.pointerDown(header, { isPrimary: true, button: 0 });
+	});
+	expect(page.queryByText("Member project")).toBeNull();
+	expect(page.queryByText("Other member")).toBeNull();
+	await act(async () => {
+		fireEvent.pointerUp(document);
+	});
+	expect(page.getByText("Member project")).toBeTruthy();
+	expect(page.getByText("Other member")).toBeTruthy();
+});

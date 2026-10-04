@@ -24,7 +24,7 @@ export function DashboardSidebarRailSeparator({
 	return (
 		<Tooltip delayDuration={300}>
 			<TooltipTrigger asChild>
-				<div className="px-3 py-1.5">
+				<div className="relative -mt-1 -mb-2 px-3 pt-2.5 pb-3.5">
 					<Separator
 						decorative={false}
 						aria-label={t({ message: `Collection: ${name}` })}

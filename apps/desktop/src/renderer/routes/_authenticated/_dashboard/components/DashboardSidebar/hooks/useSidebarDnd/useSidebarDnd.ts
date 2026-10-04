@@ -310,7 +310,13 @@ export type SidebarDndActiveItem =
 	| { type: "project"; project: DashboardSidebarProject }
 	| {
 			type: "collection";
-			collection: { id: string; name: string; color: string | null };
+			collection: {
+				id: string;
+				name: string;
+				color: string | null;
+				isCollapsed: boolean;
+				projectCount: number;
+			};
 	  }
 	| { type: "workspace"; workspace: DashboardSidebarWorkspace }
 	| { type: "section"; section: DashboardSidebarSection };
@@ -687,6 +693,8 @@ export function useSidebarDnd({
 							id: collection.id,
 							name: collection.name ?? collection.tag,
 							color: collection.color ?? null,
+							isCollapsed: collection.isCollapsed ?? false,
+							projectCount: collection.projectIds.length,
 						},
 					}
 				: null;

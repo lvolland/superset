@@ -7,7 +7,7 @@ import {
 import { type ReactNode, useCallback } from "react";
 import { createPortal } from "react-dom";
 import type { ProjectCollectionCommand } from "renderer/routes/_authenticated/hooks/useProjectCollections";
-import { DashboardSidebarGroupHeader } from "../../components/DashboardSidebarGroupHeader";
+import { DashboardSidebarCollectionHeader } from "../../components/DashboardSidebarCollectionHeader";
 import { DashboardSidebarProjectSection } from "../../components/DashboardSidebarProjectSection";
 import { SidebarDragOverlay } from "../../components/SidebarDragOverlay";
 import {
@@ -165,26 +165,15 @@ export function DashboardSidebarDndProvider({
 								</div>
 							</DndContext>
 						) : activeItem?.type === "collection" ? (
-							<DashboardSidebarGroupHeader
-								indentation="top-level"
-								isCollapsed={false}
+							<DashboardSidebarCollectionHeader
+								color={activeItem.collection.color}
+								projectCount={activeItem.collection.projectCount}
+								isCollapsed={activeItem.collection.isCollapsed}
 								onToggleCollapse={() => {}}
-								label={
-									<>
-										<span
-											className="size-2.5 rounded-full bg-muted-foreground"
-											style={
-												activeItem.collection.color
-													? { backgroundColor: activeItem.collection.color }
-													: undefined
-											}
-										/>
-										<span className="truncate">
-											{activeItem.collection.name}
-										</span>
-									</>
-								}
-							/>
+								className="mx-0"
+							>
+								<span className="truncate">{activeItem.collection.name}</span>
+							</DashboardSidebarCollectionHeader>
 						) : activeItem ? (
 							<SidebarDragOverlay
 								activeItem={activeItem}

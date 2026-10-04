@@ -2,7 +2,6 @@ import { useDroppable } from "@dnd-kit/core";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useLingui } from "@lingui/react/macro";
-import { formatNumber } from "@superset/i18n/format";
 import {
 	ContextMenu,
 	ContextMenuContent,
@@ -21,7 +20,7 @@ import { mintFolderTag } from "renderer/routes/_authenticated/utils/workspaceTag
 import { useRunAfterMenuClose } from "../../hooks/useRunAfterMenuClose";
 import { collectionDropId } from "../../hooks/useSidebarDnd/projectCollectionDrop";
 import { useSidebarProjectCollections } from "../../providers/DashboardSidebarProjectCollectionsProvider/DashboardSidebarProjectCollectionsProvider";
-import { DashboardSidebarGroupHeader } from "../DashboardSidebarGroupHeader";
+import { DashboardSidebarCollectionHeader } from "../DashboardSidebarCollectionHeader";
 import { CollectionMenuItems } from "./components/CollectionMenuItems/CollectionMenuItems";
 
 interface DashboardSidebarCollectionProps {
@@ -43,13 +42,19 @@ export function DashboardSidebarCollection({
 	const input = useRef<HTMLInputElement>(null);
 	const submitting = useRef(false);
 	const {
+		active,
 		setNodeRef,
 		attributes,
 		listeners,
 		transform,
 		transition,
 		isDragging,
-	} = useSortable({ id: collection.id, disabled: isDragDisabled || editing });
+	} = useSortable({
+		id: collection.id,
+		data: { type: "collection" },
+		disabled: isDragDisabled || editing,
+	});
+	const isCollectionDragActive = active?.data.current?.type === "collection";
 	const { setNodeRef: setDropRef, isOver } = useDroppable({
 		id: collectionDropId(collection.id),
 		disabled: isDragDisabled,
@@ -110,9 +115,11 @@ export function DashboardSidebarCollection({
 		>
 			<ContextMenu>
 				<ContextMenuTrigger asChild>
-					<DashboardSidebarGroupHeader
+					<DashboardSidebarCollectionHeader
 						ref={setNodeRef}
-						indentation="top-level"
+						labelRef={setDropRef}
+						color={collection.color}
+						projectCount={collection.projects.length}
 						isCollapsed={collection.isCollapsed}
 						isEditing={editing}
 						isDraggable={!isDragDisabled}
@@ -124,8 +131,9 @@ export function DashboardSidebarCollection({
 							});
 						}}
 						className={cn(
-							"-ml-1 pl-1 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-							isOver && "bg-fill-selected",
+							isOver &&
+								!isCollectionDragActive &&
+								"bg-sidebar-primary/15 ring-1 ring-inset ring-sidebar-primary",
 						)}
 						{...(editing ? {} : attributes)}
 						{...(editing ? {} : listeners)}
@@ -144,55 +152,6 @@ export function DashboardSidebarCollection({
 										}
 									}
 						}
-						label={
-							<span
-								ref={setDropRef}
-								className="flex min-w-0 flex-1 items-center gap-2"
-							>
-								<span
-									className="size-2.5 shrink-0 rounded-full bg-muted-foreground"
-									style={
-										collection.color
-											? { backgroundColor: collection.color }
-											: undefined
-									}
-								/>
-								{editing ? (
-									<input
-										ref={input}
-										aria-label={t({ message: "Collection name" })}
-										className="min-w-0 w-full bg-transparent outline-none"
-										value={name}
-										maxLength={200}
-										onChange={(event) => setName(event.target.value)}
-										onBlur={() => {
-											void submit();
-										}}
-										onKeyDown={(event) => {
-											event.stopPropagation();
-											if (event.key === "Enter") {
-												event.preventDefault();
-												void submit();
-											}
-											if (event.key === "Escape") {
-												event.preventDefault();
-												state?.setNewCollectionTag(null);
-												state?.setEditingTag(null);
-											}
-										}}
-									/>
-								) : (
-									<span className="truncate" title={collection.name}>
-										{collection.name}
-									</span>
-								)}
-								{collection.isCollapsed && (
-									<span className="ml-auto text-xs tabular-nums">
-										{formatNumber(collection.projects.length)}
-									</span>
-								)}
-							</span>
-						}
 						actions={
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
@@ -209,13 +168,45 @@ export function DashboardSidebarCollection({
 								</DropdownMenuContent>
 							</DropdownMenu>
 						}
-					/>
+					>
+						{editing ? (
+							<input
+								ref={input}
+								aria-label={t({ message: "Collection name" })}
+								className="min-w-0 w-full bg-transparent outline-none"
+								value={name}
+								maxLength={200}
+								onChange={(event) => setName(event.target.value)}
+								onBlur={() => {
+									void submit();
+								}}
+								onKeyDown={(event) => {
+									event.stopPropagation();
+									if (event.key === "Enter") {
+										event.preventDefault();
+										void submit();
+									}
+									if (event.key === "Escape") {
+										event.preventDefault();
+										state?.setNewCollectionTag(null);
+										state?.setEditingTag(null);
+									}
+								}}
+							/>
+						) : (
+							<span className="truncate" title={collection.name}>
+								{collection.name}
+							</span>
+						)}
+					</DashboardSidebarCollectionHeader>
 				</ContextMenuTrigger>
 				<ContextMenuContent onCloseAutoFocus={onCloseAutoFocus}>
 					<CollectionMenuItems kind="context" {...menuProps} />
 				</ContextMenuContent>
 			</ContextMenu>
-			{!collection.isCollapsed && <div className="ml-3">{children}</div>}
+			{!collection.isCollapsed && !isCollectionDragActive && (
+				<div className="ml-3">{children}</div>
+			)}
 		</div>
 	);
 }

@@ -19,7 +19,8 @@ export function DashboardSidebarProjectRootDrop({
 			className={cn(
 				"mx-2 h-3 rounded",
 				activeType === "project" && "h-8",
-				isOver && "bg-fill-selected",
+				isOver &&
+					"bg-sidebar-primary/15 ring-1 ring-inset ring-sidebar-primary",
 			)}
 		/>
 	);

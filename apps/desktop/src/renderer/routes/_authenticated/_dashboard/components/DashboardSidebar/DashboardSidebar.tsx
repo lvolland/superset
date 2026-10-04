@@ -337,6 +337,7 @@ export function DashboardSidebar({
 								tag: item.collection.tag,
 								name: item.collection.name,
 								color: item.collection.color,
+								isCollapsed: item.collection.isCollapsed,
 								projectIds: item.collection.projects.map(
 									(project) => project.id,
 								),

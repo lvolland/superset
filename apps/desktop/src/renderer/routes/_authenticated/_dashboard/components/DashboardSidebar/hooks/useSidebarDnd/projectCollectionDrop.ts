@@ -14,6 +14,7 @@ export interface ProjectCollectionDragLayout {
 		tag: string;
 		name?: string;
 		color?: string | null;
+		isCollapsed?: boolean;
 		projectIds: string[];
 	}>;
 }
