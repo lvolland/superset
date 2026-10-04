@@ -89,6 +89,7 @@ projects
   create
   list
   setup
+  update
 tasks
   create
   delete
@@ -109,6 +110,17 @@ workspaces
 
 There are no `devices` or `host` command groups in the current CLI. Host
 server lifecycle is handled by top-level `start`, `status`, and `stop`.
+
+## Projects Commands
+
+`projects list` accepts `--host <id>` or `--local`, plus `--collection <name>`
+to filter by a normalized collection tag. Its JSON output includes `tags`, and
+its human output includes a `TAGS` column.
+
+`projects update <projectId>` accepts `--host <id>` or `--local` and exactly
+one collection change: `--collection <name>` places the project in that
+collection, while `--clear-collection` removes it. Collection names are
+trimmed and lowercased before storage.
 
 ## Global Options
 
