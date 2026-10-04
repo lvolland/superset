@@ -35,8 +35,11 @@ function fixture(
 		noLlm?: boolean;
 		ambiguous?: boolean;
 		activeMode?: string;
+		appFolder?: string;
+		missingAppFolder?: boolean;
 	} = {},
 ) {
+	const appFolder = options.appFolder || "/home";
 	let now = 0;
 	let mode = options.activeMode ?? "pro";
 	let clipboard = "original clipboard\n";
@@ -45,7 +48,7 @@ function fixture(
 	const files = new Map<string, string | Buffer>();
 	files.set("/Applications/superwhisper.app", "");
 	files.set(
-		"/home/superwhisper/modes/default.json",
+		`${appFolder}/superwhisper/modes/default.json`,
 		JSON.stringify({
 			key: "default",
 			name: "Default",
@@ -56,12 +59,12 @@ function fixture(
 	);
 	if (!options.missingMode)
 		files.set(
-			"/home/superwhisper/modes/superset.json",
+			`${appFolder}/superwhisper/modes/superset.json`,
 			JSON.stringify({ key: "superset", name: "Superset", autoPaste: false }),
 		);
 	if (options.missingApp) files.delete("/Applications/superwhisper.app");
 	if (options.missingDefault)
-		files.delete("/home/superwhisper/modes/default.json");
+		files.delete(`${appFolder}/superwhisper/modes/default.json`);
 	const enoent = () => Object.assign(new Error("missing"), { code: "ENOENT" });
 	const deps: SuperwhisperDependencies = {
 		platform: "darwin",
@@ -91,11 +94,11 @@ function fixture(
 			},
 			mkdir: async () => {},
 			mkdtemp: async () => "/temp/job",
-			readdir: async () => [
+			readdir: async (path: string) => [
 				...new Set(
 					[...files.keys()]
-						.filter((p) => p.startsWith("/home/superwhisper/recordings/"))
-						.map((p) => p.split("/")[4]),
+						.filter((p) => p.startsWith(`${path}/`))
+						.map((p) => p.slice(path.length + 1).split("/")[0]),
 				),
 			],
 			rm: async (path: string) => {
@@ -109,8 +112,11 @@ function fixture(
 				files.set(args.at(-1) as string, wav());
 				return "";
 			}
-			if (command.endsWith("defaults"))
-				return args.at(-1) === "activeModeKey" ? mode : "/home";
+			if (command.endsWith("defaults")) {
+				if (args.at(-1) === "activeModeKey") return mode;
+				if (options.missingAppFolder) throw new Error("Preference missing");
+				return options.appFolder ?? "/home";
+			}
 			if (command.endsWith("pbpaste")) return clipboard;
 			if (command.endsWith("pbcopy")) {
 				clipboard = config.input ?? "";
@@ -127,7 +133,9 @@ function fixture(
 				expect(mode).toBe("superset");
 				expect(
 					JSON.parse(
-						files.get("/home/superwhisper/modes/superset.json") as string,
+						files.get(
+							`${appFolder}/superwhisper/modes/superset.json`,
+						) as string,
 					).autoPaste,
 				).toBe(false);
 				if (options.failOpen) throw new Error("open failed");
@@ -135,7 +143,7 @@ function fixture(
 				clipboard = "transcription";
 				if (!options.timeout) {
 					files.set(
-						`/home/superwhisper/recordings/${submissions}/meta.json`,
+						`${appFolder}/superwhisper/recordings/${submissions}/meta.json`,
 						JSON.stringify({
 							modeName: "Superset",
 							duration: 1000,
@@ -145,7 +153,7 @@ function fixture(
 					);
 					if (options.ambiguous)
 						files.set(
-							"/home/superwhisper/recordings/extra/meta.json",
+							`${appFolder}/superwhisper/recordings/extra/meta.json`,
 							JSON.stringify({
 								modeName: "Superset",
 								duration: 1000,
@@ -171,6 +179,46 @@ function fixture(
 const audio = Buffer.from("audio");
 
 describe("SuperwhisperAdapter", () => {
+	it("uses one resolved app folder for mode setup, status and recordings", async () => {
+		const f = fixture({ appFolder: "/custom/storage", missingMode: true });
+		expect(await f.adapter.status()).toEqual({
+			installed: true,
+			modeReady: false,
+		});
+		await f.adapter.ensureMode();
+		expect(await f.adapter.status()).toEqual({
+			installed: true,
+			modeReady: true,
+		});
+		expect(await f.adapter.transcribe(audio, "audio/mp4")).toEqual({
+			text: "processed 1",
+		});
+		expect(
+			f.files.has("/custom/storage/superwhisper/modes/superset.json"),
+		).toBe(true);
+		expect(f.files.has("/home/superwhisper/modes/superset.json")).toBe(false);
+		expect(
+			f.commands.filter((c) => c.includes("appFolderDirectory")),
+		).toHaveLength(1);
+	});
+
+	it.each([
+		{ appFolder: "" },
+		{ missingAppFolder: true },
+	])("falls back to home for an unset app folder (%j)", async (options) => {
+		const f = fixture(options);
+		expect(await f.adapter.status()).toEqual({
+			installed: true,
+			modeReady: true,
+		});
+		expect(await f.adapter.transcribe(audio, "audio/mp4")).toEqual({
+			text: "processed 1",
+		});
+		expect(
+			f.commands.filter((c) => c.includes("appFolderDirectory")),
+		).toHaveLength(1);
+	});
+
 	it("returns processed text and restores mode and exact clipboard", async () => {
 		const f = fixture();
 		expect(await f.adapter.transcribe(audio, "audio/mp4")).toEqual({
@@ -274,7 +322,7 @@ describe("SuperwhisperAdapter", () => {
 		await expect(
 			f.adapter.transcribe(audio, "audio/mp4"),
 		).rejects.toMatchObject({ kind: "MODE_NOT_READY" });
-		expect(f.commands).toHaveLength(0);
+		expect(f.commands.some((c) => c[0]?.endsWith("open"))).toBe(false);
 		expect(f.files.get("/home/superwhisper/modes/superset.json")).toBe(unsafe);
 	});
 	it("reports unavailable apps and unsupported platforms", async () => {

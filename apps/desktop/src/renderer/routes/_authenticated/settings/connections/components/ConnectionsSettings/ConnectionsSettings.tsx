@@ -1,4 +1,6 @@
 import { Trans } from "@lingui/react/macro";
+import { FEATURE_FLAGS } from "@superset/shared/constants";
+import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useIsV2CloudEnabled } from "renderer/hooks/useIsV2CloudEnabled";
 import { useSettingsSearchQuery } from "renderer/stores/settings-state";
 import {
@@ -12,10 +14,13 @@ import { SuperwhisperSettings } from "./components/SuperwhisperSettings";
 export function ConnectionsSettings({ hostId }: { hostId: string | null }) {
 	const searchQuery = useSettingsSearchQuery();
 	const isV2 = useIsV2CloudEnabled();
+	const cloudWorkspaces =
+		useFeatureFlagEnabled(FEATURE_FLAGS.CLOUD_WORKSPACES) === true;
 	const visibleItems = getVisibleItemsForSection({
 		section: "connections",
 		searchQuery,
 		isV2,
+		cloudWorkspaces,
 	});
 	return (
 		<div className="w-full max-w-4xl p-6">

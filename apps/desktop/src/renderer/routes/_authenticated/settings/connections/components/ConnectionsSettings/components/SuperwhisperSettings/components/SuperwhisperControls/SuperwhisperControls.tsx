@@ -4,6 +4,7 @@ import { Badge } from "@superset/ui/badge";
 import { toast } from "@superset/ui/sonner";
 import { Switch } from "@superset/ui/switch";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { getHostServiceClientByUrl } from "renderer/lib/host-service-client";
 import { SettingsRow } from "../../../../../../../components/SettingsRow";
 import { isSuperwhisperProcedureUnavailable } from "../../SuperwhisperSettings.utils";
@@ -11,11 +12,13 @@ import { isSuperwhisperProcedureUnavailable } from "../../SuperwhisperSettings.u
 interface SuperwhisperControlsProps {
 	hostUrl: string | null;
 	enabled: boolean;
+	hostPicker: ReactNode;
 }
 
 export function SuperwhisperControls({
 	hostUrl,
 	enabled,
+	hostPicker,
 }: SuperwhisperControlsProps) {
 	const { t } = useLingui();
 	const queryClient = useQueryClient();
@@ -57,7 +60,8 @@ export function SuperwhisperControls({
 
 	if (
 		!enabled ||
-		settingsQuery.isLoading ||
+		settingsQuery.isPending ||
+		settingsQuery.isError ||
 		isSuperwhisperProcedureUnavailable(settingsQuery.error) ||
 		!settingsQuery.data
 	)
@@ -67,47 +71,55 @@ export function SuperwhisperControls({
 	const controlsDisabled = setMutation.isPending;
 
 	return (
-		<div className="mt-4">
-			<SettingsRow
-				label={t({
-					message: "Use Superwhisper for mobile dictation",
-				})}
-				htmlFor="superwhisper-enabled"
-			>
-				<Switch
-					id="superwhisper-enabled"
-					checked={settings.enabled}
-					disabled={controlsDisabled}
-					onCheckedChange={(nextEnabled) => setMutation.mutate(nextEnabled)}
-				/>
-			</SettingsRow>
-			<SettingsRow
-				label={t({
-					message: "Superwhisper status",
-				})}
-			>
-				<div className="flex flex-wrap justify-end gap-2">
-					<Badge variant={settings.installed ? "secondary" : "outline"}>
-						{settings.installed ? (
-							<Trans>Installed</Trans>
-						) : (
-							<Trans>Not installed</Trans>
-						)}
-					</Badge>
-					<Badge variant={settings.modeReady ? "secondary" : "outline"}>
-						{settings.modeReady ? (
-							<Trans>Superset mode ready</Trans>
-						) : (
-							<Trans>Superset mode needs setup</Trans>
-						)}
-					</Badge>
-				</div>
-			</SettingsRow>
-			<SettingsRow label={t({ message: "Model and language" })}>
-				<span className="text-sm text-muted-foreground">
-					<Trans>Superset mode in Superwhisper</Trans>
-				</span>
-			</SettingsRow>
-		</div>
+		<section className="mt-8 border-t pt-6">
+			<header className="flex items-center justify-between gap-4">
+				<h3 className="text-base font-semibold">
+					<Trans>Superwhisper</Trans>
+				</h3>
+				{hostPicker}
+			</header>
+			<div className="mt-4">
+				<SettingsRow
+					label={t({
+						message: "Use Superwhisper for mobile dictation",
+					})}
+					htmlFor="superwhisper-enabled"
+				>
+					<Switch
+						id="superwhisper-enabled"
+						checked={settings.enabled}
+						disabled={controlsDisabled}
+						onCheckedChange={(nextEnabled) => setMutation.mutate(nextEnabled)}
+					/>
+				</SettingsRow>
+				<SettingsRow
+					label={t({
+						message: "Superwhisper status",
+					})}
+				>
+					<div className="flex flex-wrap justify-end gap-2">
+						<Badge variant={settings.installed ? "secondary" : "outline"}>
+							{settings.installed ? (
+								<Trans>Installed</Trans>
+							) : (
+								<Trans>Not installed</Trans>
+							)}
+						</Badge>
+						<Badge variant={settings.modeReady ? "secondary" : "outline"}>
+							{settings.modeReady ? (
+								<Trans>Superset mode ready</Trans>
+							) : (
+								<Trans>Superset mode needs setup</Trans>
+							)}
+						</Badge>
+					</div>
+				</SettingsRow>
+				<SettingsRow label={t({ message: "Model and language" })}>
+					<span className="text-sm text-muted-foreground">
+						<Trans>Superset mode in Superwhisper</Trans>
+					</span>
+				</SettingsRow>
+			</div>
+		</section>
 	);
 }

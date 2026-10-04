@@ -134,10 +134,20 @@ export function wavDurationMs(wav: Buffer): number {
 
 export class SuperwhisperAdapter {
 	private queue: Promise<unknown> = Promise.resolve();
-	private readonly modePath: string;
+	private appDirectory: Promise<string> | undefined;
 
-	constructor(private readonly deps: SuperwhisperDependencies) {
-		this.modePath = join(deps.home, "superwhisper", "modes", "superset.json");
+	constructor(private readonly deps: SuperwhisperDependencies) {}
+
+	private getAppDirectory(): Promise<string> {
+		this.appDirectory ??= this.deps
+			.run("/usr/bin/defaults", ["read", DOMAIN, "appFolderDirectory"], {
+				timeoutMs: TIMEOUT_MS,
+			})
+			.then(
+				(folder) => join(folder.trim() || this.deps.home, "superwhisper"),
+				() => join(this.deps.home, "superwhisper"),
+			);
+		return this.appDirectory;
 	}
 
 	private async exists(path: string): Promise<boolean> {
@@ -154,10 +164,15 @@ export class SuperwhisperAdapter {
 		if (this.deps.platform !== "darwin")
 			return { installed: false, modeReady: false };
 		const installed = await this.exists(APP);
+		const modePath = join(
+			await this.getAppDirectory(),
+			"modes",
+			"superset.json",
+		);
 		let modeReady = false;
 		try {
 			modeReady = modeIsSafe(
-				JSON.parse(await this.deps.fs.readFile(this.modePath, "utf8")),
+				JSON.parse(await this.deps.fs.readFile(modePath, "utf8")),
 			);
 		} catch (error) {
 			if (
@@ -175,22 +190,18 @@ export class SuperwhisperAdapter {
 				"UNAVAILABLE",
 				"Superwhisper is not installed on this Mac",
 			);
-		if (!(await this.exists(this.modePath))) {
+		const modes = join(await this.getAppDirectory(), "modes");
+		const modePath = join(modes, "superset.json");
+		if (!(await this.exists(modePath))) {
 			try {
 				const source: unknown = JSON.parse(
-					await this.deps.fs.readFile(
-						join(this.deps.home, "superwhisper", "modes", "default.json"),
-						"utf8",
-					),
+					await this.deps.fs.readFile(join(modes, "default.json"), "utf8"),
 				);
 				if (!source || typeof source !== "object" || Array.isArray(source))
 					throw new Error("Invalid default mode");
-				await this.deps.fs.mkdir(
-					join(this.deps.home, "superwhisper", "modes"),
-					{ recursive: true },
-				);
+				await this.deps.fs.mkdir(modes, { recursive: true });
 				await this.deps.fs.writeFile(
-					this.modePath,
+					modePath,
 					JSON.stringify(
 						{
 							...source,
@@ -303,21 +314,7 @@ export class SuperwhisperAdapter {
 					"INVALID_AUDIO",
 					"Dictation cannot exceed five minutes",
 				);
-			let appFolder: string;
-			try {
-				appFolder =
-					(
-						await command("/usr/bin/defaults", [
-							"read",
-							DOMAIN,
-							"appFolderDirectory",
-						])
-					).trim() || this.deps.home;
-			} catch (error) {
-				if (error instanceof DictationError) throw error;
-				appFolder = this.deps.home;
-			}
-			const recordings = join(appFolder, "superwhisper", "recordings");
+			const recordings = join(await this.getAppDirectory(), "recordings");
 			originalMode = (
 				await command("/usr/bin/defaults", ["read", DOMAIN, "activeModeKey"])
 			).trim();

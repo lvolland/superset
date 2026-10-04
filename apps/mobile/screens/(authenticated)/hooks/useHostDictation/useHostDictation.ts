@@ -1,6 +1,10 @@
 import { useLingui } from "@lingui/react/macro";
 import type { ComposerHandle } from "@superset/composer";
-import { useQuery } from "@tanstack/react-query";
+import {
+	type QueryClient,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query";
 import { File } from "expo-file-system";
 import {
 	type RefObject,
@@ -19,29 +23,25 @@ import {
 	type DictationTarget,
 	dictationEngineFor,
 } from "./dictationSession";
+import { transcribeHostDictation } from "./transcribeHostDictation/transcribeHostDictation";
 
 const composers = new Map<string, RefObject<ComposerHandle | null>>();
 const sessions = new Map<string, ReturnType<typeof createDictationSession>>();
 
-function sessionFor(key: string) {
+function sessionFor(key: string, queryClient: QueryClient) {
 	let session = sessions.get(key);
 	if (session) return session;
 	session = createDictationSession({
-		transcribe: async (audio, target) => {
-			let encoded: string;
-			try {
-				encoded = await new File(audio.uri).base64();
-			} catch {
-				throw { data: { dictation: { kind: "INVALID_AUDIO" } } };
-			}
-			const result = await getHostServiceClientByUrl(
-				target.hostUrl,
-			).dictation.transcribe.mutate({
-				audio: encoded,
-				mediaType: "audio/mp4",
-			});
-			return result.text;
-		},
+		transcribe: (audio, target) =>
+			transcribeHostDictation(audio, target, {
+				queryClient,
+				readAudio: (uri) => new File(uri).base64(),
+				transcribe: (hostUrl, encoded) =>
+					getHostServiceClientByUrl(hostUrl).dictation.transcribe.mutate({
+						audio: encoded,
+						mediaType: "audio/mp4",
+					}),
+			}),
 		append: (text) => {
 			const composer = composers.get(key)?.current;
 			if (composer) {
@@ -68,6 +68,7 @@ export function useHostDictation({
 	composerRef: RefObject<ComposerHandle | null>;
 }) {
 	const { t } = useLingui();
+	const queryClient = useQueryClient();
 	const recordingTarget = useRef<DictationTarget | null>(null);
 	const query = useQuery({
 		queryKey: [
@@ -95,7 +96,7 @@ export function useHostDictation({
 			}
 		},
 	});
-	const session = sessionFor(draftKey);
+	const session = sessionFor(draftKey, queryClient);
 	const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
 	const engine = dictationEngineFor(target, query);
 

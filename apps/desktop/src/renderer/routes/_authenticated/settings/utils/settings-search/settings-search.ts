@@ -2017,13 +2017,14 @@ export function getVisibleItemsForSection(params: {
 	section: SettingsSection;
 	searchQuery: string;
 	isV2: boolean;
+	cloudWorkspaces?: boolean;
 }): SettingItemId[] {
-	const { section, searchQuery, isV2 } = params;
+	const { section, searchQuery, isV2, cloudWorkspaces = true } = params;
 	const matched = searchQuery.trim()
 		? getMatchingItemsForSection(searchQuery, section)
 		: SETTINGS_ITEMS.filter((item) => item.section === section);
 	return matched
-		.filter((item) => isItemAllowedForVariant(item.id, isV2))
+		.filter((item) => isItemOffered(item, isV2, cloudWorkspaces))
 		.map((item) => item.id);
 }
 
@@ -2036,7 +2037,10 @@ export function getVisibleItemsForSection(params: {
 const CLOUD_WORKSPACE_SECTIONS: ReadonlySet<SettingsSection> = new Set([
 	"environments",
 	"agentAccounts",
-	"connections",
+]);
+
+const CLOUD_WORKSPACE_ITEMS: ReadonlySet<SettingItemId> = new Set([
+	SETTING_ITEM_ID.CONNECTIONS,
 ]);
 
 function isItemOffered(
@@ -2046,7 +2050,9 @@ function isItemOffered(
 ): boolean {
 	return (
 		isItemAllowedForVariant(item.id, isV2) &&
-		(cloudWorkspaces || !CLOUD_WORKSPACE_SECTIONS.has(item.section))
+		(cloudWorkspaces ||
+			(!CLOUD_WORKSPACE_SECTIONS.has(item.section) &&
+				!CLOUD_WORKSPACE_ITEMS.has(item.id)))
 	);
 }
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import {
+	getAllowedSectionsForVariant,
 	getVisibleItemsForSection,
 	getVisibleMatchCountBySection,
 	SETTING_ITEM_ID,
@@ -153,6 +154,29 @@ describe("settings search - mobile rollout", () => {
 });
 
 describe("settings search - Superwhisper", () => {
+	it("keeps Connections and dictation search visible without cloud workspaces", () => {
+		expect(getAllowedSectionsForVariant(true, false).has("connections")).toBe(
+			true,
+		);
+		expect(
+			getVisibleMatchCountBySection("Superwhisper", true, false).connections,
+		).toBe(1);
+		expect(
+			getVisibleMatchCountBySection("GitHub", true, false).connections,
+		).toBeUndefined();
+		expect(
+			getVisibleItemsForSection({
+				section: "connections",
+				searchQuery: "",
+				isV2: true,
+				cloudWorkspaces: false,
+			}),
+		).toEqual([SETTING_ITEM_ID.CONNECTIONS_SUPERWHISPER]);
+		expect(getAllowedSectionsForVariant(false, false).has("connections")).toBe(
+			false,
+		);
+	});
+
 	it.each([
 		"Superwhisper",
 		"mobile dictation",
