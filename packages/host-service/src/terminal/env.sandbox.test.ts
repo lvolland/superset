@@ -52,6 +52,28 @@ describe("terminal env in a sandbox", () => {
 		expect(first.FOO).toBe("one");
 	});
 
+	test("a managed environment cannot set wrapper-owned agent markers", () => {
+		setManagedEnv({
+			SUPERSET_AGENT_ID: "claude",
+			SUPERSET_AGENT_LAUNCH_ID: "launch-1",
+			SUPERSET_NESTED_AGENT: "1",
+			NODE_ENV: "development",
+			NEXT_PUBLIC_X: "public-value",
+			TURBO_TOKEN: "turbo-token",
+			FOO: "one",
+		});
+
+		const env = buildV2TerminalEnv(params);
+
+		expect(env.SUPERSET_AGENT_ID).toBeUndefined();
+		expect(env.SUPERSET_AGENT_LAUNCH_ID).toBeUndefined();
+		expect(env.SUPERSET_NESTED_AGENT).toBeUndefined();
+		expect(env.NODE_ENV).toBe("development");
+		expect(env.NEXT_PUBLIC_X).toBe("public-value");
+		expect(env.TURBO_TOKEN).toBe("turbo-token");
+		expect(env.FOO).toBe("one");
+	});
+
 	test("outside a sandbox the managed set is ignored", () => {
 		process.env.SUPERSET_HOST_RUN_MODE = "local";
 		setManagedEnv({ FOO: "one" });
