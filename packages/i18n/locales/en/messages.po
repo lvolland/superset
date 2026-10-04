@@ -3887,6 +3887,9 @@ msgstr "Collection actions"
 msgid "Collection name"
 msgstr "Collection name"
 
+msgid "Collection: {name}"
+msgstr "Collection: {name}"
+
 msgid "Color"
 msgstr "Color"
 
@@ -12346,6 +12349,9 @@ msgstr "Project's host is unreachable — cannot rename right now"
 
 msgid "Projects"
 msgstr "Projects"
+
+msgid "Projects outside collections"
+msgstr "Projects outside collections"
 
 msgid "Prompt"
 msgstr "Prompt"

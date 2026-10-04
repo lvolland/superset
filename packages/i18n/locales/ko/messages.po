@@ -3887,6 +3887,9 @@ msgstr "컬렉션 작업"
 msgid "Collection name"
 msgstr "컬렉션 이름"
 
+msgid "Collection: {name}"
+msgstr "컬렉션: {name}"
+
 msgid "Color"
 msgstr "색상"
 
@@ -12346,6 +12349,9 @@ msgstr "프로젝트 호스트에 연결할 수 없습니다 — 지금은 이�
 
 msgid "Projects"
 msgstr "프로젝트"
+
+msgid "Projects outside collections"
+msgstr "컬렉션 밖의 프로젝트"
 
 msgid "Prompt"
 msgstr "프롬프트"

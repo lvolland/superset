@@ -3887,6 +3887,9 @@ msgstr "Sammlungsaktionen"
 msgid "Collection name"
 msgstr "Sammlungsname"
 
+msgid "Collection: {name}"
+msgstr "Sammlung: {name}"
+
 msgid "Color"
 msgstr "Farbe"
 
@@ -12346,6 +12349,9 @@ msgstr "Host des Projekts nicht erreichbar — Umbenennen gerade nicht möglich"
 
 msgid "Projects"
 msgstr "Projekte"
+
+msgid "Projects outside collections"
+msgstr "Projekte außerhalb von Sammlungen"
 
 msgid "Prompt"
 msgstr "Prompt"

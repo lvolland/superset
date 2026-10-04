@@ -3887,6 +3887,9 @@ msgstr "集合操作"
 msgid "Collection name"
 msgstr "集合名稱"
 
+msgid "Collection: {name}"
+msgstr "集合：{name}"
+
 msgid "Color"
 msgstr "顏色"
 
@@ -12346,6 +12349,9 @@ msgstr "專案所在主機不可達，暫時無法重新命名"
 
 msgid "Projects"
 msgstr "專案"
+
+msgid "Projects outside collections"
+msgstr "集合外的專案"
 
 msgid "Prompt"
 msgstr "提示詞"

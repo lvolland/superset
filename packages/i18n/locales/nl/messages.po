@@ -3887,6 +3887,9 @@ msgstr "Collectieacties"
 msgid "Collection name"
 msgstr "Collectienaam"
 
+msgid "Collection: {name}"
+msgstr "Collectie: {name}"
+
 msgid "Color"
 msgstr "Kleur"
 
@@ -12346,6 +12349,9 @@ msgstr "De host van het project is onbereikbaar — naam kan nu niet worden gewi
 
 msgid "Projects"
 msgstr "Projecten"
+
+msgid "Projects outside collections"
+msgstr "Projecten buiten collecties"
 
 msgid "Prompt"
 msgstr "Prompt"

@@ -3887,6 +3887,9 @@ msgstr "集合操作"
 msgid "Collection name"
 msgstr "集合名称"
 
+msgid "Collection: {name}"
+msgstr "集合：{name}"
+
 msgid "Color"
 msgstr "颜色"
 
@@ -12346,6 +12349,9 @@ msgstr "项目所在主机不可达，暂时无法重命名"
 
 msgid "Projects"
 msgstr "项目"
+
+msgid "Projects outside collections"
+msgstr "集合外的项目"
 
 msgid "Prompt"
 msgstr "提示词"

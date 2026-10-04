@@ -3887,6 +3887,9 @@ msgstr "コレクションの操作"
 msgid "Collection name"
 msgstr "コレクション名"
 
+msgid "Collection: {name}"
+msgstr "コレクション: {name}"
+
 msgid "Color"
 msgstr "色"
 
@@ -12346,6 +12349,9 @@ msgstr "プロジェクトのホストに到達できません — 今は名前�
 
 msgid "Projects"
 msgstr "プロジェクト"
+
+msgid "Projects outside collections"
+msgstr "コレクション外のプロジェクト"
 
 msgid "Prompt"
 msgstr "プロンプト"

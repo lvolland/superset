@@ -3887,6 +3887,9 @@ msgstr "Akce kolekce"
 msgid "Collection name"
 msgstr "Název kolekce"
 
+msgid "Collection: {name}"
+msgstr "Kolekce: {name}"
+
 msgid "Color"
 msgstr "Barva"
 
@@ -12346,6 +12349,9 @@ msgstr "Host projektu není dostupný — teď nelze přejmenovat"
 
 msgid "Projects"
 msgstr "Projekty"
+
+msgid "Projects outside collections"
+msgstr "Projekty mimo kolekce"
 
 msgid "Prompt"
 msgstr "Prompt"

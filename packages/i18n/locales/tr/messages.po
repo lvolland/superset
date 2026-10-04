@@ -3887,6 +3887,9 @@ msgstr "Koleksiyon işlemleri"
 msgid "Collection name"
 msgstr "Koleksiyon adı"
 
+msgid "Collection: {name}"
+msgstr "Koleksiyon: {name}"
+
 msgid "Color"
 msgstr "Renk"
 
@@ -12346,6 +12349,9 @@ msgstr "Projenin host'una erişilemiyor — şu anda yeniden adlandırılamaz"
 
 msgid "Projects"
 msgstr "Projeler"
+
+msgid "Projects outside collections"
+msgstr "Koleksiyon dışındaki projeler"
 
 msgid "Prompt"
 msgstr "İstem"

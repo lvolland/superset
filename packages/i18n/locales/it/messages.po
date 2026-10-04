@@ -3887,6 +3887,9 @@ msgstr "Azioni della raccolta"
 msgid "Collection name"
 msgstr "Nome della raccolta"
 
+msgid "Collection: {name}"
+msgstr "Raccolta: {name}"
+
 msgid "Color"
 msgstr "Colore"
 
@@ -12346,6 +12349,9 @@ msgstr "L'host del progetto non è raggiungibile — non è possibile rinominare
 
 msgid "Projects"
 msgstr "Progetti"
+
+msgid "Projects outside collections"
+msgstr "Progetti fuori dalle raccolte"
 
 msgid "Prompt"
 msgstr "Prompt"

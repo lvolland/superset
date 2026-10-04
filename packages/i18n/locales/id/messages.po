@@ -3887,6 +3887,9 @@ msgstr "Tindakan koleksi"
 msgid "Collection name"
 msgstr "Nama koleksi"
 
+msgid "Collection: {name}"
+msgstr "Koleksi: {name}"
+
 msgid "Color"
 msgstr "Warna"
 
@@ -12346,6 +12349,9 @@ msgstr "Host proyek tidak bisa dijangkau — tidak bisa ganti nama sekarang"
 
 msgid "Projects"
 msgstr "Proyek"
+
+msgid "Projects outside collections"
+msgstr "Proyek di luar koleksi"
 
 msgid "Prompt"
 msgstr "Prompt"

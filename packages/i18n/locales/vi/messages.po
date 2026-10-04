@@ -3887,6 +3887,9 @@ msgstr "Thao tác với bộ sưu tập"
 msgid "Collection name"
 msgstr "Tên bộ sưu tập"
 
+msgid "Collection: {name}"
+msgstr "Bộ sưu tập: {name}"
+
 msgid "Color"
 msgstr "Màu"
 
@@ -12346,6 +12349,9 @@ msgstr "Không kết nối được host của dự án — hiện không thể 
 
 msgid "Projects"
 msgstr "Dự án"
+
+msgid "Projects outside collections"
+msgstr "Dự án ngoài bộ sưu tập"
 
 msgid "Prompt"
 msgstr "Prompt"

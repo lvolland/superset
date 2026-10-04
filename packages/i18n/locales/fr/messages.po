@@ -3887,6 +3887,9 @@ msgstr "Actions de la collection"
 msgid "Collection name"
 msgstr "Nom de la collection"
 
+msgid "Collection: {name}"
+msgstr "Collection : {name}"
+
 msgid "Color"
 msgstr "Couleur"
 
@@ -12346,6 +12349,9 @@ msgstr "L'hôte du projet est injoignable — impossible de renommer pour le mom
 
 msgid "Projects"
 msgstr "Projets"
+
+msgid "Projects outside collections"
+msgstr "Projets hors collection"
 
 msgid "Prompt"
 msgstr "Prompt"

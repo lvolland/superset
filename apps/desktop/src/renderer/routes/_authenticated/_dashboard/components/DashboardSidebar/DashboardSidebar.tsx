@@ -41,6 +41,7 @@ import { DashboardSidebarHoverCardOverlay } from "./components/DashboardSidebarH
 import { DashboardSidebarPinnedSection } from "./components/DashboardSidebarPinnedSection";
 import { DashboardSidebarProjectRootDrop } from "./components/DashboardSidebarProjectRootDrop";
 import { DashboardSidebarProjectSection } from "./components/DashboardSidebarProjectSection";
+import { DashboardSidebarRailSeparator } from "./components/DashboardSidebarRailSeparator";
 import { DashboardSidebarSectionRenameProvider } from "./components/DashboardSidebarSectionRenameContext";
 import { DashboardSidebarSessionsSection } from "./components/DashboardSidebarSessionsSection";
 import { DashboardSidebarWorkspacesHeader } from "./components/DashboardSidebarWorkspacesHeader";
@@ -67,6 +68,7 @@ import type {
 	DashboardSidebarWorkspace,
 } from "./types";
 import { buildSidebarCollectionView } from "./utils/buildSidebarCollectionView";
+import { buildSidebarRailItems } from "./utils/buildSidebarRailItems";
 import { getProjectChildrenWorkspaces } from "./utils/projectChildren";
 import { sortDashboardSidebarProjects } from "./utils/sortDashboardSidebarProjects";
 
@@ -307,6 +309,13 @@ export function DashboardSidebar({
 		isCollapsed,
 		projectCollections.railProjectOrder,
 	]);
+	const railItems = useMemo(
+		() =>
+			isCollapsed
+				? buildSidebarRailItems(displayedGroups, collectionView.rootItems)
+				: [],
+		[isCollapsed, displayedGroups, collectionView.rootItems],
+	);
 	const displayedProjectIds = collectionView.rootItems.map((item) =>
 		item.type === "project" ? item.project.id : item.collection.id,
 	);
@@ -631,7 +640,20 @@ export function DashboardSidebar({
 													strategy={verticalListSortingStrategy}
 												>
 													{isCollapsed
-														? displayedGroups.map(renderProject)
+														? railItems.map((item) =>
+																item.type === "project" ? (
+																	renderProject(item.project)
+																) : (
+																	<DashboardSidebarRailSeparator
+																		key={item.key}
+																		collection={
+																			item.type === "collectionSeparator"
+																				? item.collection
+																				: undefined
+																		}
+																	/>
+																),
+															)
 														: collectionView.rootItems.map((item) =>
 																item.type === "project" ? (
 																	renderProject(item.project)

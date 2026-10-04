@@ -3887,6 +3887,9 @@ msgstr "Действия с коллекцией"
 msgid "Collection name"
 msgstr "Название коллекции"
 
+msgid "Collection: {name}"
+msgstr "Коллекция: {name}"
+
 msgid "Color"
 msgstr "Цвет"
 
@@ -12346,6 +12349,9 @@ msgstr "Хост проекта недоступен — сейчас переи
 
 msgid "Projects"
 msgstr "Проекты"
+
+msgid "Projects outside collections"
+msgstr "Проекты вне коллекций"
 
 msgid "Prompt"
 msgstr "Промпт"

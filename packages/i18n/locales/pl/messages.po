@@ -3887,6 +3887,9 @@ msgstr "Działania kolekcji"
 msgid "Collection name"
 msgstr "Nazwa kolekcji"
 
+msgid "Collection: {name}"
+msgstr "Kolekcja: {name}"
+
 msgid "Color"
 msgstr "Kolor"
 
@@ -12346,6 +12349,9 @@ msgstr "Host projektu jest nieosiągalny — nie można teraz zmienić nazwy"
 
 msgid "Projects"
 msgstr "Projekty"
+
+msgid "Projects outside collections"
+msgstr "Projekty poza kolekcjami"
 
 msgid "Prompt"
 msgstr "Prompt"
