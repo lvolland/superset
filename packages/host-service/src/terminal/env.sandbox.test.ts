@@ -22,8 +22,10 @@ const params = {
 
 describe("terminal env in a sandbox", () => {
 	let runMode: string | undefined;
+	let nodeEnv: string | undefined;
 	beforeEach(() => {
 		runMode = process.env.SUPERSET_HOST_RUN_MODE;
+		nodeEnv = process.env.NODE_ENV;
 		process.env.SUPERSET_HOST_RUN_MODE = "sandbox";
 		resetManagedEnvForTests();
 	});
@@ -31,6 +33,8 @@ describe("terminal env in a sandbox", () => {
 		if (runMode === undefined) delete process.env.SUPERSET_HOST_RUN_MODE;
 		else process.env.SUPERSET_HOST_RUN_MODE = runMode;
 		resetManagedEnvForTests();
+		if (nodeEnv === undefined) delete process.env.NODE_ENV;
+		else process.env.NODE_ENV = nodeEnv;
 	});
 
 	test("a terminal opened before the first push carries no variables, only the sandbox marker", () => {
