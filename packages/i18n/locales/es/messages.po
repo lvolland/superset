@@ -1466,6 +1466,9 @@ msgstr "Un identificador único para la organización (generado a partir del nom
 msgid "Aa"
 msgstr "Aa"
 
+msgid "Abandon"
+msgstr "Descartar"
+
 msgid "About"
 msgstr "Acerca de"
 
@@ -3388,6 +3391,9 @@ msgstr "Cuenta corriente + ahorros + Treasury a lo largo del tiempo; los tramos 
 msgid "Checking agents…"
 msgstr "Comprobando agentes…"
 
+msgid "Checking dictation settings"
+msgstr "Comprobando ajustes de dictado"
+
 msgid "Checking environments…"
 msgstr "Comprobando entornos…"
 
@@ -4575,6 +4581,9 @@ msgstr "No se pudo cambiar quién puede ver esta página"
 msgid "Could not change who can see this workspace"
 msgstr "No se pudo cambiar quién puede ver este espacio de trabajo"
 
+msgid "Could not check dictation settings"
+msgstr "No se pudieron comprobar los ajustes de dictado"
+
 msgid "Could not check your plan. Check your connection and try again."
 msgstr "No se pudo comprobar tu plan. Revisa tu conexión e inténtalo de nuevo."
 
@@ -4680,6 +4689,9 @@ msgstr "No se pudo contactar con el host para cargar esta pull request."
 
 msgid "Could not reach the host to start the update. Check that it is online and try again."
 msgstr "No se pudo contactar con el host para iniciar la actualización. Comprueba que está en línea y vuelve a intentarlo."
+
+msgid "Could not reach the Mac for transcription."
+msgstr "No se pudo conectar con el Mac para la transcripción."
 
 msgid "Could not reach the provider. Try again."
 msgstr "No se pudo contactar con el proveedor. Inténtalo de nuevo."
@@ -15521,6 +15533,24 @@ msgstr "Supervisado"
 msgid "Superwhisper"
 msgstr "Superwhisper"
 
+msgid "Superwhisper could not read the recording."
+msgstr "Superwhisper no pudo leer la grabación."
+
+msgid "Superwhisper could not restore your Mac's mode or clipboard."
+msgstr "Superwhisper no pudo restaurar el modo o el portapapeles de tu Mac."
+
+msgid "Superwhisper could not transcribe the recording."
+msgstr "Superwhisper no pudo transcribir la grabación."
+
+msgid "Superwhisper dictation is disabled on this Mac."
+msgstr "El dictado de Superwhisper está desactivado en este Mac."
+
+msgid "Superwhisper did not respond in time. Check that it has a Pro license on your Mac."
+msgstr "Superwhisper no respondió a tiempo. Comprueba que tenga una licencia Pro en tu Mac."
+
+msgid "Superwhisper is not installed on this Mac."
+msgstr "Superwhisper no está instalado en este Mac."
+
 msgid "Superwhisper status"
 msgstr "Estado de Superwhisper"
 
@@ -16230,6 +16260,9 @@ msgstr "El servicio del host de Superset de {organization} se detuvo de forma in
 msgid "The Superset host service stopped unexpectedly ({cause}) and could not be restarted automatically."
 msgstr "El servicio del host de Superset se detuvo de forma inesperada ({cause}) y no se pudo reiniciar automáticamente."
 
+msgid "The Superset mode in Superwhisper is not ready."
+msgstr "El modo Superset de Superwhisper no está listo."
+
 msgid "The surfaces outside the site that carry the product: the repository, releases, and Discord."
 msgstr "Las superficies fuera del sitio que llevan el producto: el repositorio, las versiones y Discord."
 
@@ -16846,6 +16879,12 @@ msgstr "Seguimiento"
 
 msgid "Transcribe mobile dictation on {hostName}."
 msgstr "Transcribe el dictado móvil en {hostName}."
+
+msgid "Transcription failed"
+msgstr "Error de transcripción"
+
+msgid "Transcription on {name}"
+msgstr "Transcripción en {name}"
 
 msgid "Translated"
 msgstr "Traducido"

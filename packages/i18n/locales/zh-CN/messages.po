@@ -1466,6 +1466,9 @@ msgstr "组织的唯一标识符（根据名称自动生成）"
 msgid "Aa"
 msgstr "Aa"
 
+msgid "Abandon"
+msgstr "放弃"
+
 msgid "About"
 msgstr "关于"
 
@@ -3388,6 +3391,9 @@ msgstr "活期+储蓄+国库账户随时间变化；台阶处为融资到账"
 msgid "Checking agents…"
 msgstr "正在检查智能体…"
 
+msgid "Checking dictation settings"
+msgstr "正在检查听写设置"
+
 msgid "Checking environments…"
 msgstr "正在检查环境…"
 
@@ -4575,6 +4581,9 @@ msgstr "无法更改谁可以查看这个页面"
 msgid "Could not change who can see this workspace"
 msgstr "无法更改谁可以查看此工作区"
 
+msgid "Could not check dictation settings"
+msgstr "无法检查听写设置"
+
 msgid "Could not check your plan. Check your connection and try again."
 msgstr "无法检查您的套餐。请检查网络连接后重试。"
 
@@ -4680,6 +4689,9 @@ msgstr "无法连接到主机以加载此拉取请求。"
 
 msgid "Could not reach the host to start the update. Check that it is online and try again."
 msgstr "无法连接主机以开始更新。请确认主机在线后重试。"
+
+msgid "Could not reach the Mac for transcription."
+msgstr "无法连接到Mac进行转录。"
 
 msgid "Could not reach the provider. Try again."
 msgstr "无法连接到提供商，请重试。"
@@ -15521,6 +15533,24 @@ msgstr "监督"
 msgid "Superwhisper"
 msgstr "Superwhisper"
 
+msgid "Superwhisper could not read the recording."
+msgstr "Superwhisper无法读取录音。"
+
+msgid "Superwhisper could not restore your Mac's mode or clipboard."
+msgstr "Superwhisper无法恢复Mac的模式或剪贴板。"
+
+msgid "Superwhisper could not transcribe the recording."
+msgstr "Superwhisper无法转录录音。"
+
+msgid "Superwhisper dictation is disabled on this Mac."
+msgstr "此Mac已禁用Superwhisper听写。"
+
+msgid "Superwhisper did not respond in time. Check that it has a Pro license on your Mac."
+msgstr "Superwhisper未及时响应。请检查Mac上是否具有Pro许可证。"
+
+msgid "Superwhisper is not installed on this Mac."
+msgstr "此Mac未安装Superwhisper。"
+
 msgid "Superwhisper status"
 msgstr "Superwhisper 状态"
 
@@ -16230,6 +16260,9 @@ msgstr "{organization}的Superset主机服务意外停止（{cause}），且无�
 msgid "The Superset host service stopped unexpectedly ({cause}) and could not be restarted automatically."
 msgstr "Superset主机服务意外停止（{cause}），且无法自动重启。"
 
+msgid "The Superset mode in Superwhisper is not ready."
+msgstr "Superwhisper中的Superset模式尚未准备好。"
+
 msgid "The surfaces outside the site that carry the product: the repository, releases, and Discord."
 msgstr "站外承载产品的渠道：仓库、发布版本和 Discord。"
 
@@ -16846,6 +16879,12 @@ msgstr "已跟踪"
 
 msgid "Transcribe mobile dictation on {hostName}."
 msgstr "在 {hostName} 上转录移动听写。"
+
+msgid "Transcription failed"
+msgstr "转录失败"
+
+msgid "Transcription on {name}"
+msgstr "正在{name}上转录"
 
 msgid "Translated"
 msgstr "已翻译"

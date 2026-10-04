@@ -1134,6 +1134,11 @@ export function WorkspaceScreen() {
 
 			{showComposer ? (
 				<TerminalComposer
+					dictationTarget={
+						!cloud && host && hostUrl
+							? { machineId: host.machineId, hostUrl, hostName: host.name }
+							: null
+					}
 					workspaceId={id}
 					allowAttachments={activeRow?.agentId != null}
 					slashCommands={slashCommands}

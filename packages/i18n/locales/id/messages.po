@@ -1466,6 +1466,9 @@ msgstr "Pengenal unik untuk organisasi Anda (dibuat otomatis dari nama)"
 msgid "Aa"
 msgstr "Aa"
 
+msgid "Abandon"
+msgstr "Buang"
+
 msgid "About"
 msgstr "Tentang"
 
@@ -3388,6 +3391,9 @@ msgstr "Giro + tabungan + Treasury dari waktu ke waktu; tranche penggalangan dan
 msgid "Checking agents…"
 msgstr "Memeriksa agen…"
 
+msgid "Checking dictation settings"
+msgstr "Memeriksa pengaturan dikte"
+
 msgid "Checking environments…"
 msgstr "Memeriksa environment…"
 
@@ -4575,6 +4581,9 @@ msgstr "Tidak bisa mengubah siapa yang bisa melihat halaman ini"
 msgid "Could not change who can see this workspace"
 msgstr "Tidak dapat mengubah siapa yang dapat melihat workspace ini"
 
+msgid "Could not check dictation settings"
+msgstr "Tidak dapat memeriksa pengaturan dikte"
+
 msgid "Could not check your plan. Check your connection and try again."
 msgstr "Tidak dapat memeriksa paket Anda. Periksa koneksi Anda dan coba lagi."
 
@@ -4680,6 +4689,9 @@ msgstr "Tidak bisa menjangkau host untuk memuat pull request ini."
 
 msgid "Could not reach the host to start the update. Check that it is online and try again."
 msgstr "Tidak dapat menjangkau host untuk memulai pembaruan. Pastikan host online lalu coba lagi."
+
+msgid "Could not reach the Mac for transcription."
+msgstr "Tidak dapat menghubungi Mac untuk transkripsi."
 
 msgid "Could not reach the provider. Try again."
 msgstr "Tidak bisa menghubungi penyedia. Coba lagi."
@@ -15521,6 +15533,24 @@ msgstr "Diawasi"
 msgid "Superwhisper"
 msgstr "Superwhisper"
 
+msgid "Superwhisper could not read the recording."
+msgstr "Superwhisper tidak dapat membaca rekaman."
+
+msgid "Superwhisper could not restore your Mac's mode or clipboard."
+msgstr "Superwhisper tidak dapat memulihkan mode atau papan klip Mac Anda."
+
+msgid "Superwhisper could not transcribe the recording."
+msgstr "Superwhisper tidak dapat mentranskripsikan rekaman."
+
+msgid "Superwhisper dictation is disabled on this Mac."
+msgstr "Dikte Superwhisper dinonaktifkan di Mac ini."
+
+msgid "Superwhisper did not respond in time. Check that it has a Pro license on your Mac."
+msgstr "Superwhisper tidak merespons tepat waktu. Pastikan lisensi Pro tersedia di Mac Anda."
+
+msgid "Superwhisper is not installed on this Mac."
+msgstr "Superwhisper tidak terpasang di Mac ini."
+
 msgid "Superwhisper status"
 msgstr "Status Superwhisper"
 
@@ -16230,6 +16260,9 @@ msgstr "Layanan host Superset untuk {organization} berhenti tak terduga ({cause}
 msgid "The Superset host service stopped unexpectedly ({cause}) and could not be restarted automatically."
 msgstr "Layanan host Superset berhenti tak terduga ({cause}) dan tidak bisa dimulai ulang otomatis."
 
+msgid "The Superset mode in Superwhisper is not ready."
+msgstr "Mode Superset di Superwhisper belum siap."
+
 msgid "The surfaces outside the site that carry the product: the repository, releases, and Discord."
 msgstr "Permukaan di luar situs yang membawa produk: repositori, rilis, dan Discord."
 
@@ -16846,6 +16879,12 @@ msgstr "Pelacakan"
 
 msgid "Transcribe mobile dictation on {hostName}."
 msgstr "Transkripsikan dikte seluler di {hostName}."
+
+msgid "Transcription failed"
+msgstr "Transkripsi gagal"
+
+msgid "Transcription on {name}"
+msgstr "Transkripsi di {name}"
 
 msgid "Translated"
 msgstr "Diterjemahkan"

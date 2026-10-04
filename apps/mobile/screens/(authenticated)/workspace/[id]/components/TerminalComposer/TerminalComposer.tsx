@@ -16,6 +16,10 @@ import { posthog } from "@/lib/posthog";
 import { useAttachmentsSheet } from "@/screens/(authenticated)/hooks/useAttachmentsSheet";
 import { useAttachmentUploads } from "@/screens/(authenticated)/hooks/useAttachmentUploads";
 import { useComposerDraft } from "@/screens/(authenticated)/hooks/useComposerDraft";
+import {
+	type DictationTarget,
+	useHostDictation,
+} from "@/screens/(authenticated)/hooks/useHostDictation";
 import { usePasteAttachments } from "@/screens/(authenticated)/hooks/usePasteAttachments";
 import { useAppReviewStore } from "@/screens/(authenticated)/stores/appReviewStore";
 import { workspaceDraftKey } from "@/screens/(authenticated)/stores/composerDraftsStore";
@@ -36,6 +40,7 @@ interface TerminalComposerProps {
 	 * two sessions to hold different drafts.
 	 */
 	workspaceId: string;
+	dictationTarget: DictationTarget | null;
 	placeholder?: string;
 	/** Submit the current draft to the PTY. Rejects if it never got there. */
 	onSubmit: (text: string) => Promise<void>;
@@ -103,6 +108,7 @@ export const TerminalComposer = forwardRef<
 >(function TerminalComposer(
 	{
 		workspaceId,
+		dictationTarget,
 		placeholder,
 		onSubmit,
 		onQuickKey,
@@ -139,6 +145,11 @@ export const TerminalComposer = forwardRef<
 	}));
 
 	const draftKey = workspaceDraftKey(workspaceId);
+	const dictation = useHostDictation({
+		target: dictationTarget,
+		draftKey,
+		composerRef,
+	});
 	const draft = useComposerDraft(draftKey);
 	const openAttachmentsSheet = useAttachmentsSheet(draftKey);
 	const addPasted = usePasteAttachments(draftKey);
@@ -222,6 +233,7 @@ export const TerminalComposer = forwardRef<
 	return (
 		<View>
 			<Composer
+				{...dictation}
 				ref={composerRef}
 				placeholder={
 					placeholder ??
