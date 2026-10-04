@@ -810,6 +810,9 @@ msgstr "{count}/天"
 msgid "{createdAtRelative} ago"
 msgstr "{createdAtRelative}前"
 
+msgid "{current} of {total}"
+msgstr "{current}/{total}"
+
 msgid "{currentPage} of {totalBranches}"
 msgstr "{currentPage}/{totalBranches}"
 
@@ -6252,6 +6255,12 @@ msgstr "空狀態"
 msgid "Empty command"
 msgstr "空命令"
 
+msgid "Empty file"
+msgstr "空白檔案"
+
+msgid "Empty sheet"
+msgstr "空白工作表"
+
 msgid "Enable"
 msgstr "啟用"
 
@@ -9365,6 +9374,9 @@ msgstr "市場"
 
 msgid "Marking ready for review..."
 msgstr "正在標記為可審查…"
+
+msgid "Match case"
+msgstr "區分大小寫"
 
 msgid "Match existing patterns"
 msgstr "沿用現有模式"
@@ -12561,6 +12573,9 @@ msgstr "超出速率限制。"
 msgid "Rate Superset"
 msgstr "為Superset評分"
 
+msgid "Raw"
+msgstr "原始"
+
 msgid "Reach this Mac from anywhere via the Superset relay, or spin up cloud workspaces. Connect from any client."
 msgstr "通過Superset中繼從任何地方連上這臺Mac，或啟動雲端工作區。可從任意客戶端連線。"
 
@@ -14407,6 +14422,9 @@ msgstr "與該專案的其他本地工作區共用專案的簽出（檔案、git
 msgid "Sheet"
 msgstr "側邊面板"
 
+msgid "Sheets"
+msgstr "工作表"
+
 msgid "Shell"
 msgstr "Shell"
 
@@ -14532,6 +14550,9 @@ msgstr "顯示拉取請求列表"
 
 msgid "Show pull request preview"
 msgstr "顯示拉取請求預覽"
+
+msgid "Show raw"
+msgstr "顯示原始內容"
 
 msgid "Show resolved ({resolvedCount})"
 msgstr "顯示已解決 ({resolvedCount})"
@@ -14969,6 +14990,9 @@ msgstr "分割並開啟行動模擬器"
 
 msgid "Split with New Browser"
 msgstr "拆分並新建瀏覽器"
+
+msgid "Spreadsheet"
+msgstr "試算表"
 
 msgid "Squash & Merge"
 msgstr "壓縮併合併"
@@ -16368,6 +16392,9 @@ msgstr "此環境的儲存庫已固定；請再次提升一個工作區以變更
 
 msgid "this file"
 msgstr "該檔案"
+
+msgid "This file could not be read as a spreadsheet"
+msgstr "無法將此檔案讀取為試算表"
 
 msgid "This file is empty or was deleted."
 msgstr "這個檔案為空或已被刪除。"

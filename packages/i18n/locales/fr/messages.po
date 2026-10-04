@@ -810,6 +810,9 @@ msgstr "{count}/jour"
 msgid "{createdAtRelative} ago"
 msgstr "il y a {createdAtRelative}"
 
+msgid "{current} of {total}"
+msgstr "{current} sur {total}"
+
 msgid "{currentPage} of {totalBranches}"
 msgstr "{currentPage} sur {totalBranches}"
 
@@ -6252,6 +6255,12 @@ msgstr "Vide"
 msgid "Empty command"
 msgstr "Commande vide"
 
+msgid "Empty file"
+msgstr "Fichier vide"
+
+msgid "Empty sheet"
+msgstr "Feuille vide"
+
 msgid "Enable"
 msgstr "Activer"
 
@@ -9365,6 +9374,9 @@ msgstr "Marketplace"
 
 msgid "Marking ready for review..."
 msgstr "Marquage comme prêt pour la revue…"
+
+msgid "Match case"
+msgstr "Respecter la casse"
 
 msgid "Match existing patterns"
 msgstr "Suivre les modèles existants"
@@ -12561,6 +12573,9 @@ msgstr "Limite de débit dépassée."
 msgid "Rate Superset"
 msgstr "Noter Superset"
 
+msgid "Raw"
+msgstr "Brut"
+
 msgid "Reach this Mac from anywhere via the Superset relay, or spin up cloud workspaces. Connect from any client."
 msgstr "Accédez à ce Mac depuis n'importe où via le relais Superset, ou lancez des espaces de travail cloud. Connectez-vous depuis n'importe quel client."
 
@@ -14407,6 +14422,9 @@ msgstr "Partage le checkout du projet — fichiers, index git et branche — ave
 msgid "Sheet"
 msgstr "Sheet"
 
+msgid "Sheets"
+msgstr "Feuilles"
+
 msgid "Shell"
 msgstr "Shell"
 
@@ -14532,6 +14550,9 @@ msgstr "Afficher la liste des pull requests"
 
 msgid "Show pull request preview"
 msgstr "Afficher l'aperçu de la pull request"
+
+msgid "Show raw"
+msgstr "Afficher le brut"
 
 msgid "Show resolved ({resolvedCount})"
 msgstr "Afficher les commentaires résolus ({resolvedCount})"
@@ -14969,6 +14990,9 @@ msgstr "Diviser avec le simulateur mobile"
 
 msgid "Split with New Browser"
 msgstr "Fractionner avec un navigateur"
+
+msgid "Spreadsheet"
+msgstr "Tableur"
 
 msgid "Squash & Merge"
 msgstr "Squasher et fusionner"
@@ -16368,6 +16392,9 @@ msgstr "Les dépôts de cet environnement sont figés ; promouvez à nouveau un 
 
 msgid "this file"
 msgstr "ce fichier"
+
+msgid "This file could not be read as a spreadsheet"
+msgstr "Impossible de lire ce fichier comme un tableur"
 
 msgid "This file is empty or was deleted."
 msgstr "Ce fichier est vide ou a été supprimé."

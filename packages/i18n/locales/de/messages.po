@@ -810,6 +810,9 @@ msgstr "{count}/Tag"
 msgid "{createdAtRelative} ago"
 msgstr "vor {createdAtRelative}"
 
+msgid "{current} of {total}"
+msgstr "{current} von {total}"
+
 msgid "{currentPage} of {totalBranches}"
 msgstr "{currentPage} von {totalBranches}"
 
@@ -6252,6 +6255,12 @@ msgstr "Leer"
 msgid "Empty command"
 msgstr "Leerer Befehl"
 
+msgid "Empty file"
+msgstr "Leere Datei"
+
+msgid "Empty sheet"
+msgstr "Leeres Blatt"
+
 msgid "Enable"
 msgstr "Aktivieren"
 
@@ -9365,6 +9374,9 @@ msgstr "Marketplace"
 
 msgid "Marking ready for review..."
 msgstr "Wird als bereit zur Review markiert…"
+
+msgid "Match case"
+msgstr "Groß-/Kleinschreibung beachten"
 
 msgid "Match existing patterns"
 msgstr "An bestehende Muster anpassen"
@@ -12561,6 +12573,9 @@ msgstr "Ratenlimit überschritten."
 msgid "Rate Superset"
 msgstr "Superset bewerten"
 
+msgid "Raw"
+msgstr "Roh"
+
 msgid "Reach this Mac from anywhere via the Superset relay, or spin up cloud workspaces. Connect from any client."
 msgstr "Erreiche diesen Mac von überall über das Superset-Relay oder starte Cloud-Arbeitsbereiche. Verbinde dich von jedem Client aus."
 
@@ -14407,6 +14422,9 @@ msgstr "Teilt den Checkout des Projekts – Dateien, Git-Index und Branch – mi
 msgid "Sheet"
 msgstr "Sheet"
 
+msgid "Sheets"
+msgstr "Blätter"
+
 msgid "Shell"
 msgstr "Shell"
 
@@ -14532,6 +14550,9 @@ msgstr "Pull-Request-Liste anzeigen"
 
 msgid "Show pull request preview"
 msgstr "Pull-Request-Vorschau anzeigen"
+
+msgid "Show raw"
+msgstr "Rohtext anzeigen"
 
 msgid "Show resolved ({resolvedCount})"
 msgstr "Aufgelöste anzeigen ({resolvedCount})"
@@ -14969,6 +14990,9 @@ msgstr "Mit mobilem Simulator teilen"
 
 msgid "Split with New Browser"
 msgstr "Mit neuem Browser teilen"
+
+msgid "Spreadsheet"
+msgstr "Tabellenkalkulation"
 
 msgid "Squash & Merge"
 msgstr "Squash & zusammenführen"
@@ -16368,6 +16392,9 @@ msgstr "Die Repositories dieser Umgebung sind festgelegt; befördere erneut eine
 
 msgid "this file"
 msgstr "diese Datei"
+
+msgid "This file could not be read as a spreadsheet"
+msgstr "Diese Datei konnte nicht als Tabelle gelesen werden"
 
 msgid "This file is empty or was deleted."
 msgstr "Diese Datei ist leer oder wurde gelöscht."

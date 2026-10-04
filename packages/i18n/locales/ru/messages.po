@@ -810,6 +810,9 @@ msgstr "{count}/день"
 msgid "{createdAtRelative} ago"
 msgstr "{createdAtRelative} назад"
 
+msgid "{current} of {total}"
+msgstr "{current} из {total}"
+
 msgid "{currentPage} of {totalBranches}"
 msgstr "{currentPage} из {totalBranches}"
 
@@ -6252,6 +6255,12 @@ msgstr "Пусто"
 msgid "Empty command"
 msgstr "Пустая команда"
 
+msgid "Empty file"
+msgstr "Пустой файл"
+
+msgid "Empty sheet"
+msgstr "Пустой лист"
+
 msgid "Enable"
 msgstr "Включить"
 
@@ -9365,6 +9374,9 @@ msgstr "Маркетплейс"
 
 msgid "Marking ready for review..."
 msgstr "Помечается как готово к ревью…"
+
+msgid "Match case"
+msgstr "Учитывать регистр"
 
 msgid "Match existing patterns"
 msgstr "Следуй существующим шаблонам"
@@ -12561,6 +12573,9 @@ msgstr "Превышен лимит запросов."
 msgid "Rate Superset"
 msgstr "Оценить Superset"
 
+msgid "Raw"
+msgstr "Текст"
+
 msgid "Reach this Mac from anywhere via the Superset relay, or spin up cloud workspaces. Connect from any client."
 msgstr "Достучитесь до этого Mac откуда угодно через реле Superset или поднимите облачные рабочие области. Подключайтесь с любого клиента."
 
@@ -14407,6 +14422,9 @@ msgstr "Использует checkout проекта — файлы, индек�
 msgid "Sheet"
 msgstr "Панель"
 
+msgid "Sheets"
+msgstr "Листы"
+
 msgid "Shell"
 msgstr "Shell"
 
@@ -14532,6 +14550,9 @@ msgstr "Показать список пул-реквестов"
 
 msgid "Show pull request preview"
 msgstr "Показать предпросмотр пул-реквеста"
+
+msgid "Show raw"
+msgstr "Показать текст"
 
 msgid "Show resolved ({resolvedCount})"
 msgstr "Показать закрытые ({resolvedCount})"
@@ -14969,6 +14990,9 @@ msgstr "Разделить с мобильным симулятором"
 
 msgid "Split with New Browser"
 msgstr "Разделить с новым браузером"
+
+msgid "Spreadsheet"
+msgstr "Электронная таблица"
 
 msgid "Squash & Merge"
 msgstr "Сжать и объединить"
@@ -16368,6 +16392,9 @@ msgstr "Репозитории этого окружения зафиксиро�
 
 msgid "this file"
 msgstr "этот файл"
+
+msgid "This file could not be read as a spreadsheet"
+msgstr "Не удалось прочитать файл как электронную таблицу"
 
 msgid "This file is empty or was deleted."
 msgstr "Файл пуст или удалён."

@@ -810,6 +810,9 @@ msgstr "{count}/dzień"
 msgid "{createdAtRelative} ago"
 msgstr "{createdAtRelative} temu"
 
+msgid "{current} of {total}"
+msgstr "{current} z {total}"
+
 msgid "{currentPage} of {totalBranches}"
 msgstr "{currentPage} z {totalBranches}"
 
@@ -6252,6 +6255,12 @@ msgstr "Pusty"
 msgid "Empty command"
 msgstr "Puste polecenie"
 
+msgid "Empty file"
+msgstr "Pusty plik"
+
+msgid "Empty sheet"
+msgstr "Pusty arkusz"
+
 msgid "Enable"
 msgstr "Włącz"
 
@@ -9365,6 +9374,9 @@ msgstr "Marketplace"
 
 msgid "Marking ready for review..."
 msgstr "Oznaczanie jako gotowe do recenzji…"
+
+msgid "Match case"
+msgstr "Uwzględniaj wielkość liter"
 
 msgid "Match existing patterns"
 msgstr "Zachowaj istniejące wzorce"
@@ -12561,6 +12573,9 @@ msgstr "Przekroczono limit żądań."
 msgid "Rate Superset"
 msgstr "Oceń Superset"
 
+msgid "Raw"
+msgstr "Surowy"
+
 msgid "Reach this Mac from anywhere via the Superset relay, or spin up cloud workspaces. Connect from any client."
 msgstr "Sięgnij po tego Maca z dowolnego miejsca przez przekaźnik Superset albo uruchom obszary robocze w chmurze. Połącz się z dowolnego klienta."
 
@@ -14407,6 +14422,9 @@ msgstr "Współdzieli checkout projektu — pliki, indeks git i gałąź — z p
 msgid "Sheet"
 msgstr "Arkusz"
 
+msgid "Sheets"
+msgstr "Arkusze"
+
 msgid "Shell"
 msgstr "Shell"
 
@@ -14532,6 +14550,9 @@ msgstr "Pokaż listę pull requestów"
 
 msgid "Show pull request preview"
 msgstr "Pokaż podgląd pull requesta"
+
+msgid "Show raw"
+msgstr "Pokaż surowy tekst"
 
 msgid "Show resolved ({resolvedCount})"
 msgstr "Pokaż rozwiązane ({resolvedCount})"
@@ -14969,6 +14990,9 @@ msgstr "Podziel z symulatorem mobilnym"
 
 msgid "Split with New Browser"
 msgstr "Podziel z nową przeglądarką"
+
+msgid "Spreadsheet"
+msgstr "Arkusz kalkulacyjny"
 
 msgid "Squash & Merge"
 msgstr "Squash i scal"
@@ -16368,6 +16392,9 @@ msgstr "Repozytoria tego środowiska są ustalone; aby je zmienić, ponownie awa
 
 msgid "this file"
 msgstr "ten plik"
+
+msgid "This file could not be read as a spreadsheet"
+msgstr "Nie można odczytać tego pliku jako arkusza kalkulacyjnego"
 
 msgid "This file is empty or was deleted."
 msgstr "Ten plik jest pusty lub został usunięty."

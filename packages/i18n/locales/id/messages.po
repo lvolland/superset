@@ -810,6 +810,9 @@ msgstr "{count}/hari"
 msgid "{createdAtRelative} ago"
 msgstr "{createdAtRelative} lalu"
 
+msgid "{current} of {total}"
+msgstr "{current} dari {total}"
+
 msgid "{currentPage} of {totalBranches}"
 msgstr "{currentPage} dari {totalBranches}"
 
@@ -6252,6 +6255,12 @@ msgstr "Kosong"
 msgid "Empty command"
 msgstr "Perintah kosong"
 
+msgid "Empty file"
+msgstr "File kosong"
+
+msgid "Empty sheet"
+msgstr "Lembar kosong"
+
 msgid "Enable"
 msgstr "Aktifkan"
 
@@ -9365,6 +9374,9 @@ msgstr "Marketplace"
 
 msgid "Marking ready for review..."
 msgstr "Menandai siap ditinjau…"
+
+msgid "Match case"
+msgstr "Cocokkan huruf besar/kecil"
 
 msgid "Match existing patterns"
 msgstr "Ikuti pola yang ada"
@@ -12561,6 +12573,9 @@ msgstr "Batas laju terlampaui."
 msgid "Rate Superset"
 msgstr "Beri Nilai Superset"
 
+msgid "Raw"
+msgstr "Mentah"
+
 msgid "Reach this Mac from anywhere via the Superset relay, or spin up cloud workspaces. Connect from any client."
 msgstr "Jangkau Mac ini dari mana saja lewat relay Superset, atau jalankan workspace cloud. Hubungkan dari klien mana pun."
 
@@ -14407,6 +14422,9 @@ msgstr "Berbagi checkout proyek — file, indeks git, dan branch — dengan work
 msgid "Sheet"
 msgstr "Sheet"
 
+msgid "Sheets"
+msgstr "Lembar"
+
 msgid "Shell"
 msgstr "Shell"
 
@@ -14532,6 +14550,9 @@ msgstr "Tampilkan daftar pull request"
 
 msgid "Show pull request preview"
 msgstr "Tampilkan pratinjau pull request"
+
+msgid "Show raw"
+msgstr "Tampilkan mentah"
 
 msgid "Show resolved ({resolvedCount})"
 msgstr "Tampilkan yang terselesaikan ({resolvedCount})"
@@ -14969,6 +14990,9 @@ msgstr "Bagi dengan Simulator Seluler"
 
 msgid "Split with New Browser"
 msgstr "Bagi dengan Browser Baru"
+
+msgid "Spreadsheet"
+msgstr "Spreadsheet"
 
 msgid "Squash & Merge"
 msgstr "Squash & Merge"
@@ -16368,6 +16392,9 @@ msgstr "Repositori environment ini sudah tetap; promosikan workspace lagi untuk 
 
 msgid "this file"
 msgstr "file ini"
+
+msgid "This file could not be read as a spreadsheet"
+msgstr "File ini tidak dapat dibaca sebagai spreadsheet"
 
 msgid "This file is empty or was deleted."
 msgstr "File ini kosong atau sudah dihapus."

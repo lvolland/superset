@@ -810,6 +810,9 @@ msgstr "{count}/日"
 msgid "{createdAtRelative} ago"
 msgstr "{createdAtRelative}前"
 
+msgid "{current} of {total}"
+msgstr "{current}/{total}"
+
 msgid "{currentPage} of {totalBranches}"
 msgstr "{currentPage}/{totalBranches}"
 
@@ -6252,6 +6255,12 @@ msgstr "Empty"
 msgid "Empty command"
 msgstr "空のコマンド"
 
+msgid "Empty file"
+msgstr "空のファイル"
+
+msgid "Empty sheet"
+msgstr "空のシート"
+
 msgid "Enable"
 msgstr "有効にする"
 
@@ -9365,6 +9374,9 @@ msgstr "マーケットプレイス"
 
 msgid "Marking ready for review..."
 msgstr "レビュー準備完了にしています…"
+
+msgid "Match case"
+msgstr "大文字と小文字を区別"
 
 msgid "Match existing patterns"
 msgstr "既存のパターンに合わせて"
@@ -12561,6 +12573,9 @@ msgstr "レート制限を超えました。"
 msgid "Rate Superset"
 msgstr "Supersetを評価"
 
+msgid "Raw"
+msgstr "生データ"
+
 msgid "Reach this Mac from anywhere via the Superset relay, or spin up cloud workspaces. Connect from any client."
 msgstr "Supersetリレー経由でどこからでもこのMacに接続でき、クラウドワークスペースも起動できます。どのクライアントからでも接続できます。"
 
@@ -14407,6 +14422,9 @@ msgstr "プロジェクトのチェックアウト（ファイル、git イン�
 msgid "Sheet"
 msgstr "Sheet"
 
+msgid "Sheets"
+msgstr "シート"
+
 msgid "Shell"
 msgstr "シェル"
 
@@ -14532,6 +14550,9 @@ msgstr "プルリクエスト一覧を表示"
 
 msgid "Show pull request preview"
 msgstr "プルリクエストのプレビューを表示"
+
+msgid "Show raw"
+msgstr "生データを表示"
 
 msgid "Show resolved ({resolvedCount})"
 msgstr "解決済みを表示 ({resolvedCount})"
@@ -14969,6 +14990,9 @@ msgstr "モバイルシミュレーターで分割"
 
 msgid "Split with New Browser"
 msgstr "新規ブラウザで分割"
+
+msgid "Spreadsheet"
+msgstr "スプレッドシート"
 
 msgid "Squash & Merge"
 msgstr "スカッシュしてマージ"
@@ -16368,6 +16392,9 @@ msgstr "この環境のリポジトリは固定されています。変更する
 
 msgid "this file"
 msgstr "このファイル"
+
+msgid "This file could not be read as a spreadsheet"
+msgstr "このファイルをスプレッドシートとして読み込めませんでした"
 
 msgid "This file is empty or was deleted."
 msgstr "このファイルは空か、削除されています。"

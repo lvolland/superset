@@ -810,6 +810,9 @@ msgstr "{count}/den"
 msgid "{createdAtRelative} ago"
 msgstr "před {createdAtRelative}"
 
+msgid "{current} of {total}"
+msgstr "{current} z {total}"
+
 msgid "{currentPage} of {totalBranches}"
 msgstr "{currentPage} z {totalBranches}"
 
@@ -6252,6 +6255,12 @@ msgstr "Prázdné"
 msgid "Empty command"
 msgstr "Prázdný příkaz"
 
+msgid "Empty file"
+msgstr "Prázdný soubor"
+
+msgid "Empty sheet"
+msgstr "Prázdný list"
+
 msgid "Enable"
 msgstr "Zapnout"
 
@@ -9365,6 +9374,9 @@ msgstr "Marketplace"
 
 msgid "Marking ready for review..."
 msgstr "Označování jako připravené k revizi…"
+
+msgid "Match case"
+msgstr "Rozlišovat velikost písmen"
 
 msgid "Match existing patterns"
 msgstr "Dodrž stávající vzory"
@@ -12561,6 +12573,9 @@ msgstr "Překročen limit požadavků."
 msgid "Rate Superset"
 msgstr "Ohodnotit Superset"
 
+msgid "Raw"
+msgstr "Surový"
+
 msgid "Reach this Mac from anywhere via the Superset relay, or spin up cloud workspaces. Connect from any client."
 msgstr "Dosáhněte na tento Mac odkudkoli přes Superset relay nebo spusťte cloudové pracovní prostory. Připojte se z libovolného klienta."
 
@@ -14407,6 +14422,9 @@ msgstr "Sdílí checkout projektu — soubory, git index a větev — s ostatní
 msgid "Sheet"
 msgstr "Sheet"
 
+msgid "Sheets"
+msgstr "Listy"
+
 msgid "Shell"
 msgstr "Shell"
 
@@ -14532,6 +14550,9 @@ msgstr "Zobrazit seznam pull requestů"
 
 msgid "Show pull request preview"
 msgstr "Zobrazit náhled pull requestu"
+
+msgid "Show raw"
+msgstr "Zobrazit surový text"
 
 msgid "Show resolved ({resolvedCount})"
 msgstr "Zobrazit vyřešené ({resolvedCount})"
@@ -14969,6 +14990,9 @@ msgstr "Rozdělit s mobilním simulátorem"
 
 msgid "Split with New Browser"
 msgstr "Rozdělit s novým prohlížečem"
+
+msgid "Spreadsheet"
+msgstr "Sešit"
 
 msgid "Squash & Merge"
 msgstr "Squash a sloučit"
@@ -16368,6 +16392,9 @@ msgstr "Repozitáře tohoto prostředí jsou pevně dané; pro jejich změnu zno
 
 msgid "this file"
 msgstr "tento soubor"
+
+msgid "This file could not be read as a spreadsheet"
+msgstr "Tento soubor nelze přečíst jako tabulku"
 
 msgid "This file is empty or was deleted."
 msgstr "Tento soubor je prázdný nebo byl smazán."

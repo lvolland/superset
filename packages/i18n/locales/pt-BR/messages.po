@@ -810,6 +810,9 @@ msgstr "{count}/dia"
 msgid "{createdAtRelative} ago"
 msgstr "há {createdAtRelative}"
 
+msgid "{current} of {total}"
+msgstr "{current} de {total}"
+
 msgid "{currentPage} of {totalBranches}"
 msgstr "{currentPage} de {totalBranches}"
 
@@ -6252,6 +6255,12 @@ msgstr "Vazio"
 msgid "Empty command"
 msgstr "Comando vazio"
 
+msgid "Empty file"
+msgstr "Arquivo vazio"
+
+msgid "Empty sheet"
+msgstr "Planilha vazia"
+
 msgid "Enable"
 msgstr "Ativar"
 
@@ -9365,6 +9374,9 @@ msgstr "Marketplace"
 
 msgid "Marking ready for review..."
 msgstr "Marcando como pronto para revisão…"
+
+msgid "Match case"
+msgstr "Diferenciar maiúsculas e minúsculas"
 
 msgid "Match existing patterns"
 msgstr "Siga os padrões existentes"
@@ -12561,6 +12573,9 @@ msgstr "Limite de requisições excedido."
 msgid "Rate Superset"
 msgstr "Avaliar o Superset"
 
+msgid "Raw"
+msgstr "Bruto"
+
 msgid "Reach this Mac from anywhere via the Superset relay, or spin up cloud workspaces. Connect from any client."
 msgstr "Acesse este Mac de qualquer lugar pelo relay do Superset ou crie áreas de trabalho na nuvem. Conecte-se de qualquer cliente."
 
@@ -14407,6 +14422,9 @@ msgstr "Compartilha o checkout do projeto (arquivos, índice do git e branch) co
 msgid "Sheet"
 msgstr "Sheet"
 
+msgid "Sheets"
+msgstr "Planilhas"
+
 msgid "Shell"
 msgstr "Shell"
 
@@ -14532,6 +14550,9 @@ msgstr "Mostrar a lista de pull requests"
 
 msgid "Show pull request preview"
 msgstr "Mostrar a prévia do pull request"
+
+msgid "Show raw"
+msgstr "Mostrar texto bruto"
 
 msgid "Show resolved ({resolvedCount})"
 msgstr "Mostrar os resolvidos ({resolvedCount})"
@@ -14969,6 +14990,9 @@ msgstr "Dividir com simulador móvel"
 
 msgid "Split with New Browser"
 msgstr "Dividir com novo navegador"
+
+msgid "Spreadsheet"
+msgstr "Planilha"
 
 msgid "Squash & Merge"
 msgstr "Squash e merge"
@@ -16368,6 +16392,9 @@ msgstr "Os repositórios deste ambiente são fixos; promova uma área de trabalh
 
 msgid "this file"
 msgstr "este arquivo"
+
+msgid "This file could not be read as a spreadsheet"
+msgstr "Não foi possível ler este arquivo como planilha"
 
 msgid "This file is empty or was deleted."
 msgstr "Este arquivo está vazio ou foi excluído."

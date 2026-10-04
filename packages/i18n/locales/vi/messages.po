@@ -810,6 +810,9 @@ msgstr "{count}/ngày"
 msgid "{createdAtRelative} ago"
 msgstr "{createdAtRelative} trước"
 
+msgid "{current} of {total}"
+msgstr "{current}/{total}"
+
 msgid "{currentPage} of {totalBranches}"
 msgstr "{currentPage}/{totalBranches}"
 
@@ -6252,6 +6255,12 @@ msgstr "Rỗng"
 msgid "Empty command"
 msgstr "Lệnh trống"
 
+msgid "Empty file"
+msgstr "Tệp trống"
+
+msgid "Empty sheet"
+msgstr "Trang tính trống"
+
 msgid "Enable"
 msgstr "Bật"
 
@@ -9365,6 +9374,9 @@ msgstr "Marketplace"
 
 msgid "Marking ready for review..."
 msgstr "Đang đánh dấu sẵn sàng để review…"
+
+msgid "Match case"
+msgstr "Phân biệt chữ hoa/thường"
 
 msgid "Match existing patterns"
 msgstr "Bám theo mẫu hiện có"
@@ -12561,6 +12573,9 @@ msgstr "Đã vượt giới hạn tần suất."
 msgid "Rate Superset"
 msgstr "Đánh giá Superset"
 
+msgid "Raw"
+msgstr "Thô"
+
 msgid "Reach this Mac from anywhere via the Superset relay, or spin up cloud workspaces. Connect from any client."
 msgstr "Truy cập chiếc Mac này từ bất cứ đâu qua relay của Superset, hoặc khởi tạo workspace trên cloud. Kết nối từ mọi thiết bị."
 
@@ -14407,6 +14422,9 @@ msgstr "Dùng chung checkout của dự án — tệp, chỉ mục git và nhán
 msgid "Sheet"
 msgstr "Sheet"
 
+msgid "Sheets"
+msgstr "Trang tính"
+
 msgid "Shell"
 msgstr "Shell"
 
@@ -14532,6 +14550,9 @@ msgstr "Hiện danh sách pull request"
 
 msgid "Show pull request preview"
 msgstr "Hiện xem trước pull request"
+
+msgid "Show raw"
+msgstr "Hiển thị dạng thô"
 
 msgid "Show resolved ({resolvedCount})"
 msgstr "Hiện các mục đã xử lý ({resolvedCount})"
@@ -14969,6 +14990,9 @@ msgstr "Chia với Trình giả lập di động"
 
 msgid "Split with New Browser"
 msgstr "Chia kèm trình duyệt mới"
+
+msgid "Spreadsheet"
+msgstr "Bảng tính"
 
 msgid "Squash & Merge"
 msgstr "Squash & merge"
@@ -16368,6 +16392,9 @@ msgstr "Các repository của environment này đã cố định; hãy promote l
 
 msgid "this file"
 msgstr "tệp này"
+
+msgid "This file could not be read as a spreadsheet"
+msgstr "Không thể đọc tệp này dưới dạng bảng tính"
 
 msgid "This file is empty or was deleted."
 msgstr "Tệp này rỗng hoặc đã bị xóa."

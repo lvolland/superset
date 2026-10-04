@@ -810,6 +810,9 @@ msgstr "{count}/day"
 msgid "{createdAtRelative} ago"
 msgstr "{createdAtRelative} ago"
 
+msgid "{current} of {total}"
+msgstr "{current} of {total}"
+
 msgid "{currentPage} of {totalBranches}"
 msgstr "{currentPage} of {totalBranches}"
 
@@ -6252,6 +6255,12 @@ msgstr "Empty"
 msgid "Empty command"
 msgstr "Empty command"
 
+msgid "Empty file"
+msgstr "Empty file"
+
+msgid "Empty sheet"
+msgstr "Empty sheet"
+
 msgid "Enable"
 msgstr "Enable"
 
@@ -9365,6 +9374,9 @@ msgstr "Marketplace"
 
 msgid "Marking ready for review..."
 msgstr "Marking ready for review..."
+
+msgid "Match case"
+msgstr "Match case"
 
 msgid "Match existing patterns"
 msgstr "Match existing patterns"
@@ -12561,6 +12573,9 @@ msgstr "Rate limit exceeded."
 msgid "Rate Superset"
 msgstr "Rate Superset"
 
+msgid "Raw"
+msgstr "Raw"
+
 msgid "Reach this Mac from anywhere via the Superset relay, or spin up cloud workspaces. Connect from any client."
 msgstr "Reach this Mac from anywhere via the Superset relay, or spin up cloud workspaces. Connect from any client."
 
@@ -14407,6 +14422,9 @@ msgstr "Shares the project's checkout — files, git index and branch — with i
 msgid "Sheet"
 msgstr "Sheet"
 
+msgid "Sheets"
+msgstr "Sheets"
+
 msgid "Shell"
 msgstr "Shell"
 
@@ -14532,6 +14550,9 @@ msgstr "Show pull request list"
 
 msgid "Show pull request preview"
 msgstr "Show pull request preview"
+
+msgid "Show raw"
+msgstr "Show raw"
 
 msgid "Show resolved ({resolvedCount})"
 msgstr "Show resolved ({resolvedCount})"
@@ -14969,6 +14990,9 @@ msgstr "Split with Mobile Simulator"
 
 msgid "Split with New Browser"
 msgstr "Split with New Browser"
+
+msgid "Spreadsheet"
+msgstr "Spreadsheet"
 
 msgid "Squash & Merge"
 msgstr "Squash & Merge"
@@ -16368,6 +16392,9 @@ msgstr "This environment's repositories are fixed; promote a workspace again to 
 
 msgid "this file"
 msgstr "this file"
+
+msgid "This file could not be read as a spreadsheet"
+msgstr "This file could not be read as a spreadsheet"
 
 msgid "This file is empty or was deleted."
 msgstr "This file is empty or was deleted."

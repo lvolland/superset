@@ -810,6 +810,9 @@ msgstr "{count}/giorno"
 msgid "{createdAtRelative} ago"
 msgstr "{createdAtRelative} fa"
 
+msgid "{current} of {total}"
+msgstr "{current} di {total}"
+
 msgid "{currentPage} of {totalBranches}"
 msgstr "{currentPage} di {totalBranches}"
 
@@ -6252,6 +6255,12 @@ msgstr "Empty"
 msgid "Empty command"
 msgstr "Comando vuoto"
 
+msgid "Empty file"
+msgstr "File vuoto"
+
+msgid "Empty sheet"
+msgstr "Foglio vuoto"
+
 msgid "Enable"
 msgstr "Attiva"
 
@@ -9365,6 +9374,9 @@ msgstr "Marketplace"
 
 msgid "Marking ready for review..."
 msgstr "Contrassegno come pronta per la revisione…"
+
+msgid "Match case"
+msgstr "Maiuscole/minuscole"
 
 msgid "Match existing patterns"
 msgstr "Segui i pattern esistenti"
@@ -12561,6 +12573,9 @@ msgstr "Limite di richieste superato."
 msgid "Rate Superset"
 msgstr "Valuta Superset"
 
+msgid "Raw"
+msgstr "Grezzo"
+
 msgid "Reach this Mac from anywhere via the Superset relay, or spin up cloud workspaces. Connect from any client."
 msgstr "Raggiungi questo Mac da ovunque tramite il relay di Superset, oppure avvia workspace nel cloud. Connettiti da qualsiasi client."
 
@@ -14407,6 +14422,9 @@ msgstr "Condivide il checkout del progetto (file, indice git e branch) con gli a
 msgid "Sheet"
 msgstr "Sheet"
 
+msgid "Sheets"
+msgstr "Fogli"
+
 msgid "Shell"
 msgstr "Shell"
 
@@ -14532,6 +14550,9 @@ msgstr "Mostra l'elenco delle pull request"
 
 msgid "Show pull request preview"
 msgstr "Mostra l'anteprima della pull request"
+
+msgid "Show raw"
+msgstr "Mostra testo grezzo"
 
 msgid "Show resolved ({resolvedCount})"
 msgstr "Mostra i risolti ({resolvedCount})"
@@ -14969,6 +14990,9 @@ msgstr "Dividi con simulatore mobile"
 
 msgid "Split with New Browser"
 msgstr "Dividi con un nuovo browser"
+
+msgid "Spreadsheet"
+msgstr "Foglio di calcolo"
 
 msgid "Squash & Merge"
 msgstr "Squash e merge"
@@ -16368,6 +16392,9 @@ msgstr "I repository di questo ambiente sono fissi; promuovi di nuovo un workspa
 
 msgid "this file"
 msgstr "questo file"
+
+msgid "This file could not be read as a spreadsheet"
+msgstr "Impossibile leggere questo file come foglio di calcolo"
 
 msgid "This file is empty or was deleted."
 msgstr "Questo file è vuoto o è stato eliminato."

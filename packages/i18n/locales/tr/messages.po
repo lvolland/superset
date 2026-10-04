@@ -810,6 +810,9 @@ msgstr "{count}/gün"
 msgid "{createdAtRelative} ago"
 msgstr "{createdAtRelative} önce"
 
+msgid "{current} of {total}"
+msgstr "{total} içinden {current}"
+
 msgid "{currentPage} of {totalBranches}"
 msgstr "{totalBranches} içinden {currentPage}"
 
@@ -6252,6 +6255,12 @@ msgstr "Boş"
 msgid "Empty command"
 msgstr "Boş komut"
 
+msgid "Empty file"
+msgstr "Boş dosya"
+
+msgid "Empty sheet"
+msgstr "Boş sayfa"
+
 msgid "Enable"
 msgstr "Etkinleştir"
 
@@ -9365,6 +9374,9 @@ msgstr "Pazar yeri"
 
 msgid "Marking ready for review..."
 msgstr "İncelemeye hazır olarak işaretleniyor…"
+
+msgid "Match case"
+msgstr "Büyük/küçük harf duyarlı"
 
 msgid "Match existing patterns"
 msgstr "Mevcut desenlere uy"
@@ -12561,6 +12573,9 @@ msgstr "Hız sınırı aşıldı."
 msgid "Rate Superset"
 msgstr "Superset'i puanla"
 
+msgid "Raw"
+msgstr "Ham"
+
 msgid "Reach this Mac from anywhere via the Superset relay, or spin up cloud workspaces. Connect from any client."
 msgstr "Superset rölesi üzerinden bu Mac'e her yerden erişin veya bulut çalışma alanları başlatın. Herhangi bir istemciden bağlanın."
 
@@ -14407,6 +14422,9 @@ msgstr "Projenin checkout'unu (dosyalar, git indeksi ve dal) diğer yerel çalı
 msgid "Sheet"
 msgstr "Sayfa"
 
+msgid "Sheets"
+msgstr "Sayfalar"
+
 msgid "Shell"
 msgstr "Kabuk"
 
@@ -14532,6 +14550,9 @@ msgstr "Pull request listesini göster"
 
 msgid "Show pull request preview"
 msgstr "Pull request önizlemesini göster"
+
+msgid "Show raw"
+msgstr "Ham metni göster"
 
 msgid "Show resolved ({resolvedCount})"
 msgstr "Çözülenleri göster ({resolvedCount})"
@@ -14969,6 +14990,9 @@ msgstr "Mobil Simülatörle böl"
 
 msgid "Split with New Browser"
 msgstr "Yeni tarayıcıyla böl"
+
+msgid "Spreadsheet"
+msgstr "Elektronik tablo"
 
 msgid "Squash & Merge"
 msgstr "Squash ve birleştir"
@@ -16368,6 +16392,9 @@ msgstr "Bu ortamın depoları sabittir; değiştirmek için bir çalışma alan�
 
 msgid "this file"
 msgstr "bu dosya"
+
+msgid "This file could not be read as a spreadsheet"
+msgstr "Bu dosya elektronik tablo olarak okunamadı"
 
 msgid "This file is empty or was deleted."
 msgstr "Bu dosya boş veya silinmiş."

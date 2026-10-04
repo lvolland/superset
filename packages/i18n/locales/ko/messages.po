@@ -810,6 +810,9 @@ msgstr "하루 {count}개"
 msgid "{createdAtRelative} ago"
 msgstr "{createdAtRelative} 전"
 
+msgid "{current} of {total}"
+msgstr "{total} 중 {current}"
+
 msgid "{currentPage} of {totalBranches}"
 msgstr "{totalBranches} 중 {currentPage}"
 
@@ -6252,6 +6255,12 @@ msgstr "비어 있음"
 msgid "Empty command"
 msgstr "빈 명령"
 
+msgid "Empty file"
+msgstr "빈 파일"
+
+msgid "Empty sheet"
+msgstr "빈 시트"
+
 msgid "Enable"
 msgstr "활성화"
 
@@ -9365,6 +9374,9 @@ msgstr "마켓플레이스"
 
 msgid "Marking ready for review..."
 msgstr "리뷰 준비 완료로 표시하는 중…"
+
+msgid "Match case"
+msgstr "대소문자 구분"
 
 msgid "Match existing patterns"
 msgstr "기존 패턴을 따라 주세요"
@@ -12561,6 +12573,9 @@ msgstr "요청 한도를 초과했습니다."
 msgid "Rate Superset"
 msgstr "Superset 평가하기"
 
+msgid "Raw"
+msgstr "원본"
+
 msgid "Reach this Mac from anywhere via the Superset relay, or spin up cloud workspaces. Connect from any client."
 msgstr "Superset 릴레이를 통해 어디서든 이 Mac에 접속하거나 클라우드 워크스페이스를 띄우세요. 어떤 클라이언트에서도 연결할 수 있습니다."
 
@@ -14407,6 +14422,9 @@ msgstr "프로젝트의 체크아웃(파일, git 인덱스, 브랜치)을 다른
 msgid "Sheet"
 msgstr "시트"
 
+msgid "Sheets"
+msgstr "시트"
+
 msgid "Shell"
 msgstr "셸"
 
@@ -14532,6 +14550,9 @@ msgstr "풀 리퀘스트 목록 표시"
 
 msgid "Show pull request preview"
 msgstr "풀 리퀘스트 미리보기 표시"
+
+msgid "Show raw"
+msgstr "원본 보기"
 
 msgid "Show resolved ({resolvedCount})"
 msgstr "해결된 항목 표시 ({resolvedCount})"
@@ -14969,6 +14990,9 @@ msgstr "모바일 시뮬레이터로 분할"
 
 msgid "Split with New Browser"
 msgstr "새 브라우저로 분할"
+
+msgid "Spreadsheet"
+msgstr "스프레드시트"
 
 msgid "Squash & Merge"
 msgstr "스쿼시 후 머지"
@@ -16368,6 +16392,9 @@ msgstr "이 환경의 리포지토리는 고정되어 있습니다. 변경하려
 
 msgid "this file"
 msgstr "이 파일"
+
+msgid "This file could not be read as a spreadsheet"
+msgstr "이 파일을 스프레드시트로 읽을 수 없습니다"
 
 msgid "This file is empty or was deleted."
 msgstr "이 파일은 비어 있거나 삭제되었습니다."

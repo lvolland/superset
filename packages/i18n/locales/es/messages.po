@@ -810,6 +810,9 @@ msgstr "{count}/día"
 msgid "{createdAtRelative} ago"
 msgstr "hace {createdAtRelative}"
 
+msgid "{current} of {total}"
+msgstr "{current} de {total}"
+
 msgid "{currentPage} of {totalBranches}"
 msgstr "{currentPage} de {totalBranches}"
 
@@ -6252,6 +6255,12 @@ msgstr "Vacío"
 msgid "Empty command"
 msgstr "Comando vacío"
 
+msgid "Empty file"
+msgstr "Archivo vacío"
+
+msgid "Empty sheet"
+msgstr "Hoja vacía"
+
 msgid "Enable"
 msgstr "Activar"
 
@@ -9365,6 +9374,9 @@ msgstr "Marketplace"
 
 msgid "Marking ready for review..."
 msgstr "Marcando como listo para revisión…"
+
+msgid "Match case"
+msgstr "Coincidir mayúsculas y minúsculas"
 
 msgid "Match existing patterns"
 msgstr "Sigue los patrones existentes"
@@ -12561,6 +12573,9 @@ msgstr "Se superó el límite de peticiones."
 msgid "Rate Superset"
 msgstr "Valorar Superset"
 
+msgid "Raw"
+msgstr "Sin formato"
+
 msgid "Reach this Mac from anywhere via the Superset relay, or spin up cloud workspaces. Connect from any client."
 msgstr "Llegar a este Mac desde cualquier lugar a través del relay de Superset, o crear espacios de trabajo en la nube. Conectarse desde cualquier cliente."
 
@@ -14407,6 +14422,9 @@ msgstr "Comparte el checkout del proyecto (archivos, índice de git y rama) con 
 msgid "Sheet"
 msgstr "Hoja"
 
+msgid "Sheets"
+msgstr "Hojas"
+
 msgid "Shell"
 msgstr "Shell"
 
@@ -14532,6 +14550,9 @@ msgstr "Mostrar la lista de pull requests"
 
 msgid "Show pull request preview"
 msgstr "Mostrar la vista previa de la pull request"
+
+msgid "Show raw"
+msgstr "Mostrar sin formato"
 
 msgid "Show resolved ({resolvedCount})"
 msgstr "Mostrar los resueltos ({resolvedCount})"
@@ -14969,6 +14990,9 @@ msgstr "Dividir con simulador móvil"
 
 msgid "Split with New Browser"
 msgstr "Dividir con un navegador nuevo"
+
+msgid "Spreadsheet"
+msgstr "Hoja de cálculo"
 
 msgid "Squash & Merge"
 msgstr "Squash y fusionar"
@@ -16368,6 +16392,9 @@ msgstr "Los repositorios de este entorno están fijados; promueve de nuevo un es
 
 msgid "this file"
 msgstr "este archivo"
+
+msgid "This file could not be read as a spreadsheet"
+msgstr "No se pudo leer este archivo como hoja de cálculo"
 
 msgid "This file is empty or was deleted."
 msgstr "Este archivo está vacío o fue eliminado."

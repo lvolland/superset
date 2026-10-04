@@ -810,6 +810,9 @@ msgstr "{count}/dag"
 msgid "{createdAtRelative} ago"
 msgstr "{createdAtRelative} geleden"
 
+msgid "{current} of {total}"
+msgstr "{current} van {total}"
+
 msgid "{currentPage} of {totalBranches}"
 msgstr "{currentPage} van {totalBranches}"
 
@@ -6252,6 +6255,12 @@ msgstr "Leeg"
 msgid "Empty command"
 msgstr "Leeg commando"
 
+msgid "Empty file"
+msgstr "Leeg bestand"
+
+msgid "Empty sheet"
+msgstr "Leeg blad"
+
 msgid "Enable"
 msgstr "Inschakelen"
 
@@ -9365,6 +9374,9 @@ msgstr "Marketplace"
 
 msgid "Marking ready for review..."
 msgstr "Markeren als klaar voor review…"
+
+msgid "Match case"
+msgstr "Hoofdlettergevoelig"
 
 msgid "Match existing patterns"
 msgstr "Volg bestaande patronen"
@@ -12561,6 +12573,9 @@ msgstr "Limiet overschreden."
 msgid "Rate Superset"
 msgstr "Superset beoordelen"
 
+msgid "Raw"
+msgstr "Ruw"
+
 msgid "Reach this Mac from anywhere via the Superset relay, or spin up cloud workspaces. Connect from any client."
 msgstr "Bereik deze Mac van overal via de Superset-relay, of start cloudwerkruimtes. Verbind vanaf elke client."
 
@@ -14407,6 +14422,9 @@ msgstr "Deelt de checkout van het project — bestanden, git-index en branch —
 msgid "Sheet"
 msgstr "Sheet"
 
+msgid "Sheets"
+msgstr "Bladen"
+
 msgid "Shell"
 msgstr "Shell"
 
@@ -14532,6 +14550,9 @@ msgstr "Lijst met pull requests tonen"
 
 msgid "Show pull request preview"
 msgstr "Voorbeeld van pull request tonen"
+
+msgid "Show raw"
+msgstr "Ruwe tekst tonen"
 
 msgid "Show resolved ({resolvedCount})"
 msgstr "Opgeloste tonen ({resolvedCount})"
@@ -14969,6 +14990,9 @@ msgstr "Splitsen met mobiele simulator"
 
 msgid "Split with New Browser"
 msgstr "Splitsen met nieuwe browser"
+
+msgid "Spreadsheet"
+msgstr "Spreadsheet"
 
 msgid "Squash & Merge"
 msgstr "Squashen en mergen"
@@ -16368,6 +16392,9 @@ msgstr "De repositories van deze omgeving liggen vast; promoveer opnieuw een wer
 
 msgid "this file"
 msgstr "dit bestand"
+
+msgid "This file could not be read as a spreadsheet"
+msgstr "Dit bestand kan niet als spreadsheet worden gelezen"
 
 msgid "This file is empty or was deleted."
 msgstr "Dit bestand is leeg of is verwijderd."
