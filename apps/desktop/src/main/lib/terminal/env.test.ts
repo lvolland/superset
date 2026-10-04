@@ -602,6 +602,8 @@ describe("env", () => {
 			"SUPERSET_AUTH_CONFIG_PATH",
 			"SUPERSET_AGENT_HOOK_PORT",
 			"SUPERSET_AGENT_HOOK_VERSION",
+			"SUPERSET_DEBUG_HOOKS",
+			"SUPERSET_DEBUG",
 		];
 
 		beforeEach(() => {
@@ -620,6 +622,16 @@ describe("env", () => {
 					process.env[key] = originalEnvVars[key];
 				}
 			}
+		});
+
+		it("preserves hook and plugin debug switches in new terminals", () => {
+			process.env.SUPERSET_DEBUG_HOOKS = "1";
+			process.env.SUPERSET_DEBUG = "1";
+
+			const result = buildTerminalEnv(baseParams);
+
+			expect(result.SUPERSET_DEBUG_HOOKS).toBe("1");
+			expect(result.SUPERSET_DEBUG).toBe("1");
 		});
 
 		it("strips inherited agent and app metadata from new terminals", () => {
