@@ -16,7 +16,10 @@ export type WorkbookState =
 	| { status: "error"; reason: UnreadableReason | null };
 
 /** Parses the source in a worker, which then serves rows on demand. */
-export function useWorkbook(source: WorkbookSource | null): WorkbookState {
+export function useWorkbook(
+	source: WorkbookSource | null,
+	createWorker: () => Worker = createSheetWorker,
+): WorkbookState {
 	const [state, setState] = useState<WorkbookState>({ status: "loading" });
 
 	useEffect(() => {
@@ -24,7 +27,7 @@ export function useWorkbook(source: WorkbookSource | null): WorkbookState {
 			setState({ status: "loading" });
 			return;
 		}
-		const client = new SheetWorkerClient(createSheetWorker());
+		const client = new SheetWorkerClient(createWorker());
 		let cancelled = false;
 		setState({ status: "loading" });
 		client.request({ type: "open", source }).then(
@@ -32,6 +35,7 @@ export function useWorkbook(source: WorkbookSource | null): WorkbookState {
 				if (!cancelled) setState({ status: "ready", client, sheets });
 			},
 			(error: unknown) => {
+				client.dispose();
 				if (cancelled) return;
 				setState({
 					status: "error",
@@ -43,7 +47,7 @@ export function useWorkbook(source: WorkbookSource | null): WorkbookState {
 			cancelled = true;
 			client.dispose();
 		};
-	}, [source]);
+	}, [source, createWorker]);
 
 	return state;
 }

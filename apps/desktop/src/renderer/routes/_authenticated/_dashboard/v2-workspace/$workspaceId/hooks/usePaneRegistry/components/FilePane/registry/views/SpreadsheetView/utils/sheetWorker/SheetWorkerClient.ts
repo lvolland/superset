@@ -11,6 +11,7 @@ export class SheetWorkerError extends Error {
 }
 
 interface Pending {
+	type: SheetRequestBody["type"];
 	resolve: (value: never) => void;
 	reject: (error: Error) => void;
 }
@@ -26,6 +27,7 @@ export class SheetWorkerClient {
 	private nextId = 1;
 	private pending = new Map<number, Pending>();
 	private failure: Error | null = null;
+	private disposed = false;
 
 	constructor(private readonly worker: WorkerLike) {
 		worker.onmessage = (event) => {
@@ -33,8 +35,15 @@ export class SheetWorkerClient {
 			const pending = this.pending.get(response.id);
 			if (!pending) return;
 			this.pending.delete(response.id);
-			if (response.ok) pending.resolve(response.result as never);
-			else {
+			if (response.ok && response.type === pending.type) {
+				pending.resolve(response.result as never);
+			} else if (response.ok) {
+				pending.reject(
+					new SheetWorkerError(
+						`Expected a ${pending.type} result, got ${response.type}`,
+					),
+				);
+			} else {
 				pending.reject(
 					new SheetWorkerError(
 						response.reason ?? "unreadable",
@@ -55,12 +64,14 @@ export class SheetWorkerClient {
 		if (this.failure) return Promise.reject(this.failure);
 		const id = this.nextId++;
 		return new Promise<SheetResults[T]>((resolve, reject) => {
-			this.pending.set(id, { resolve, reject } as Pending);
+			this.pending.set(id, { type: body.type, resolve, reject } as Pending);
 			this.worker.postMessage({ ...body, id });
 		});
 	}
 
 	dispose(): void {
+		if (this.disposed) return;
+		this.disposed = true;
 		this.worker.terminate();
 		this.fail(new Error("Disposed"));
 	}

@@ -13181,6 +13181,9 @@ msgstr "Memória residente usada pelo Superset e pelas árvores de processos de 
 msgid "Resizable"
 msgstr "Resizable"
 
+msgid "Resize column {name}"
+msgstr "Redimensionar a coluna {name}"
+
 msgid "Resize left edge"
 msgstr "Redimensionar pela borda esquerda"
 
@@ -13853,6 +13856,9 @@ msgstr "Buscar na documentação..."
 
 msgid "Search environments..."
 msgstr "Buscar ambientes..."
+
+msgid "Search failed"
+msgstr "Falha na pesquisa"
 
 msgid "Search files"
 msgstr "Buscar arquivos"
@@ -14841,6 +14847,9 @@ msgstr "Relatório SOC 2 Tipo II"
 
 msgid "Social"
 msgstr "Redes sociais"
+
+msgid "Some cells could not be loaded"
+msgstr "Não foi possível carregar algumas células"
 
 msgid "Some files are not an accepted type and were not added."
 msgstr "Alguns arquivos não são de um tipo aceito e não foram adicionados."

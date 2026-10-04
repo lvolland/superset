@@ -13181,6 +13181,9 @@ msgstr "Superset과 모니터링 중인 터미널 프로세스 트리가 사용�
 msgid "Resizable"
 msgstr "크기 조절 가능"
 
+msgid "Resize column {name}"
+msgstr "{name} 열 너비 조정"
+
 msgid "Resize left edge"
 msgstr "왼쪽 가장자리 크기 조절"
 
@@ -13853,6 +13856,9 @@ msgstr "문서 검색..."
 
 msgid "Search environments..."
 msgstr "환경 검색..."
+
+msgid "Search failed"
+msgstr "검색하지 못했습니다"
 
 msgid "Search files"
 msgstr "파일 검색"
@@ -14841,6 +14847,9 @@ msgstr "SOC 2 Type II 보고서"
 
 msgid "Social"
 msgstr "소셜"
+
+msgid "Some cells could not be loaded"
+msgstr "일부 셀을 불러오지 못했습니다"
 
 msgid "Some files are not an accepted type and were not added."
 msgstr "일부 파일이 허용되지 않는 형식이라 추가되지 않았습니다."

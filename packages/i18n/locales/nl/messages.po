@@ -13181,6 +13181,9 @@ msgstr "Resident geheugen dat Superset en de gemonitorde terminalprocesbomen geb
 msgid "Resizable"
 msgstr "Resizable"
 
+msgid "Resize column {name}"
+msgstr "Breedte van kolom {name} wijzigen"
+
 msgid "Resize left edge"
 msgstr "Linkerrand verslepen"
 
@@ -13853,6 +13856,9 @@ msgstr "Docs zoeken..."
 
 msgid "Search environments..."
 msgstr "Omgevingen zoeken..."
+
+msgid "Search failed"
+msgstr "Zoeken mislukt"
 
 msgid "Search files"
 msgstr "Bestanden zoeken"
@@ -14841,6 +14847,9 @@ msgstr "SOC 2 Type II-rapport"
 
 msgid "Social"
 msgstr "Social"
+
+msgid "Some cells could not be loaded"
+msgstr "Sommige cellen konden niet worden geladen"
 
 msgid "Some files are not an accepted type and were not added."
 msgstr "Sommige bestanden hebben geen toegestaan type en zijn niet toegevoegd."

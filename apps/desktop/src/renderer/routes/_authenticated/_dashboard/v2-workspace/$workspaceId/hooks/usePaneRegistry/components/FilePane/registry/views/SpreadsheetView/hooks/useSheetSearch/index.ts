@@ -1,1 +1,1 @@
-export { useSheetSearch } from "./useSheetSearch";
+export { type SearchStatus, useSheetSearch } from "./useSheetSearch";

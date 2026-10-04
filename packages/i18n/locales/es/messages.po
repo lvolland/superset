@@ -9379,7 +9379,7 @@ msgid "Marking ready for review..."
 msgstr "Marcando como listo para revisión…"
 
 msgid "Match case"
-msgstr "Coincidir mayúsculas y minúsculas"
+msgstr "Distinguir mayúsculas y minúsculas"
 
 msgid "Match existing patterns"
 msgstr "Sigue los patrones existentes"
@@ -13181,6 +13181,9 @@ msgstr "Memoria residente que usan Superset y los árboles de procesos de termin
 msgid "Resizable"
 msgstr "Redimensionable"
 
+msgid "Resize column {name}"
+msgstr "Cambiar el ancho de la columna {name}"
+
 msgid "Resize left edge"
 msgstr "Redimensionar el borde izquierdo"
 
@@ -13853,6 +13856,9 @@ msgstr "Buscar en la documentación..."
 
 msgid "Search environments..."
 msgstr "Buscar entornos..."
+
+msgid "Search failed"
+msgstr "La búsqueda falló"
 
 msgid "Search files"
 msgstr "Buscar archivos"
@@ -14841,6 +14847,9 @@ msgstr "Informe SOC 2 Type II"
 
 msgid "Social"
 msgstr "Redes sociales"
+
+msgid "Some cells could not be loaded"
+msgstr "No se pudieron cargar algunas celdas"
 
 msgid "Some files are not an accepted type and were not added."
 msgstr "Algunos archivos no son de un tipo admitido y no se añadieron."

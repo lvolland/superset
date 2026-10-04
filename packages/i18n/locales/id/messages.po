@@ -13181,6 +13181,9 @@ msgstr "Memori residen yang dipakai Superset dan pohon proses terminal yang dipa
 msgid "Resizable"
 msgstr "Resizable"
 
+msgid "Resize column {name}"
+msgstr "Ubah lebar kolom {name}"
+
 msgid "Resize left edge"
 msgstr "Ubah ukuran tepi kiri"
 
@@ -13853,6 +13856,9 @@ msgstr "Cari dokumentasi..."
 
 msgid "Search environments..."
 msgstr "Cari environment..."
+
+msgid "Search failed"
+msgstr "Pencarian gagal"
 
 msgid "Search files"
 msgstr "Cari file"
@@ -14561,7 +14567,7 @@ msgid "Show pull request preview"
 msgstr "Tampilkan pratinjau pull request"
 
 msgid "Show raw"
-msgstr "Tampilkan mentah"
+msgstr "Tampilkan teks mentah"
 
 msgid "Show resolved ({resolvedCount})"
 msgstr "Tampilkan yang terselesaikan ({resolvedCount})"
@@ -14841,6 +14847,9 @@ msgstr "Laporan SOC 2 Type II"
 
 msgid "Social"
 msgstr "Media sosial"
+
+msgid "Some cells could not be loaded"
+msgstr "Beberapa sel tidak dapat dimuat"
 
 msgid "Some files are not an accepted type and were not added."
 msgstr "Sebagian file bukan tipe yang diterima dan tidak ditambahkan."

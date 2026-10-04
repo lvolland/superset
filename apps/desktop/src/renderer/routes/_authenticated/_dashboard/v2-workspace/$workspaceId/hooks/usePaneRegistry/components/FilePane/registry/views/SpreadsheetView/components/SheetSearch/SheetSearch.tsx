@@ -4,9 +4,11 @@ import { cn } from "@superset/ui/utils";
 import { useEffect, useRef } from "react";
 import { HiChevronDown, HiChevronUp, HiMiniXMark } from "react-icons/hi2";
 import { PiTextAa } from "react-icons/pi";
+import type { SearchStatus } from "../../hooks/useSheetSearch";
 
 interface SheetSearchProps {
 	query: string;
+	status: SearchStatus;
 	caseSensitive: boolean;
 	matchCount: number;
 	truncated: boolean;
@@ -23,6 +25,7 @@ const ICON_BUTTON =
 
 export function SheetSearch({
 	query,
+	status,
 	caseSensitive,
 	matchCount,
 	truncated,
@@ -67,7 +70,11 @@ export function SheetSearch({
 			/>
 			{query && (
 				<span className="whitespace-nowrap px-1 text-muted-foreground text-xs tabular-nums">
-					{matchCount === 0 ? (
+					{status === "pending" ? (
+						<Trans>Searching…</Trans>
+					) : status === "error" ? (
+						<Trans>Search failed</Trans>
+					) : matchCount === 0 ? (
 						<Trans>No results</Trans>
 					) : (
 						<Trans>

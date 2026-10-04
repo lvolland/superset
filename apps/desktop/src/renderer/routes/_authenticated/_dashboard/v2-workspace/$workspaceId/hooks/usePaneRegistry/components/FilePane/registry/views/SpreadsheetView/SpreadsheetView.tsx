@@ -28,6 +28,9 @@ export function SpreadsheetView({
 	}, [content, filePath]);
 	const workbook = useWorkbook(source);
 
+	if (content.kind === "not-found") {
+		return <ErrorState reason="not-found" />;
+	}
 	if (workbook.status === "loading") {
 		return <LoadingState />;
 	}

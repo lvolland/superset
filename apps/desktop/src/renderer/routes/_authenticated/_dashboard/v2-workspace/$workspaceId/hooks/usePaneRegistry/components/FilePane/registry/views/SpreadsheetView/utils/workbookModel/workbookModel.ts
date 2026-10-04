@@ -2,6 +2,7 @@ import type { NumberSeparators } from "@superset/i18n/format";
 import { getFileExtension } from "@superset/shared/media-files";
 import {
 	type CellObject,
+	CFB,
 	read,
 	SSF,
 	utils,
@@ -21,8 +22,12 @@ import type {
 	WorkbookSource,
 } from "../../types";
 import { delimitedSource, parseDelimitedText } from "../delimitedText";
-import { type ArchiveFiles, NO_FREEZE, readFrozenPanes } from "../frozenPanes";
-import { tsvField } from "../toTsv";
+import {
+	type ArchiveFiles,
+	NO_FREEZE,
+	parseOpenDocumentFrozenPanes,
+	readFrozenPanes,
+} from "../frozenPanes";
 
 const WIDTH_SAMPLE_ROWS = 1000;
 const MAX_SAMPLED_CHARS = 60;
@@ -31,6 +36,11 @@ const NUMERIC_TEXT =
 	/^[-+(]?[$€£¥]?\s?\d[\d\s.,' {2}]*(?:[eE][-+]?\d+)?\s?[%$€£¥]?\)?$/;
 // SheetJS formats numbers the en-US way: "," groups digits, "." starts decimals.
 const EN_SEPARATOR = /\.(?=\d)|(?<=\d),(?=\d)/g;
+// Text a number format prints as written: "quoted", \escaped, [$currency-locale].
+const FORMAT_LITERAL = /"[^"]*"|\\.|\[\$[^\]-]+(?:-[^\]]*)?\]/g;
+const LITERAL_MARK = 0xe000;
+const LITERAL_MARKS = /[\ue000-\uf8ff]/g;
+const TSV_NEEDS_QUOTES = /[\t\n\r"]/;
 const DELIMITED_HEADER: FrozenPane = { rows: 1, cols: 0 };
 
 export interface CopyLimits {
@@ -60,7 +70,10 @@ export interface WorkbookModel {
 		limit: number,
 		numbers: NumberSeparators,
 	): SearchResult;
-	/** Walks the cells that exist, so a sparse sheet copies at its real size. */
+	/**
+	 * The selected rectangle, empty cells included, as Excel and Numbers paste
+	 * it back. Stops at the limits without walking the rest of the selection.
+	 */
 	rangeToTsv(
 		sheetIndex: number,
 		range: CellRange,
@@ -129,33 +142,36 @@ export function openWorkbook(source: WorkbookSource): WorkbookModel {
 			const parts: string[] = [];
 			let cells = 0;
 			let chars = 0;
-			if (!sheet) return { text: "", cells, truncated: false };
+			const result = (truncated: boolean): CopyResult => ({
+				text: parts.join(""),
+				cells,
+				truncated,
+			});
+			if (!sheet) return result(false);
 			const bottom = Math.min(range.bottom, sheet.summary.rowCount - 1);
 			const right = Math.min(range.right, sheet.summary.colCount - 1);
+			if (range.left > right) return result(false);
 			for (let r = range.top; r <= bottom; r += 1) {
 				if (r > range.top) {
-					if (chars + 1 > limits.maxChars) {
-						return { text: parts.join(""), cells, truncated: true };
+					if (cells + 1 > limits.maxCells || chars + 1 > limits.maxChars) {
+						return result(true);
 					}
 					parts.push("\n");
 					chars += 1;
 				}
 				const row = sheet.rows[r];
-				if (!row) continue;
-				let last = Math.min(right, row.length - 1);
-				while (last >= range.left && !display(row[last], numbers)) last -= 1;
-				for (let c = range.left; c <= last; c += 1) {
-					const field = tsvField(display(row[c], numbers));
+				for (let c = range.left; c <= right; c += 1) {
+					const field = row ? tsvField(display(row[c], numbers)) : "";
 					const size = field.length + (c > range.left ? 1 : 0);
 					if (cells + 1 > limits.maxCells || chars + size > limits.maxChars) {
-						return { text: parts.join(""), cells, truncated: true };
+						return result(true);
 					}
 					parts.push(c > range.left ? `\t${field}` : field);
 					cells += 1;
 					chars += size;
 				}
 			}
-			return { text: parts.join(""), cells, truncated: false };
+			return result(false);
 		},
 	};
 }
@@ -168,7 +184,12 @@ function readDelimited(
 	const tsv = getFileExtension(source.fileName) === "tsv";
 	const { text, separator } = delimitedSource(withoutBom, tsv ? "\t" : null);
 	const rows = parseDelimitedText(text, separator);
-	const summary = summarize("Sheet1", false, rows, [], DELIMITED_HEADER);
+	let fields = 0;
+	for (const row of rows) fields = Math.max(fields, row.length);
+	const summary = summarize("Sheet1", false, rows, [], DELIMITED_HEADER, {
+		rows: rows.length,
+		cols: fields,
+	});
 	return [{ summary, rows }];
 }
 
@@ -176,8 +197,15 @@ function readBytes(
 	source: Extract<WorkbookSource, { kind: "bytes" }>,
 ): SheetData[] {
 	const extension = getFileExtension(source.fileName);
-	if (ZIP_EXTENSIONS.has(extension) && !hasZipSignature(source.bytes)) {
-		throw new UnreadableWorkbookError("Not a valid workbook archive");
+	if (ZIP_EXTENSIONS.has(extension)) {
+		// Office encrypts a workbook into an OLE container, the format of .xls too.
+		if (hasOleSignature(source.bytes)) {
+			if (isEncryptedPackage(source.bytes)) {
+				throw new UnreadableWorkbookError("File is password-protected");
+			}
+		} else if (!hasZipSignature(source.bytes)) {
+			throw new UnreadableWorkbookError("Not a valid workbook archive");
+		}
 	}
 	const workbook = read(source.bytes, {
 		type: "array",
@@ -188,7 +216,10 @@ function readBytes(
 		cellStyles: false,
 		bookFiles: true,
 	}) as WorkBook & { files?: ArchiveFiles };
-	const frozen = readFrozenPanes(workbook.files);
+	const frozen =
+		extension === "ods"
+			? openDocumentFrozenPanes(source.bytes, workbook.SheetNames)
+			: readFrozenPanes(workbook.files);
 	return workbook.SheetNames.map((name, index) => {
 		const sheet = workbook.Sheets[name];
 		const rows = (sheet?.["!data"] as CellObject[][] | undefined) ?? [];
@@ -213,6 +244,38 @@ function hasZipSignature(bytes: Uint8Array): boolean {
 	);
 }
 
+const OLE_SIGNATURE = [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1];
+
+function hasOleSignature(bytes: Uint8Array): boolean {
+	return OLE_SIGNATURE.every((byte, index) => bytes[index] === byte);
+}
+
+function isEncryptedPackage(bytes: Uint8Array): boolean {
+	try {
+		return Boolean(
+			CFB.find(CFB.read(bytes, { type: "array" }), "EncryptedPackage"),
+		);
+	} catch {
+		return false;
+	}
+}
+
+function openDocumentFrozenPanes(
+	bytes: Uint8Array,
+	sheetNames: string[],
+): FrozenPane[] {
+	let settings = "";
+	try {
+		const entry = CFB.find(CFB.read(bytes, { type: "array" }), "settings.xml");
+		if (entry?.content) {
+			settings = new TextDecoder().decode(entry.content as Uint8Array);
+		}
+	} catch {
+		return [];
+	}
+	return parseOpenDocumentFrozenPanes(settings, sheetNames);
+}
+
 function mergesOf(sheet: WorkSheet | undefined): CellRange[] {
 	return (sheet?.["!merges"] ?? []).map((merge) => ({
 		top: merge.s.r,
@@ -228,6 +291,7 @@ function summarize(
 	rows: CellObject[][],
 	allMerges: CellRange[],
 	frozen: FrozenPane,
+	extent = { rows: 0, cols: 0 },
 ): SheetSummary {
 	let rowCount = 0;
 	let colCount = 0;
@@ -247,6 +311,8 @@ function summarize(
 			}
 		}
 	}
+	rowCount = Math.max(rowCount, extent.rows);
+	colCount = Math.max(colCount, extent.cols);
 	const merges = allMerges.filter(
 		(merge) => merge.top < rowCount && merge.left < colCount,
 	);
@@ -297,16 +363,51 @@ function isEnglish(numbers: NumberSeparators): boolean {
 	return numbers.group === "," && numbers.decimal === ".";
 }
 
-/** The file's number format, written with the separators of the app language. */
+function swapSeparators(text: string, numbers: NumberSeparators): string {
+	return text.replace(EN_SEPARATOR, (mark) =>
+		mark === "." ? numbers.decimal : numbers.group,
+	);
+}
+
+/**
+ * The file's number format, written with the separators of the app language.
+ * Text of the format stays as written: it is swapped for marks before the
+ * number is formatted, and put back after.
+ */
 function localizedText(
 	cell: CellObject | undefined,
 	numbers: NumberSeparators,
 ): string {
 	const text = cellText(cell);
 	if (!isLocalizedNumber(cell) || isEnglish(numbers)) return text;
-	return text.replace(EN_SEPARATOR, (mark) =>
-		mark === "." ? numbers.decimal : numbers.group,
+	const format = typeof cell.z === "string" ? cell.z : "";
+	if (!format.match(FORMAT_LITERAL)) return swapSeparators(text, numbers);
+	const literals: string[] = [];
+	const masked = format.replace(FORMAT_LITERAL, (token) => {
+		const literal = token.startsWith('"')
+			? token.slice(1, -1)
+			: token.startsWith("\\")
+				? token.slice(1)
+				: token.slice(2, -1).replace(/-.*$/, "");
+		literals.push(literal);
+		return `"${String.fromCharCode(LITERAL_MARK + literals.length - 1)}"`;
+	});
+	let formatted: string;
+	try {
+		formatted = SSF.format(masked, cell.v);
+	} catch {
+		return text;
+	}
+	return swapSeparators(formatted, numbers).replace(
+		LITERAL_MARKS,
+		(mark) => literals[mark.charCodeAt(0) - LITERAL_MARK] ?? mark,
 	);
+}
+
+function tsvField(field: string): string {
+	return TSV_NEEDS_QUOTES.test(field)
+		? `"${field.replaceAll('"', '""')}"`
+		: field;
 }
 
 function toGridCell(

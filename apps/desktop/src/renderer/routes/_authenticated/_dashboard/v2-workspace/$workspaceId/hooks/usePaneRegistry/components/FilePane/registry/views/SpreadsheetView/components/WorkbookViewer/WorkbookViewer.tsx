@@ -1,4 +1,4 @@
-import { useLingui } from "@lingui/react/macro";
+import { Trans, useLingui } from "@lingui/react/macro";
 import { useFormat } from "@superset/i18n/react";
 import { toast } from "@superset/ui/sonner";
 import {
@@ -68,7 +68,13 @@ export function WorkbookViewer({
 		Record<number, Record<number, number>>
 	>({});
 	const [, onCellsLoaded] = useReducer((count: number) => count + 1, 0);
+	const [cacheGeneration, renewCache] = useReducer(
+		(count: number) => count + 1,
+		0,
+	);
+	const [failedCache, setFailedCache] = useState<CellBlockCache | null>(null);
 	const gridRef = useRef<SheetGridHandle>(null);
+	const focusGridOnSheetChange = useRef(false);
 	const { copyToClipboard } = useCopyToClipboard();
 
 	const sheet = sheets[sheetIndex];
@@ -79,20 +85,26 @@ export function WorkbookViewer({
 		bounds,
 	);
 
-	const cache = useMemo(
-		() =>
-			new CellBlockCache(
-				(window) =>
-					client.request({
-						type: "cells",
-						sheet: sheetIndex,
-						window,
-						numbers,
-					}),
-				onCellsLoaded,
-			),
-		[client, sheetIndex, numbers],
-	);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: a new generation is how Retry refetches the cells
+	const cache = useMemo(() => {
+		const created = new CellBlockCache(
+			(window) =>
+				client.request({
+					type: "cells",
+					sheet: sheetIndex,
+					window,
+					numbers,
+				}),
+			{
+				onVisibleLoad: onCellsLoaded,
+				onVisibleError: (error) => {
+					console.error("[SpreadsheetView] cells failed to load", error);
+					setFailedCache(created);
+				},
+			},
+		);
+		return created;
+	}, [client, sheetIndex, numbers, cacheGeneration]);
 	useEffect(() => () => cache.dispose(), [cache]);
 	const ensureCells = useCallback(
 		(ranges: CellRange[]) => cache.ensure(ranges),
@@ -176,8 +188,24 @@ export function WorkbookViewer({
 					toast.warning(t`Copied the first ${count} cells of the selection`);
 				}
 			})
-			.catch(() => {});
+			.catch((error: unknown) => {
+				console.error("[SpreadsheetView] copy failed", error);
+				toast.error(t`Copy failed`);
+			});
 	};
+
+	const stepSheet = (delta: 1 | -1) => {
+		focusGridOnSheetChange.current = true;
+		selectSheet(Math.max(0, Math.min(sheets.length - 1, sheetIndex + delta)));
+	};
+
+	// The grid remounts per sheet, so a keyboard switch hands focus to the new one.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: runs when the sheet changes
+	useEffect(() => {
+		if (!focusGridOnSheetChange.current) return;
+		focusGridOnSheetChange.current = false;
+		gridRef.current?.focus();
+	}, [sheetIndex]);
 
 	if (!sheet) return null;
 
@@ -199,6 +227,23 @@ export function WorkbookViewer({
 					}
 				/>
 			)}
+			{failedCache === cache && !isEmpty && (
+				<div
+					role="alert"
+					className="flex h-7 shrink-0 items-center gap-2 border-border border-b px-2 text-muted-foreground text-xs"
+				>
+					<span className="min-w-0 truncate">
+						<Trans>Some cells could not be loaded</Trans>
+					</span>
+					<button
+						type="button"
+						onClick={renewCache}
+						className="h-5 shrink-0 rounded-sm px-2 text-foreground transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+					>
+						<Trans>Retry</Trans>
+					</button>
+				</div>
+			)}
 			<div className="relative min-h-0 flex-1">
 				{isEmpty ? (
 					<ErrorState
@@ -218,11 +263,7 @@ export function WorkbookViewer({
 						onSelectionChange={setSelection}
 						onColumnResize={handleColumnResize}
 						onCopy={handleCopy}
-						onSheetStep={(delta) =>
-							selectSheet(
-								Math.max(0, Math.min(sheets.length - 1, sheetIndex + delta)),
-							)
-						}
+						onSheetStep={stepSheet}
 						matchKeys={search.isOpen ? search.matchKeys : null}
 						activeMatch={search.isOpen ? search.activeMatch : null}
 					/>
@@ -230,6 +271,7 @@ export function WorkbookViewer({
 				{search.isOpen && !isEmpty && (
 					<SheetSearch
 						query={search.query}
+						status={search.status}
 						caseSensitive={search.caseSensitive}
 						matchCount={search.matchCount}
 						truncated={search.truncated}

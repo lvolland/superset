@@ -1,3 +1,5 @@
+// biome-ignore-all lint/a11y/useSemanticElements: cells are placed absolutely, so ARIA grid roles stand in for table elements
+// biome-ignore-all lint/a11y/useFocusableInteractive: the grid is the one tab stop and announces the active cell
 import { cn } from "@superset/ui/utils";
 import { memo } from "react";
 import type { GridCell } from "../../../../../../types";
@@ -5,6 +7,10 @@ import type { GridCell } from "../../../../../../types";
 export type MatchState = "none" | "match" | "active";
 
 interface SheetCellProps {
+	/** 1-based, counting the row header column. */
+	ariaColIndex: number;
+	rowSpan?: number;
+	colSpan?: number;
 	top: number;
 	left: number;
 	width: number;
@@ -22,6 +28,9 @@ const ALIGN: Record<GridCell["kind"], string> = {
 };
 
 export const SheetCell = memo(function SheetCell({
+	ariaColIndex,
+	rowSpan,
+	colSpan,
 	top,
 	left,
 	width,
@@ -32,6 +41,10 @@ export const SheetCell = memo(function SheetCell({
 }: SheetCellProps) {
 	return (
 		<div
+			role="gridcell"
+			aria-colindex={ariaColIndex}
+			aria-rowspan={rowSpan}
+			aria-colspan={colSpan}
 			className={cn(
 				"absolute truncate whitespace-nowrap px-1.5 text-xs leading-[23px]",
 				merged && "z-[1] flex items-center bg-background",

@@ -15,6 +15,8 @@ interface UseSheetSearchOptions {
 	delayMs?: number;
 }
 
+export type SearchStatus = "idle" | "pending" | "error" | "done";
+
 /** Matches belong to the search that produced them, and die with it. */
 interface Answer {
 	key: string;
@@ -34,6 +36,7 @@ export function useSheetSearch({
 	const [query, setQuery] = useState("");
 	const [caseSensitive, setCaseSensitive] = useState(false);
 	const [answer, setAnswer] = useState<Answer | null>(null);
+	const [failedKey, setFailedKey] = useState<string | null>(null);
 	const { group, decimal } = numbers;
 	const key = JSON.stringify([
 		sheetIndex,
@@ -43,6 +46,14 @@ export function useSheetSearch({
 		decimal,
 	]);
 	const current = isOpen && query && answer?.key === key ? answer : null;
+	const status: SearchStatus =
+		!isOpen || !query
+			? "idle"
+			: current
+				? "done"
+				: failedKey === key
+					? "error"
+					: "pending";
 
 	useEffect(() => {
 		if (!isOpen || !query) return;
@@ -64,7 +75,11 @@ export function useSheetSearch({
 						const [row, col] = result.matches;
 						if (row !== undefined && col !== undefined) onReveal({ row, col });
 					},
-					() => {},
+					(error: unknown) => {
+						if (cancelled) return;
+						console.error("[SpreadsheetView] search failed", error);
+						setFailedKey(key);
+					},
 				);
 		}, delayMs);
 		return () => {
@@ -118,6 +133,7 @@ export function useSheetSearch({
 
 	return {
 		isOpen,
+		status,
 		open: () => setIsOpen(true),
 		close: () => setIsOpen(false),
 		query,

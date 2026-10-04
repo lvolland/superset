@@ -4401,7 +4401,7 @@ msgid "Copied terminal ID"
 msgstr "Skopiowano ID terminala"
 
 msgid "Copied the first {count} cells of the selection"
-msgstr "Skopiowano pierwsze {count} komórek zaznaczenia"
+msgstr "Skopiowano komórki z początku zaznaczenia (liczba: {count})"
 
 msgid "Copied to clipboard."
 msgstr "Skopiowano do schowka."
@@ -12583,7 +12583,7 @@ msgid "Rate Superset"
 msgstr "Oceń Superset"
 
 msgid "Raw"
-msgstr "Surowy"
+msgstr "Surowy tekst"
 
 msgid "Reach this Mac from anywhere via the Superset relay, or spin up cloud workspaces. Connect from any client."
 msgstr "Sięgnij po tego Maca z dowolnego miejsca przez przekaźnik Superset albo uruchom obszary robocze w chmurze. Połącz się z dowolnego klienta."
@@ -13180,6 +13180,9 @@ msgstr "Pamięć rezydentna zużywana przez Superset i monitorowane drzewa proce
 
 msgid "Resizable"
 msgstr "Resizable"
+
+msgid "Resize column {name}"
+msgstr "Zmień szerokość kolumny {name}"
 
 msgid "Resize left edge"
 msgstr "Zmień rozmiar lewej krawędzi"
@@ -13853,6 +13856,9 @@ msgstr "Szukaj w dokumentacji..."
 
 msgid "Search environments..."
 msgstr "Szukaj środowisk..."
+
+msgid "Search failed"
+msgstr "Wyszukiwanie nie powiodło się"
 
 msgid "Search files"
 msgstr "Szukaj plików"
@@ -14841,6 +14847,9 @@ msgstr "Raport SOC 2 Type II"
 
 msgid "Social"
 msgstr "Social media"
+
+msgid "Some cells could not be loaded"
+msgstr "Nie udało się wczytać niektórych komórek"
 
 msgid "Some files are not an accepted type and were not added."
 msgstr "Część plików ma niedozwolony typ i nie została dodana."

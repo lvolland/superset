@@ -13181,6 +13181,9 @@ msgstr "Superset与受监控的终端进程树占用的常驻内存。如果持�
 msgid "Resizable"
 msgstr "可调整大小"
 
+msgid "Resize column {name}"
+msgstr "调整列 {name} 的宽度"
+
 msgid "Resize left edge"
 msgstr "调整左边缘"
 
@@ -13853,6 +13856,9 @@ msgstr "搜索文档..."
 
 msgid "Search environments..."
 msgstr "搜索环境..."
+
+msgid "Search failed"
+msgstr "搜索失败"
 
 msgid "Search files"
 msgstr "搜索文件"
@@ -14841,6 +14847,9 @@ msgstr "SOC 2 Type II报告"
 
 msgid "Social"
 msgstr "社交"
+
+msgid "Some cells could not be loaded"
+msgstr "部分单元格无法加载"
 
 msgid "Some files are not an accepted type and were not added."
 msgstr "部分文件的类型不被允许，未添加。"

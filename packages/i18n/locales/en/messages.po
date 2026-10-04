@@ -13181,6 +13181,9 @@ msgstr "Resident memory used by Superset and monitored terminal process trees. I
 msgid "Resizable"
 msgstr "Resizable"
 
+msgid "Resize column {name}"
+msgstr "Resize column {name}"
+
 msgid "Resize left edge"
 msgstr "Resize left edge"
 
@@ -13853,6 +13856,9 @@ msgstr "Search docs..."
 
 msgid "Search environments..."
 msgstr "Search environments..."
+
+msgid "Search failed"
+msgstr "Search failed"
 
 msgid "Search files"
 msgstr "Search files"
@@ -14841,6 +14847,9 @@ msgstr "SOC 2 Type II report"
 
 msgid "Social"
 msgstr "Social"
+
+msgid "Some cells could not be loaded"
+msgstr "Some cells could not be loaded"
 
 msgid "Some files are not an accepted type and were not added."
 msgstr "Some files are not an accepted type and were not added."

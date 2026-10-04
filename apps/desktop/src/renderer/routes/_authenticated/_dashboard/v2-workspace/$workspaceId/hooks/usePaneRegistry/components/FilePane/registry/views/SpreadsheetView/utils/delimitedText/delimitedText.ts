@@ -3,8 +3,8 @@ import type { CellObject } from "xlsx";
 const QUOTE = 0x22;
 const LF = 0x0a;
 const CR = 0x0d;
-const SNIFF_CHARS = 1024;
-// Most frequent wins; on a tie, the earlier one.
+const SNIFF_CHARS = 64 * 1024;
+const SNIFF_RECORDS = 100;
 const CANDIDATES = [",", "\t", ";", "|"];
 
 export interface DelimitedText {
@@ -24,30 +24,69 @@ export function delimitedSource(
 	return { text, separator: fallback ?? guessSeparator(text) };
 }
 
-export function guessSeparator(text: string): string {
-	const counts = new Map<string, number>();
-	let quoted = false;
+/** Fields per record over the head of the text, quotes respected. */
+function fieldCounts(text: string, separator: string): number[] {
+	const counts: number[] = [];
 	const end = Math.min(text.length, SNIFF_CHARS);
-	for (let i = 0; i < end; i += 1) {
-		const char = text[i] as string;
+	let quoted = false;
+	let fields = 1;
+	let empty = true;
+	for (let i = 0; i < end && counts.length < SNIFF_RECORDS; i += 1) {
+		const char = text[i];
 		if (char === '"') quoted = !quoted;
-		else if (!quoted && CANDIDATES.includes(char)) {
-			counts.set(char, (counts.get(char) ?? 0) + 1);
+		else if (quoted) continue;
+		else if (char === separator) fields += 1;
+		else if (char === "\n" || char === "\r") {
+			if (char === "\r" && text[i + 1] === "\n") i += 1;
+			if (!empty || fields > 1) counts.push(fields);
+			fields = 1;
+			empty = true;
+			continue;
 		}
+		empty = false;
 	}
+	// A record cut by the sniff window would skew the counts.
+	if (end === text.length && (!empty || fields > 1)) counts.push(fields);
+	return counts;
+}
+
+/**
+ * The candidate that splits the most records into the same number of fields,
+ * then the one with more fields; on a tie, the earlier one.
+ */
+export function guessSeparator(text: string): string {
 	let best = ",";
-	let bestCount = 0;
+	let bestShare = 0;
+	let bestFields = 1;
 	for (const candidate of CANDIDATES) {
-		const count = counts.get(candidate) ?? 0;
-		if (count > bestCount) {
+		const counts = fieldCounts(text, candidate);
+		const frequency = new Map<number, number>();
+		for (const count of counts) {
+			frequency.set(count, (frequency.get(count) ?? 0) + 1);
+		}
+		let fields = 1;
+		let records = 0;
+		for (const [count, seen] of frequency) {
+			if (seen > records || (seen === records && count > fields)) {
+				fields = count;
+				records = seen;
+			}
+		}
+		if (fields < 2) continue;
+		const share = records / counts.length;
+		if (share > bestShare || (share === bestShare && fields > bestFields)) {
 			best = candidate;
-			bestCount = count;
+			bestShare = share;
+			bestFields = fields;
 		}
 	}
 	return best;
 }
 
-/** RFC 4180 fields, kept as written: no number, date or formula guessing. */
+/**
+ * RFC 4180 fields, kept as written: no number, date or formula guessing.
+ * Empty fields are holes, but each row is as long as its record.
+ */
 export function parseDelimitedText(
 	text: string,
 	separator: string,
@@ -106,12 +145,16 @@ export function parseDelimitedText(
 			i += 1;
 			continue;
 		}
+		row.length = col + 1;
 		rows.push(row);
 		row = [];
 		col = 0;
 		if (code === CR) i += text.charCodeAt(i + 1) === LF ? 2 : 1;
 		else if (code === LF) i += 1;
 	}
-	if (col > 0 || row.length > 0) rows.push(row);
+	if (col > 0 || row.length > 0) {
+		row.length = col + 1;
+		rows.push(row);
+	}
 	return rows;
 }

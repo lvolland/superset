@@ -13181,6 +13181,9 @@ msgstr "Supersetと監視対象のターミナルプロセスツリーが使用�
 msgid "Resizable"
 msgstr "Resizable"
 
+msgid "Resize column {name}"
+msgstr "列 {name} の幅を変更"
+
 msgid "Resize left edge"
 msgstr "左端をリサイズ"
 
@@ -13853,6 +13856,9 @@ msgstr "ドキュメントを検索..."
 
 msgid "Search environments..."
 msgstr "環境を検索..."
+
+msgid "Search failed"
+msgstr "検索に失敗しました"
 
 msgid "Search files"
 msgstr "ファイルを検索"
@@ -14841,6 +14847,9 @@ msgstr "SOC 2 Type IIレポート"
 
 msgid "Social"
 msgstr "ソーシャル"
+
+msgid "Some cells could not be loaded"
+msgstr "一部のセルを読み込めませんでした"
 
 msgid "Some files are not an accepted type and were not added."
 msgstr "一部のファイルは対応していない形式のため追加されませんでした。"

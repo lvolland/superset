@@ -1,3 +1,5 @@
+// biome-ignore-all lint/a11y/useSemanticElements: cells are placed absolutely, so ARIA grid roles stand in for table elements
+// biome-ignore-all lint/a11y/useFocusableInteractive: the grid is the one tab stop and announces the active cell
 import { cn } from "@superset/ui/utils";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
@@ -18,11 +20,13 @@ import type {
 	SheetSummary,
 } from "../../types";
 import {
+	cellAddress,
 	columnAtOffset,
 	columnStarts,
 	gutterWidth,
 	HEADER_HEIGHT,
 	ROW_HEIGHT,
+	rangeAddress,
 	revealOffset,
 } from "../../utils/gridGeometry";
 import {
@@ -250,6 +254,8 @@ export function SheetGrid({
 	};
 
 	const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+		// Keys typed in a column resize handle are its own.
+		if (event.target !== event.currentTarget) return;
 		const primaryKey = PLATFORM === "mac" ? event.metaKey : event.ctrlKey;
 		const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
 		if (primaryKey && key === "c") {
@@ -401,26 +407,32 @@ export function SheetGrid({
 			left={left}
 			width={widths[col] ?? 0}
 			selected={col >= selected.left && col <= selected.right}
+			resizeTabbable={col === active.left}
 			onResize={onColumnResize}
 		/>
 	);
 	const rowHeader = (row: number, top: number) => (
-		<RowHeader
-			key={row}
-			row={row}
-			top={top}
-			width={gutter}
-			selected={row >= selected.top && row <= selected.bottom}
-		/>
+		<div key={row} role="row" aria-rowindex={row + 2}>
+			<RowHeader
+				row={row}
+				top={top}
+				width={gutter}
+				selected={row >= selected.top && row <= selected.bottom}
+			/>
+		</div>
 	);
+	const activeCell = getCell(selection.anchor.row, selection.anchor.col);
 
 	return (
 		<div className="relative h-full w-full">
 			<div
 				ref={scrollRef}
-				role="application"
+				role="grid"
 				aria-label={label}
-				// biome-ignore lint/a11y/noNoninteractiveTabindex: focus is required for the keyboard navigation handlers
+				aria-readonly
+				aria-multiselectable
+				aria-rowcount={rowCount + 1}
+				aria-colcount={colCount + 1}
 				tabIndex={0}
 				className="group peer relative h-full w-full select-none overflow-auto outline-none"
 				onKeyDown={handleKeyDown}
@@ -456,15 +468,18 @@ export function SheetGrid({
 							style={{ width: stickyLeft }}
 						>
 							<div
+								aria-hidden
 								className={cn(
 									"absolute top-0 left-0 border-border border-r border-b",
 									HEADER_SURFACE,
 								)}
 								style={{ width: gutter, height: HEADER_HEIGHT }}
 							/>
-							{pinnedCols.map((col) =>
-								columnHeader(col, gutter + (starts[col] ?? 0)),
-							)}
+							<div role="row" aria-rowindex={1}>
+								{pinnedCols.map((col) =>
+									columnHeader(col, gutter + (starts[col] ?? 0)),
+								)}
+							</div>
 							{pinnedRows.map((row) =>
 								rowHeader(row, HEADER_HEIGHT + row * ROW_HEIGHT),
 							)}
@@ -498,9 +513,11 @@ export function SheetGrid({
 							className="relative h-full shrink-0"
 							style={{ width: totalWidth - stickyLeft }}
 						>
-							{scrollCols.map((col) =>
-								columnHeader(col, (starts[col] ?? 0) - frozenWidth),
-							)}
+							<div role="row" aria-rowindex={1}>
+								{scrollCols.map((col) =>
+									columnHeader(col, (starts[col] ?? 0) - frozenWidth),
+								)}
+							</div>
 							{frozenRows > 0 && (
 								<CellLayer
 									{...layer}
@@ -556,6 +573,10 @@ export function SheetGrid({
 				</div>
 			</div>
 			<div className="pointer-events-none absolute inset-0 z-30 peer-focus-visible:ring-1 peer-focus-visible:ring-ring peer-focus-visible:ring-inset" />
+			<div className="sr-only" aria-live="polite" aria-atomic>
+				{isMultiCell ? rangeAddress(selected) : cellAddress(selection.anchor)}{" "}
+				{activeCell?.text}
+			</div>
 		</div>
 	);
 }

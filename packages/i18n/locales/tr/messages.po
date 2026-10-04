@@ -13181,6 +13181,9 @@ msgstr "Superset ve izlenen terminal süreç ağaçlarının kullandığı yerle
 msgid "Resizable"
 msgstr "Yeniden boyutlandırılabilir"
 
+msgid "Resize column {name}"
+msgstr "{name} sütununu yeniden boyutlandır"
+
 msgid "Resize left edge"
 msgstr "Sol kenarı yeniden boyutlandır"
 
@@ -13853,6 +13856,9 @@ msgstr "Belgelerde ara..."
 
 msgid "Search environments..."
 msgstr "Ortamlarda ara..."
+
+msgid "Search failed"
+msgstr "Arama başarısız oldu"
 
 msgid "Search files"
 msgstr "Dosyalarda ara"
@@ -14841,6 +14847,9 @@ msgstr "SOC 2 Type II raporu"
 
 msgid "Social"
 msgstr "Sosyal"
+
+msgid "Some cells could not be loaded"
+msgstr "Bazı hücreler yüklenemedi"
 
 msgid "Some files are not an accepted type and were not added."
 msgstr "Bazı dosyalar kabul edilen türde değil ve eklenmedi."

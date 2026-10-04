@@ -4401,7 +4401,7 @@ msgid "Copied terminal ID"
 msgstr "ID terminálu zkopírováno"
 
 msgid "Copied the first {count} cells of the selection"
-msgstr "Zkopírováno prvních {count} buněk výběru"
+msgstr "Zkopírovány buňky ze začátku výběru (počet: {count})"
 
 msgid "Copied to clipboard."
 msgstr "Zkopírováno do schránky."
@@ -12583,7 +12583,7 @@ msgid "Rate Superset"
 msgstr "Ohodnotit Superset"
 
 msgid "Raw"
-msgstr "Surový"
+msgstr "Surový text"
 
 msgid "Reach this Mac from anywhere via the Superset relay, or spin up cloud workspaces. Connect from any client."
 msgstr "Dosáhněte na tento Mac odkudkoli přes Superset relay nebo spusťte cloudové pracovní prostory. Připojte se z libovolného klienta."
@@ -13180,6 +13180,9 @@ msgstr "Rezidentní paměť využitá Supersetem a sledovanými stromy procesů 
 
 msgid "Resizable"
 msgstr "Resizable"
+
+msgid "Resize column {name}"
+msgstr "Změnit šířku sloupce {name}"
 
 msgid "Resize left edge"
 msgstr "Změnit velikost levého okraje"
@@ -13853,6 +13856,9 @@ msgstr "Hledat v dokumentaci..."
 
 msgid "Search environments..."
 msgstr "Hledat prostředí..."
+
+msgid "Search failed"
+msgstr "Hledání selhalo"
 
 msgid "Search files"
 msgstr "Hledat soubory"
@@ -14841,6 +14847,9 @@ msgstr "Zpráva SOC 2 Type II"
 
 msgid "Social"
 msgstr "Sociální sítě"
+
+msgid "Some cells could not be loaded"
+msgstr "Některé buňky se nepodařilo načíst"
 
 msgid "Some files are not an accepted type and were not added."
 msgstr "Některé soubory nemají povolený typ a nebyly přidány."

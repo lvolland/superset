@@ -13181,6 +13181,9 @@ msgstr "Bộ nhớ thường trú mà Superset và các cây tiến trình termi
 msgid "Resizable"
 msgstr "Resizable"
 
+msgid "Resize column {name}"
+msgstr "Đổi độ rộng cột {name}"
+
 msgid "Resize left edge"
 msgstr "Đổi kích thước cạnh trái"
 
@@ -13853,6 +13856,9 @@ msgstr "Tìm trong tài liệu..."
 
 msgid "Search environments..."
 msgstr "Tìm environment..."
+
+msgid "Search failed"
+msgstr "Tìm kiếm thất bại"
 
 msgid "Search files"
 msgstr "Tìm tệp"
@@ -14841,6 +14847,9 @@ msgstr "Báo cáo SOC 2 Type II"
 
 msgid "Social"
 msgstr "Mạng xã hội"
+
+msgid "Some cells could not be loaded"
+msgstr "Không thể tải một số ô"
 
 msgid "Some files are not an accepted type and were not added."
 msgstr "Một số tệp không thuộc loại được chấp nhận nên không được thêm."

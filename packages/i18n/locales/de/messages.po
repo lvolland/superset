@@ -12583,7 +12583,7 @@ msgid "Rate Superset"
 msgstr "Superset bewerten"
 
 msgid "Raw"
-msgstr "Roh"
+msgstr "Rohtext"
 
 msgid "Reach this Mac from anywhere via the Superset relay, or spin up cloud workspaces. Connect from any client."
 msgstr "Erreiche diesen Mac von überall über das Superset-Relay oder starte Cloud-Arbeitsbereiche. Verbinde dich von jedem Client aus."
@@ -13180,6 +13180,9 @@ msgstr "Resident belegter Speicher von Superset und den überwachten Terminal-Pr
 
 msgid "Resizable"
 msgstr "Resizable"
+
+msgid "Resize column {name}"
+msgstr "Breite von Spalte {name} ändern"
 
 msgid "Resize left edge"
 msgstr "Linken Rand verschieben"
@@ -13853,6 +13856,9 @@ msgstr "Doku durchsuchen..."
 
 msgid "Search environments..."
 msgstr "Umgebungen suchen..."
+
+msgid "Search failed"
+msgstr "Suche fehlgeschlagen"
 
 msgid "Search files"
 msgstr "Dateien suchen"
@@ -14841,6 +14847,9 @@ msgstr "SOC-2-Type-II-Bericht"
 
 msgid "Social"
 msgstr "Social"
+
+msgid "Some cells could not be loaded"
+msgstr "Einige Zellen konnten nicht geladen werden"
 
 msgid "Some files are not an accepted type and were not added."
 msgstr "Einige Dateien haben keinen zulässigen Typ und wurden nicht hinzugefügt."

@@ -1,3 +1,5 @@
+// biome-ignore-all lint/a11y/useSemanticElements: cells are placed absolutely, so ARIA grid roles stand in for table elements
+// biome-ignore-all lint/a11y/useFocusableInteractive: the grid is the one tab stop and announces the active cell
 import { cn } from "@superset/ui/utils";
 import type { CellRange, GridCell } from "../../../../types";
 import { HEADER_HEIGHT, ROW_HEIGHT } from "../../../../utils/gridGeometry";
@@ -106,6 +108,7 @@ export function CellLayer({
 				cols.map((col) => (
 					<div
 						key={`line:${col}`}
+						aria-hidden
 						className="absolute w-px bg-border"
 						style={{
 							left: gutter + (starts[col + 1] ?? 0) - 1 - originX,
@@ -114,40 +117,53 @@ export function CellLayer({
 						}}
 					/>
 				))}
-			{rows.map((row) =>
-				cols.map((col) => {
-					if (covered(row, col)) return null;
-					return (
-						<SheetCell
-							key={`${row}:${col}`}
-							top={HEADER_HEIGHT + row * ROW_HEIGHT - originY}
-							left={gutter + (starts[col] ?? 0) - originX}
-							width={(starts[col + 1] ?? 0) - (starts[col] ?? 0) - 1}
-							height={ROW_HEIGHT - 1}
-							cell={getCell(row, col)}
-							match={matchState(row, col)}
-						/>
-					);
-				}),
-			)}
+			{rows.map((row) => (
+				// A static row adds no box: its cells stay placed by the layer.
+				<div key={row} role="row" aria-rowindex={row + 2}>
+					{cols.map((col) => {
+						if (covered(row, col)) return null;
+						return (
+							<SheetCell
+								key={col}
+								ariaColIndex={col + 2}
+								top={HEADER_HEIGHT + row * ROW_HEIGHT - originY}
+								left={gutter + (starts[col] ?? 0) - originX}
+								width={(starts[col + 1] ?? 0) - (starts[col] ?? 0) - 1}
+								height={ROW_HEIGHT - 1}
+								cell={getCell(row, col)}
+								match={matchState(row, col)}
+							/>
+						);
+					})}
+				</div>
+			))}
 			{ownMerges.map(({ merge, part }) => {
 				const rect = rectOf(part);
 				const ownsAnchor = part.top === merge.top && part.left === merge.left;
 				return (
-					<SheetCell
+					<div
 						key={`merge:${merge.top}:${merge.left}`}
-						top={rect.top}
-						left={rect.left}
-						width={rect.width - 1}
-						height={rect.height - 1}
-						cell={ownsAnchor ? getCell(merge.top, merge.left) : null}
-						match={ownsAnchor ? matchState(merge.top, merge.left) : "none"}
-						merged
-					/>
+						role="row"
+						aria-rowindex={part.top + 2}
+					>
+						<SheetCell
+							ariaColIndex={part.left + 2}
+							rowSpan={part.bottom - part.top + 1}
+							colSpan={part.right - part.left + 1}
+							top={rect.top}
+							left={rect.left}
+							width={rect.width - 1}
+							height={rect.height - 1}
+							cell={ownsAnchor ? getCell(merge.top, merge.left) : null}
+							match={ownsAnchor ? matchState(merge.top, merge.left) : "none"}
+							merged
+						/>
+					</div>
 				);
 			})}
 			{selectionPart && (
 				<div
+					aria-hidden
 					className="pointer-events-none absolute z-[2] border border-primary/40 bg-primary/10"
 					style={rectOf(selectionPart)}
 				/>
@@ -157,6 +173,7 @@ export function CellLayer({
 					const rect = rectOf(activePart);
 					return (
 						<div
+							aria-hidden
 							className="pointer-events-none absolute z-[3] border-2 border-muted-foreground/50 group-focus:border-primary"
 							style={{
 								top: rect.top - 1,

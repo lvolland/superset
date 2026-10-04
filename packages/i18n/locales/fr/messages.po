@@ -13181,6 +13181,9 @@ msgstr "Mémoire résidente utilisée par Superset et par les arborescences de p
 msgid "Resizable"
 msgstr "Redimensionnable"
 
+msgid "Resize column {name}"
+msgstr "Redimensionner la colonne {name}"
+
 msgid "Resize left edge"
 msgstr "Redimensionner le bord gauche"
 
@@ -13853,6 +13856,9 @@ msgstr "Rechercher dans la documentation..."
 
 msgid "Search environments..."
 msgstr "Rechercher des environnements..."
+
+msgid "Search failed"
+msgstr "La recherche a échoué"
 
 msgid "Search files"
 msgstr "Rechercher des fichiers"
@@ -14841,6 +14847,9 @@ msgstr "Rapport SOC 2 Type II"
 
 msgid "Social"
 msgstr "Réseaux sociaux"
+
+msgid "Some cells could not be loaded"
+msgstr "Certaines cellules n'ont pas pu être chargées"
 
 msgid "Some files are not an accepted type and were not added."
 msgstr "Certains fichiers ne sont pas d'un type accepté et n'ont pas été ajoutés."

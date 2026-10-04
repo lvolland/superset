@@ -43,6 +43,13 @@ export interface SheetResults {
 export type SheetRequest = SheetRequestBody & { id: number };
 
 export type SheetResponse =
-	| { id: number; ok: true; result: SheetResults[keyof SheetResults] }
+	| {
+			[T in keyof SheetResults]: {
+				id: number;
+				type: T;
+				ok: true;
+				result: SheetResults[T];
+			};
+	  }[keyof SheetResults]
 	/** reason is null when there is nothing useful to tell beyond "unreadable". */
 	| { id: number; ok: false; reason: UnreadableReason | null };

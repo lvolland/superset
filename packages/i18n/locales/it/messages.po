@@ -4401,7 +4401,7 @@ msgid "Copied terminal ID"
 msgstr "ID del terminale copiato"
 
 msgid "Copied the first {count} cells of the selection"
-msgstr "Copiate le prime {count} celle della selezione"
+msgstr "Sono state copiate le prime {count} celle della selezione"
 
 msgid "Copied to clipboard."
 msgstr "Copiato negli appunti."
@@ -13181,6 +13181,9 @@ msgstr "Memoria residente usata da Superset e dagli alberi di processi dei termi
 msgid "Resizable"
 msgstr "Resizable"
 
+msgid "Resize column {name}"
+msgstr "Ridimensiona la colonna {name}"
+
 msgid "Resize left edge"
 msgstr "Ridimensiona il bordo sinistro"
 
@@ -13853,6 +13856,9 @@ msgstr "Cerca nella documentazione..."
 
 msgid "Search environments..."
 msgstr "Cerca ambienti..."
+
+msgid "Search failed"
+msgstr "Ricerca non riuscita"
 
 msgid "Search files"
 msgstr "Cerca file"
@@ -14841,6 +14847,9 @@ msgstr "Report SOC 2 Type II"
 
 msgid "Social"
 msgstr "Social"
+
+msgid "Some cells could not be loaded"
+msgstr "Non è stato possibile caricare alcune celle"
 
 msgid "Some files are not an accepted type and were not added."
 msgstr "Alcuni file non sono di un tipo consentito e non sono stati aggiunti."

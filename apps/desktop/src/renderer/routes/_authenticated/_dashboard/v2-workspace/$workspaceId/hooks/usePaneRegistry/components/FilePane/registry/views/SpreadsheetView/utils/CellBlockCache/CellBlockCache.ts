@@ -11,6 +11,12 @@ export const BLOCK_ROWS = 256;
 export const BLOCK_COLS = 64;
 const MAX_CELLS = 400_000;
 
+export interface CellBlockEvents {
+	onVisibleLoad: () => void;
+	/** A visible block failed twice in a row. */
+	onVisibleError: (error: unknown) => void;
+}
+
 const blockKey = (rowBlock: number, colBlock: number) =>
 	`${rowBlock}:${colBlock}`;
 
@@ -18,6 +24,7 @@ const blockKey = (rowBlock: number, colBlock: number) =>
  * Cells of one sheet fetched from the worker in blocks of rows by columns,
  * least recently used first. The blocks of the last `ensure` call are the
  * visible ones: they are never evicted, and only their arrival repaints.
+ * A visible block that fails is fetched once more before it is reported.
  */
 export class CellBlockCache {
 	private blocks = new Map<string, Block>();
@@ -28,7 +35,7 @@ export class CellBlockCache {
 
 	constructor(
 		private readonly fetchCells: (window: CellWindow) => Promise<Rows>,
-		private readonly onVisibleLoad: () => void,
+		private readonly events: CellBlockEvents,
 		private readonly maxCells = MAX_CELLS,
 	) {}
 
@@ -69,13 +76,17 @@ export class CellBlockCache {
 			return;
 		}
 		if (this.pending.has(key)) return;
-		this.pending.add(key);
-		this.fetchCells({
+		this.load(key, {
 			rowStart: rowBlock * BLOCK_ROWS,
 			rowEnd: (rowBlock + 1) * BLOCK_ROWS,
 			colStart: colBlock * BLOCK_COLS,
 			colEnd: (colBlock + 1) * BLOCK_COLS,
-		}).then(
+		});
+	}
+
+	private load(key: string, window: CellWindow, retried = false): void {
+		this.pending.add(key);
+		this.fetchCells(window).then(
 			(rows) => {
 				this.pending.delete(key);
 				if (this.disposed) return;
@@ -83,10 +94,13 @@ export class CellBlockCache {
 				this.blocks.set(key, { rows, size });
 				this.cells += size;
 				this.evict();
-				if (this.visible.has(key)) this.onVisibleLoad();
+				if (this.visible.has(key)) this.events.onVisibleLoad();
 			},
-			() => {
+			(error: unknown) => {
 				this.pending.delete(key);
+				if (this.disposed || !this.visible.has(key)) return;
+				if (retried) this.events.onVisibleError(error);
+				else this.load(key, window, true);
 			},
 		);
 	}

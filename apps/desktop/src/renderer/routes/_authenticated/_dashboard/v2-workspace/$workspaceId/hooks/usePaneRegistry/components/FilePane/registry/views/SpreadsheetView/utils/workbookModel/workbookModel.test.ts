@@ -1,7 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { getNumberSeparators } from "@superset/i18n/format";
 import { CFB, utils, type WorkSheet, write } from "xlsx";
-import { openWorkbook, UnreadableWorkbookError } from "./workbookModel";
+import {
+	openWorkbook,
+	UnreadableWorkbookError,
+	unreadableReason,
+} from "./workbookModel";
 
 const EN = { group: ",", decimal: "." };
 const FR = getNumberSeparators("fr");
@@ -157,6 +161,25 @@ describe("openWorkbook", () => {
 		expect(model.search(0, "286,75", false, 10, FR).matches).toEqual([0, 0]);
 	});
 
+	test("separators change in the number only, never in the text of its format", () => {
+		const sheet = utils.aoa_to_sheet([[5200.5, 5200.5, 5200.5]]);
+		sheet.A1.z = '0.00 "kg (d.2024)"';
+		sheet.B1.z = "0.00\\ \\d\\.\\2";
+		sheet.C1.z = '#,##0.0 "1,5"';
+		const model = openWorkbook({
+			kind: "bytes",
+			fileName: "l.xlsx",
+			bytes: toXlsx(["S", sheet]),
+		});
+		const fr = model.getCells(0, ALL, FR)[0];
+		expect(fr?.[0]?.text).toBe("5200,50 kg (d.2024)");
+		expect(fr?.[1]?.text).toBe("5200,50 d.2");
+		expect(fr?.[2]?.text).toBe(`5${FR.group}200,5 1,5`);
+		expect(model.getCells(0, ALL, EN)[0]?.[0]?.text).toBe(
+			"5200.50 kg (d.2024)",
+		);
+	});
+
 	test("delimited text stays as written whatever the language", () => {
 		const model = text("1.5,2\n");
 		expect(model.getCells(0, ALL, FR)[0]?.[0]?.text).toBe("1.5");
@@ -235,7 +258,24 @@ describe("openWorkbook", () => {
 		).toMatchObject({ text: "pomme\nraisin", truncated: false });
 	});
 
-	test("copy walks the cells that exist, not the selected rectangle", () => {
+	test("copy keeps the selected rectangle, empty cells included", () => {
+		const model = text("x,,\n1,2,3\n");
+		expect(
+			model.rangeToTsv(0, { top: 0, left: 0, bottom: 0, right: 2 }, EN),
+		).toEqual({ text: "x\t\t", cells: 3, truncated: false });
+		expect(
+			model.rangeToTsv(0, { top: 0, left: 1, bottom: 1, right: 2 }, EN),
+		).toEqual({ text: "\t\n2\t3", cells: 4, truncated: false });
+		expect(
+			text('a\tb,"say ""hi""",two\nlines\n').rangeToTsv(
+				0,
+				{ top: 0, left: 0, bottom: 0, right: 2 },
+				EN,
+			).text,
+		).toBe('"a\tb"\t"say ""hi"""\ttwo');
+	});
+
+	test("copy of a huge selection stops at the cell bound without walking the rest", () => {
 		// SheetJS writes every cell of !ref, so the far corner is patched in.
 		const bytes = withSheetXml(
 			toXlsx(["S", utils.aoa_to_sheet([["a"], [null, "z"]])]),
@@ -252,9 +292,13 @@ describe("openWorkbook", () => {
 			colCount: 16_384,
 		});
 		const all = { top: 0, left: 0, bottom: 1_048_575, right: 16_383 };
-		const copy = model.rangeToTsv(0, all, EN);
-		expect(copy).toMatchObject({ cells: 16_385, truncated: false });
-		expect(copy.text).toBe(`a${"\n".repeat(1_048_575)}${"\t".repeat(16_383)}z`);
+		expect(
+			model.rangeToTsv(0, all, EN, { maxCells: 3, maxChars: 1000 }),
+		).toEqual({ text: "a\t\t", cells: 3, truncated: true });
+		expect(model.rangeToTsv(0, all, EN)).toMatchObject({
+			cells: 1_000_000,
+			truncated: true,
+		});
 	});
 
 	test("copy stops at the cell and size bounds", () => {
@@ -280,5 +324,78 @@ describe("openWorkbook", () => {
 
 	test("an empty CSV has no rows", () => {
 		expect(text("").sheets[0]).toMatchObject({ rowCount: 0, colCount: 0 });
+	});
+
+	test("delimited dimensions count fields and records, empty ones included", () => {
+		expect(text("a,b,\n").sheets[0]).toMatchObject({
+			rowCount: 1,
+			colCount: 3,
+		});
+		expect(text("a,,").sheets[0]).toMatchObject({ rowCount: 1, colCount: 3 });
+		expect(text("a\n\n\n").sheets[0]).toMatchObject({
+			rowCount: 3,
+			colCount: 1,
+		});
+	});
+
+	test("a password-protected Office file says so, and a legacy .xls still opens", () => {
+		const container = CFB.utils.cfb_new();
+		CFB.utils.cfb_add(container, "EncryptionInfo", new Uint8Array(64));
+		CFB.utils.cfb_add(container, "EncryptedPackage", new Uint8Array(64));
+		const encrypted = new Uint8Array(
+			CFB.write(container, { fileType: "cfb", type: "array" }),
+		);
+		for (const fileName of ["locked.xlsx", "locked.xlsm", "locked.xlsb"]) {
+			let error: unknown;
+			try {
+				openWorkbook({ kind: "bytes", fileName, bytes: encrypted });
+			} catch (caught) {
+				error = caught;
+			}
+			expect(unreadableReason(error)).toBe("password");
+		}
+
+		const book = utils.book_new();
+		utils.book_append_sheet(book, utils.aoa_to_sheet([["legacy"]]), "S");
+		const xls = new Uint8Array(write(book, { type: "array", bookType: "xls" }));
+		for (const fileName of ["old.xls", "renamed.xlsx"]) {
+			const model = openWorkbook({ kind: "bytes", fileName, bytes: xls });
+			expect(model.getCells(0, ALL, EN)[0]?.[0]?.text).toBe("legacy");
+		}
+	});
+
+	test("reads frozen panes of an OpenDocument sheet from its settings", () => {
+		const book = utils.book_new();
+		utils.book_append_sheet(book, utils.aoa_to_sheet([["a"]]), "Plain");
+		utils.book_append_sheet(
+			book,
+			utils.aoa_to_sheet([
+				["a", "b", "c"],
+				[1, 2, 3],
+				[4, 5, 6],
+			]),
+			"Gel & co",
+		);
+		const zip = CFB.read(
+			new Uint8Array(write(book, { type: "array", bookType: "ods" })),
+			{ type: "array" },
+		);
+		const item = (name: string, value: number) =>
+			`<config:config-item config:name='${name}' config:type="int">${value}</config:config-item>`;
+		CFB.utils.cfb_add(
+			zip,
+			"settings.xml",
+			new TextEncoder().encode(
+				`<office:document-settings><office:settings><config:config-item-set config:name="ooo:view-settings"><config:config-item-map-indexed config:name="Views"><config:config-item-map-entry><config:config-item-map-named config:name="Tables"><config:config-item-map-entry config:name="Plain">${item("HorizontalSplitMode", 1)}${item("HorizontalSplitPosition", 300)}</config:config-item-map-entry><config:config-item-map-entry config:name="Gel &amp; co">${item("HorizontalSplitMode", 2)}${item("HorizontalSplitPosition", 1)}${item("VerticalSplitMode", 2)}${item("VerticalSplitPosition", 2)}</config:config-item-map-entry></config:config-item-map-named></config:config-item-map-entry></config:config-item-map-indexed></config:config-item-set></office:settings></office:document-settings>`,
+			),
+		);
+		const bytes = new Uint8Array(
+			CFB.write(zip, { fileType: "zip", type: "array" }),
+		);
+		const model = openWorkbook({ kind: "bytes", fileName: "p.ods", bytes });
+		expect(model.sheets.map((sheet) => sheet.frozen)).toEqual([
+			{ rows: 0, cols: 0 },
+			{ rows: 2, cols: 1 },
+		]);
 	});
 });
