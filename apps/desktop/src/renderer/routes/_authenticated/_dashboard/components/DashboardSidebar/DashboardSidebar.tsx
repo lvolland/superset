@@ -532,8 +532,7 @@ export function DashboardSidebar({
 			isCollapsed={isCollapsed}
 			isDragDisabled={
 				isProjectDragDisabled ||
-				(!isCollapsed &&
-					sortMode !== "manual" &&
+				(sortMode !== "manual" &&
 					projectCollections.collectionByProjectId.has(project.id))
 			}
 			workspaceShortcutLabels={workspaceShortcutLabels}

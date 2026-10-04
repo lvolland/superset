@@ -244,7 +244,7 @@ export async function mutateProjectCollection(
 						projects.target.machineId === host.target.machineId &&
 						projects.rows?.some((row) => row.supportsProjectTags === true),
 				);
-			if (!supportsProjectScope) continue;
+			if (host.status === "error" && !supportsProjectScope) continue;
 			pendingDeletes.push({ machineId: host.target.machineId, tag });
 			host.settings = host.settings.filter(
 				(row) => row.scope !== PROJECTS_TAG_SCOPE || row.tag !== tag,

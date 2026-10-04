@@ -874,8 +874,8 @@ test("rail and expanded reorders share project order without collections", async
 	);
 });
 
-for (const status of ["error", "offline"] as const) {
-	test(`deletion does not queue a ${status} host without project scope support`, async () => {
+for (const status of ["error", "offline", "pending"] as const) {
+	test(`deletion ${status === "error" ? "does not queue" : "queues"} a ${status} host without cached project scope support`, async () => {
 		const h = setup();
 		const remote = h.state().folderHosts[1];
 		const projects = h.state().projectHosts[1];
@@ -893,6 +893,8 @@ for (const status of ["error", "offline"] as const) {
 				tag: "other",
 			}),
 		).toBe(true);
-		expect(pending).toEqual([]);
+		expect(pending).toEqual(
+			status === "error" ? [] : [{ machineId: "remote", tag: "other" }],
+		);
 	});
 }
