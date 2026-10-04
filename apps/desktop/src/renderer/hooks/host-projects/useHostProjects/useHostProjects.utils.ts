@@ -260,6 +260,7 @@ export function applyProjectChangedEvent(
 	},
 	projectId: string,
 	viewerUserId: string | null = null,
+	requestRefresh?: () => void,
 ): HostProjectRow[] | undefined {
 	if (event.eventType === "deleted") {
 		if (!rows) return rows;
@@ -269,6 +270,12 @@ export function applyProjectChangedEvent(
 	const snapshot = event.project;
 	if (!snapshot) return rows;
 	const existing = rows?.find((row) => row.id === snapshot.id);
+	if (
+		!existing &&
+		snapshot.tagAssignments === undefined &&
+		snapshot.tags === undefined
+	)
+		requestRefresh?.();
 	const nextRow: HostProjectRow = {
 		id: snapshot.id,
 		tags: snapshot.tagAssignments

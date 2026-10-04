@@ -15,9 +15,15 @@ import {
 } from "../../utils/projectCollections/projectCollections";
 
 export type ProjectCollectionCommand =
-	| { type: "move"; projectIds: string[]; tag: string | null; index?: number }
+	| {
+			type: "move";
+			projectIds: string[];
+			tag: string | null;
+			index?: number;
+			beforeKey?: string | null;
+	  }
 	| { type: "create"; tag: string; name: string; projectIds?: string[] }
-	| { type: "rename"; tag: string; name: string }
+	| { type: "rename"; tag: string; name: string; replacementTag?: string }
 	| { type: "color"; tag: string; color: string | null }
 	| { type: "delete"; tag: string }
 	| { type: "collapse"; tag: string; isCollapsed: boolean }
@@ -45,7 +51,40 @@ export interface ProjectCollectionMutationAdapter {
 		rows: ProjectCollectionPlacement[],
 		removeKeys: string[],
 	): Promise<unknown>;
-	invalidate(): void;
+	invalidate(): void | Promise<void>;
+}
+
+const mutationQueues = new Map<string, Promise<unknown>>();
+
+export function enqueueProjectCollectionMutation<T>(
+	scope: string,
+	work: () => Promise<T>,
+): Promise<T> {
+	const previous = mutationQueues.get(scope);
+	const result = (previous ?? Promise.resolve())
+		.catch(() => undefined)
+		.then(work);
+	const tail = result.catch(() => undefined);
+	mutationQueues.set(scope, tail);
+	void tail.then(() => {
+		if (mutationQueues.get(scope) === tail) mutationQueues.delete(scope);
+	});
+	return result;
+}
+
+function isUnsupportedProjectScope(error: unknown): boolean {
+	if (isMissingProcedureError(error)) return true;
+	if (!error || typeof error !== "object") return false;
+	const { data, message } = error as {
+		data?: { code?: string };
+		message?: string;
+	};
+	return (
+		data?.code === "BAD_REQUEST" &&
+		typeof message === "string" &&
+		/scope/.test(message) &&
+		/uuid|sessions|invalid_union/i.test(message)
+	);
 }
 
 function requiredTag(value: string): string {
@@ -102,10 +141,23 @@ export async function mutateProjectCollection(
 	const collection = tag
 		? view.collections.find((row) => row.tag === tag)
 		: undefined;
+	const replacementTag =
+		command.type === "rename" && command.replacementTag
+			? requiredTag(command.replacementTag)
+			: null;
+	if (
+		replacementTag &&
+		replacementTag !== tag &&
+		view.collections.some((row) => row.tag === replacementTag)
+	)
+		return false;
 	const projectIds =
 		command.type === "move" || command.type === "create"
 			? [...new Set(command.projectIds ?? [])]
-			: command.type === "delete"
+			: command.type === "delete" ||
+					(command.type === "rename" &&
+						replacementTag !== null &&
+						replacementTag !== tag)
 				? [...projectMap.values()]
 						.filter((project) => project.tags.includes(tag as string))
 						.map((project) => project.id)
@@ -136,14 +188,10 @@ export async function mutateProjectCollection(
 	const settingWrite = ["create", "rename", "color", "delete"].includes(
 		command.type,
 	);
-	if (
-		settingWrite &&
-		(!before.folderHosts.length ||
-			before.folderHosts.some(
-				(host) => !host.target.hostUrl || host.status !== "ready",
-			))
-	)
-		return false;
+	const writableFolderHosts = next.folderHosts.filter(
+		(host) => host.target.hostUrl && host.status === "ready",
+	);
+	if (settingWrite && !writableFolderHosts.length) return false;
 	if (
 		(command.type === "rename" || command.type === "create") &&
 		(!command.name.trim() || command.name.trim().length > 200)
@@ -160,8 +208,11 @@ export async function mutateProjectCollection(
 		for (const row of host.rows ?? []) {
 			if (!projectIds.includes(row.id)) continue;
 			rollback.push({ projectId: row.id, tags: row.tags ?? [] });
-			row.tags =
-				command.type === "delete"
+			row.tags = replacementTag
+				? (row.tags ?? []).map((entry) =>
+						entry === tag ? replacementTag : entry,
+					)
+				: command.type === "delete"
 					? view.collectionByProjectId.get(row.id)?.tag === tag
 						? []
 						: (row.tags ?? []).filter((entry) => entry !== tag)
@@ -175,11 +226,12 @@ export async function mutateProjectCollection(
 	}
 	const settingWrites: Array<{
 		url: string;
+		tag: string;
 		setting: HostTagFolderSetting | null;
 		rollback: HostTagFolderSetting | null;
 	}> = [];
 	if (settingWrite && tag)
-		for (const host of next.folderHosts) {
+		for (const host of writableFolderHosts) {
 			const prior =
 				host.settings.find(
 					(row) => row.scope === PROJECTS_TAG_SCOPE && row.tag === tag,
@@ -189,7 +241,7 @@ export async function mutateProjectCollection(
 					? null
 					: {
 							scope: PROJECTS_TAG_SCOPE,
-							tag,
+							tag: replacementTag ?? tag,
 							displayName:
 								command.type === "rename" || command.type === "create"
 									? command.name.trim()
@@ -209,9 +261,17 @@ export async function mutateProjectCollection(
 			if (setting) host.settings.push(setting);
 			settingWrites.push({
 				url: host.target.hostUrl as string,
+				tag: replacementTag ?? tag,
 				setting,
-				rollback: prior,
+				rollback: replacementTag && replacementTag !== tag ? null : prior,
 			});
+			if (replacementTag && replacementTag !== tag)
+				settingWrites.push({
+					url: host.target.hostUrl as string,
+					tag,
+					setting: null,
+					rollback: prior,
+				});
 		}
 	const setOrder = (
 		identity: string,
@@ -233,6 +293,16 @@ export async function mutateProjectCollection(
 			"collection",
 			Math.max(0, ...view.rootItems.map((row) => row.tabOrder)) + 1,
 		);
+	if (replacementTag && tag && replacementTag !== tag) {
+		const old = placements.get(projectCollectionId(tag));
+		placements.delete(projectCollectionId(tag));
+		placements.set(projectCollectionId(replacementTag), {
+			key: projectCollectionId(replacementTag),
+			kind: "collection",
+			tabOrder: old?.tabOrder ?? collection?.tabOrder ?? 0,
+			isCollapsed: old?.isCollapsed ?? false,
+		});
+	}
 	if (command.type === "collapse" && tag)
 		placements.set(projectCollectionId(tag), {
 			key: projectCollectionId(tag),
@@ -240,12 +310,31 @@ export async function mutateProjectCollection(
 			tabOrder: collection?.tabOrder ?? 0,
 			isCollapsed: command.isCollapsed,
 		});
-	if (command.type === "reorder")
-		command.keys.forEach((key, index) => {
+	if (command.type === "reorder") {
+		const requested = new Set(command.keys);
+		const collection = view.collections.find((row) =>
+			command.keys.every((key) =>
+				row.projects.some((project) => project.id === key),
+			),
+		);
+		const allKeys = collection
+			? collection.projects.map((project) => project.id)
+			: view.rootItems.map((row) =>
+					row.type === "project" ? row.project.id : row.collection.id,
+				);
+		let index = 0;
+		const keys = allKeys.map((key) =>
+			requested.has(key) ? (command.keys[index++] ?? key) : key,
+		);
+		if (!command.keys.every((key) => allKeys.includes(key))) {
+			keys.splice(0, keys.length, ...command.keys);
+		}
+		keys.forEach((key, index) => {
 			const folder = view.collections.find((row) => row.id === key);
 			if (folder) setOrder(folder.tag, "collection", index);
 			else if (projectMap.has(key)) setOrder(key, "project", index);
 		});
+	}
 	if (command.type === "move" || command.type === "create") {
 		const members = tag
 			? (collection?.projects.map((project) => project.id) ?? [])
@@ -258,10 +347,18 @@ export async function mutateProjectCollection(
 					row.type === "project" ? row.project.id : row.collection.id,
 				);
 		const ordered = keys.filter((key) => !projectIds.includes(key));
+		const anchorIndex =
+			command.type === "move" && command.beforeKey
+				? ordered.indexOf(command.beforeKey)
+				: -1;
 		ordered.splice(
-			command.type === "move"
-				? (command.index ?? ordered.length)
-				: ordered.length,
+			command.type === "move" && command.beforeKey === null
+				? ordered.length
+				: anchorIndex >= 0
+					? anchorIndex
+					: command.type === "move"
+						? (command.index ?? ordered.length)
+						: ordered.length,
 			0,
 			...projectIds,
 		);
@@ -296,16 +393,40 @@ export async function mutateProjectCollection(
 		if (tagFailure?.status === "rejected") throw tagFailure.reason;
 		const settings = await Promise.allSettled(
 			settingWrites.map(async (write) => {
-				await adapter.setSetting(write.url, tag as string, write.setting);
+				try {
+					await adapter.setSetting(write.url, write.tag, write.setting);
+				} catch (error) {
+					if (!isUnsupportedProjectScope(error)) throw error;
+					const host = next.folderHosts.find(
+						(host) => host.target.hostUrl === write.url,
+					);
+					const prior = before.folderHosts.find(
+						(host) => host.target.hostUrl === write.url,
+					);
+					if (host && prior) host.settings = structuredClone(prior.settings);
+					return false;
+				}
 				undo.push(() =>
-					adapter.setSetting(write.url, tag as string, write.rollback),
+					adapter.setSetting(write.url, write.tag, write.rollback),
 				);
+				return true;
 			}),
 		);
 		const settingFailure = settings.find(
 			(result) => result.status === "rejected",
 		);
 		if (settingFailure?.status === "rejected") throw settingFailure.reason;
+		if (
+			settingWrites.length &&
+			!settings.some(
+				(result) => result.status === "fulfilled" && result.value === true,
+			)
+		) {
+			await Promise.allSettled(undo.reverse().map((rollback) => rollback()));
+			adapter.publish(before);
+			return false;
+		}
+		adapter.publish(next);
 		await adapter.writePlacements(
 			next.placements,
 			before.placements
@@ -325,6 +446,6 @@ export async function mutateProjectCollection(
 		}
 		throw error;
 	} finally {
-		adapter.invalidate();
+		if (tagWrites.length || settingWrite) await adapter.invalidate();
 	}
 }

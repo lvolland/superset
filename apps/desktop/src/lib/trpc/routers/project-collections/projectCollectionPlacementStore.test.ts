@@ -2,9 +2,9 @@ import { Database } from "bun:sqlite";
 import { afterEach, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { projectCollectionPlacements } from "@superset/local-db";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import type { LocalDb } from "main/lib/local-db";
-import { projectCollectionPlacements } from "../../../../../../../packages/local-db/src/schema/schema";
 import { projectCollectionPlacementStore } from "./projectCollectionPlacementStore";
 
 const databases: Database[] = [];
@@ -103,4 +103,14 @@ describe("SQLite project collection placements", () => {
 				.map((item) => item.key),
 		).toEqual([row.key]);
 	});
+});
+
+test("placement store uses the public schema table identity", async () => {
+	const { projectCollectionPlacements: publicTable } = await import(
+		"@superset/local-db"
+	);
+	const h = setup();
+	h.store().write([row], []);
+	const db = drizzle(h.sqlite);
+	expect(db.select().from(publicTable).all()[0]).toMatchObject(row);
 });

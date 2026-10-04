@@ -1,7 +1,7 @@
+import { projectCollectionPlacements } from "@superset/local-db";
 import { and, eq, inArray, notInArray } from "drizzle-orm";
 import type { LocalDb } from "main/lib/local-db";
 import type { ProjectCollectionPlacement } from "shared/project-collections";
-import { projectCollectionPlacements } from "../../../../../../../packages/local-db/src/schema/schema";
 
 export function projectCollectionPlacementStore(
 	db: LocalDb,

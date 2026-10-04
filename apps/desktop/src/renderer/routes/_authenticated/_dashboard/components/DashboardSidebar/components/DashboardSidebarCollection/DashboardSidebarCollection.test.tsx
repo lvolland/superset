@@ -30,10 +30,18 @@ const collection: ProjectCollection<{ id: string }> = {
 };
 const run = mock(async () => true);
 const setEditingTag = mock(() => {});
+const setNewCollectionTag = mock(() => {});
 
-function mount(editingTag: string | null = null, isCollapsed = true) {
+function mount(
+	editingTag: string | null = null,
+	isCollapsed = true,
+	newCollectionTag: string | null = null,
+) {
 	const value = {
 		editingTag,
+		newCollectionTag,
+		setNewCollectionTag,
+		collections: [collection],
 		setEditingTag,
 		run,
 	} as unknown as SidebarProjectCollectionsValue;
@@ -55,6 +63,7 @@ afterEach(() => {
 	cleanup();
 	run.mockClear();
 	setEditingTag.mockClear();
+	setNewCollectionTag.mockClear();
 	document.body.style.pointerEvents = "";
 });
 afterAll(async () => {
@@ -149,4 +158,22 @@ describe("collection row", () => {
 		});
 		expect(run).toHaveBeenCalledWith({ type: "delete", tag: "team" });
 	});
+});
+
+test("the first inline name mints the readable CLI tag", async () => {
+	mount("team", true, "team");
+	const input = within(document.body).getByRole("textbox", {
+		name: "Collection name",
+	});
+	await act(async () => {
+		fireEvent.change(input, { target: { value: "Perso" } });
+		fireEvent.keyDown(input, { key: "Enter" });
+	});
+	expect(run).toHaveBeenCalledWith({
+		type: "rename",
+		tag: "team",
+		name: "Perso",
+		replacementTag: "perso",
+	});
+	expect(setNewCollectionTag).toHaveBeenCalledWith(null);
 });

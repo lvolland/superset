@@ -172,3 +172,21 @@ describe("personal project tags", () => {
 		).toEqual([]);
 	});
 });
+
+test("a newly created or restored project requests tags immediately when its snapshot omits them", () => {
+	const { tags: _, ...row } = normalizeHostProjectRow({
+		id: "one",
+		repoPath: "/one",
+	});
+	for (const eventType of ["created", "updated"] as const) {
+		const reads: string[] = [];
+		applyProjectChangedEvent(
+			[],
+			{ eventType, project: row },
+			"one",
+			"alice",
+			() => reads.push("list"),
+		);
+		expect(reads).toEqual(["list"]);
+	}
+});

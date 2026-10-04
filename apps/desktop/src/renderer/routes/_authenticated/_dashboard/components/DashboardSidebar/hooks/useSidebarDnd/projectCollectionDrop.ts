@@ -6,6 +6,8 @@ export const collectionDropId = (id: string) => `collection-drop:${id}`;
 
 export interface ProjectCollectionDragLayout {
 	rootKeys: string[];
+	isRail?: boolean;
+	immovableProjectIds?: string[];
 	collections: Array<{
 		id: string;
 		tag: string;
@@ -20,16 +22,25 @@ export function planProjectCollectionDrop(
 	active: string,
 	over: string,
 ): ProjectCollectionCommand | null {
-	if (active === over) return null;
+	if (active === over || layout.immovableProjectIds?.includes(active))
+		return null;
+	if (layout.isRail) {
+		const keys = layout.rootKeys.flatMap(
+			(key) =>
+				layout.collections.find((row) => row.id === key)?.projectIds ?? [key],
+		);
+		const from = keys.indexOf(active);
+		const to = keys.indexOf(over);
+		return from >= 0 && to >= 0
+			? { type: "reorder", keys: arrayMove(keys, from, to) }
+			: null;
+	}
 	const source = layout.collections.find((row) =>
 		row.projectIds.includes(active),
 	);
 	const draggedCollection = layout.collections.find((row) => row.id === active);
 	const target = layout.collections.find(
-		(row) =>
-			row.id === over ||
-			row.projectIds.includes(over) ||
-			collectionDropId(row.id) === over,
+		(row) => row.projectIds.includes(over) || collectionDropId(row.id) === over,
 	);
 	if (draggedCollection) {
 		const targetKey = target?.id ?? over;
@@ -60,6 +71,7 @@ export function planProjectCollectionDrop(
 			projectIds: [active],
 			tag: target.tag,
 			index: index < 0 ? target.projectIds.length : index,
+			beforeKey: index >= 0 ? over : null,
 		};
 	}
 	const index =
@@ -67,7 +79,14 @@ export function planProjectCollectionDrop(
 			? layout.rootKeys.length
 			: layout.rootKeys.indexOf(over);
 	if (index < 0) return null;
-	if (source) return { type: "move", projectIds: [active], tag: null, index };
+	if (source)
+		return {
+			type: "move",
+			projectIds: [active],
+			tag: null,
+			index,
+			beforeKey: over !== PROJECT_COLLECTION_ROOT_DROP ? over : null,
+		};
 	const from = layout.rootKeys.indexOf(active);
 	const to = Math.min(index, layout.rootKeys.length - 1);
 	return from >= 0 && from !== to

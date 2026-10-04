@@ -9,6 +9,8 @@ export interface SidebarProjectCollectionsValue
 	run: (command: ProjectCollectionCommand) => Promise<boolean>;
 	create: (projectIds?: string[]) => void;
 	editingTag: string | null;
+	newCollectionTag: string | null;
+	setNewCollectionTag: (tag: string | null) => void;
 	setEditingTag: (tag: string | null) => void;
 }
 

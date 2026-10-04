@@ -20,12 +20,11 @@ import { useLocalHostService } from "renderer/routes/_authenticated/providers/Lo
 import type { ProjectCollectionPlacement } from "shared/project-collections";
 import { deriveProjectCollections } from "../../utils/projectCollections/projectCollections";
 import {
+	enqueueProjectCollectionMutation,
 	mutateProjectCollection,
 	type ProjectCollectionCommand,
 	type ProjectCollectionMutationState,
 } from "./projectCollectionMutations";
-
-const pendingScopes = new Set<string>();
 
 export function useProjectCollections(filter = "") {
 	const projects = useHostProjects();
@@ -129,39 +128,48 @@ export function useProjectCollections(filter = "") {
 	const lastReconciled = useRef("");
 	useEffect(() => {
 		const identity = `${scope.organizationId}\u0000${scope.userId}\u0000${knownKeys}`;
-		if (
-			!canReconcile ||
-			pendingScopes.has(scopeKey) ||
-			lastReconciled.current === identity
-		)
-			return;
+		if (!canReconcile || lastReconciled.current === identity) return;
 		lastReconciled.current = identity;
-		pendingScopes.add(scopeKey);
-		void reconcile
-			.mutateAsync({
+		void enqueueProjectCollectionMutation(scopeKey, async () => {
+			await reconcile.mutateAsync({
 				...scope,
-				keys: knownKeys ? knownKeys.split("\u0000") : [],
-			})
-			.then(() => utils.projectCollections.list.invalidate(scope))
-			.catch(() => {
-				lastReconciled.current = "";
-			})
-			.finally(() => pendingScopes.delete(scopeKey));
+				keys: [
+					...new Set([
+						...current.current.projectHosts.flatMap((host) =>
+							(host.rows ?? []).map((row) => row.id),
+						),
+						...current.current.projectHosts.flatMap((host) =>
+							(host.rows ?? []).flatMap((row) =>
+								(row.tags ?? []).map((tag) => `${PROJECTS_TAG_SCOPE}:${tag}`),
+							),
+						),
+						...current.current.folderHosts.flatMap((host) =>
+							host.settings
+								.filter((row) => row.scope === PROJECTS_TAG_SCOPE)
+								.map((row) => `${PROJECTS_TAG_SCOPE}:${row.tag}`),
+						),
+					]),
+				],
+			});
+			await utils.projectCollections.list.invalidate(scope);
+		}).catch(() => {
+			lastReconciled.current = "";
+		});
 	}, [canReconcile, knownKeys, scope, scopeKey, reconcile, utils]);
 	const mutate = useCallback(
 		async (command: ProjectCollectionCommand) => {
-			if (!enabled || !placementsQuery.isSuccess || pendingScopes.has(scopeKey))
-				return false;
-			pendingScopes.add(scopeKey);
-			const baseline = current.current;
-			try {
+			if (!enabled || !placementsQuery.isSuccess) return false;
+			return enqueueProjectCollectionMutation(scopeKey, async () => {
+				const localOnly =
+					command.type === "collapse" || command.type === "reorder";
+
 				await Promise.all([
-					...current.current.projectHosts.map((host) =>
+					...(localOnly ? [] : current.current.projectHosts).map((host) =>
 						queryClient.cancelQueries({
 							queryKey: getHostProjectsQueryKey(host.target),
 						}),
 					),
-					...current.current.folderHosts.map((host) =>
+					...(localOnly ? [] : current.current.folderHosts).map((host) =>
 						queryClient.cancelQueries({
 							queryKey: [
 								"host-tag-folders",
@@ -172,6 +180,27 @@ export function useProjectCollections(filter = "") {
 					),
 					utils.projectCollections.list.cancel(scope),
 				]);
+				const baseline: ProjectCollectionMutationState = {
+					projectHosts: current.current.projectHosts.map((host) => ({
+						...host,
+						rows:
+							queryClient.getQueryData<HostProjectRow[]>(
+								getHostProjectsQueryKey(host.target),
+							) ?? host.rows,
+					})),
+					folderHosts: current.current.folderHosts.map((host) => ({
+						...host,
+						settings:
+							queryClient.getQueryData<HostTagFolderSetting[]>([
+								"host-tag-folders",
+								host.target.organizationId,
+								host.target.machineId,
+							]) ?? host.settings,
+					})),
+					placements:
+						utils.projectCollections.list.getData(scope) ??
+						current.current.placements,
+				};
 				return await mutateProjectCollection(
 					{
 						read: () => ({
@@ -195,12 +224,12 @@ export function useProjectCollections(filter = "") {
 						}),
 						publish: (state) => {
 							current.current = state;
-							for (const host of state.projectHosts)
+							for (const host of localOnly ? [] : state.projectHosts)
 								queryClient.setQueryData<HostProjectRow[]>(
 									getHostProjectsQueryKey(host.target),
 									host.rows,
 								);
-							for (const host of state.folderHosts)
+							for (const host of localOnly ? [] : state.folderHosts)
 								queryClient.setQueryData<HostTagFolderSetting[]>(
 									[
 										"host-tag-folders",
@@ -267,27 +296,38 @@ export function useProjectCollections(filter = "") {
 									}),
 						writePlacements: (rows, removeKeys) =>
 							write.mutateAsync({ ...scope, rows, removeKeys }),
-						invalidate: () => {
-							for (const host of baseline.projectHosts)
-								void queryClient.invalidateQueries({
-									queryKey: getHostProjectsQueryKey(host.target),
-								});
-							for (const host of baseline.folderHosts)
-								void queryClient.invalidateQueries({
-									queryKey: [
-										"host-tag-folders",
-										host.target.organizationId,
-										host.target.machineId,
-									],
-								});
-							void utils.projectCollections.list.invalidate(scope);
+						invalidate: async () => {
+							const refreshes: Promise<unknown>[] = [];
+							for (const host of command.type === "move" ||
+							command.type === "delete" ||
+							(command.type === "create" && command.projectIds?.length) ||
+							(command.type === "rename" && command.replacementTag)
+								? baseline.projectHosts
+								: [])
+								refreshes.push(
+									queryClient.invalidateQueries({
+										queryKey: getHostProjectsQueryKey(host.target),
+									}),
+								);
+							for (const host of command.type === "move"
+								? []
+								: baseline.folderHosts)
+								refreshes.push(
+									queryClient.invalidateQueries({
+										queryKey: [
+											"host-tag-folders",
+											host.target.organizationId,
+											host.target.machineId,
+										],
+									}),
+								);
+							refreshes.push(utils.projectCollections.list.invalidate(scope));
+							await Promise.allSettled(refreshes);
 						},
 					},
 					command,
 				);
-			} finally {
-				pendingScopes.delete(scopeKey);
-			}
+			});
 		},
 		[
 			enabled,

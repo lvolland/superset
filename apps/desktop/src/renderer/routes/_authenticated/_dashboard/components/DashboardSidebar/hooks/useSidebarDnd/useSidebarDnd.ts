@@ -792,15 +792,12 @@ export function useSidebarDnd({
 			if (type === "project") {
 				const targets = args.droppableContainers.filter(
 					(container) =>
-						(projectIds.has(String(container.id)) &&
-							!collectionLayout?.collections.some(
-								(row) => row.id === String(container.id),
-							)) ||
+						projectIds.has(String(container.id)) ||
 						(collectionLayout &&
 							(String(container.id).startsWith("collection-drop:") ||
 								container.id === PROJECT_COLLECTION_ROOT_DROP)),
 				);
-				if (collectionLayout) {
+				if (collectionLayout && !collectionLayout.isRail) {
 					const pointerHits = pointerWithin({
 						...args,
 						droppableContainers: targets,

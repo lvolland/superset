@@ -30,10 +30,19 @@ describe("project collection drops", () => {
 				"root-a",
 				collectionDropId("projects:team"),
 			),
-		).toEqual({ type: "move", projectIds: ["root-a"], tag: "team", index: 3 });
+		).toEqual({
+			type: "move",
+			projectIds: ["root-a"],
+			tag: "team",
+			index: 3,
+			beforeKey: null,
+		});
 		expect(
 			planProjectCollectionDrop(layout, "root-a", "projects:team"),
-		).toEqual({ type: "move", projectIds: ["root-a"], tag: "team", index: 3 });
+		).toEqual({
+			type: "reorder",
+			keys: ["projects:team", "root-a", "root-b", "projects:personal"],
+		});
 	});
 	test("moves into an empty collection", () => {
 		expect(
@@ -42,7 +51,13 @@ describe("project collection drops", () => {
 				"a",
 				collectionDropId("projects:personal"),
 			),
-		).toEqual({ type: "move", projectIds: ["a"], tag: "personal", index: 0 });
+		).toEqual({
+			type: "move",
+			projectIds: ["a"],
+			tag: "personal",
+			index: 0,
+			beforeKey: null,
+		});
 	});
 	test("inserts across collections at the hovered project", () => {
 		const two = {
@@ -57,6 +72,7 @@ describe("project collection drops", () => {
 			projectIds: ["a"],
 			tag: "other",
 			index: 1,
+			beforeKey: "e",
 		});
 	});
 	test("reorders inside a collection", () => {
@@ -71,12 +87,19 @@ describe("project collection drops", () => {
 			projectIds: ["a"],
 			tag: null,
 			index: 2,
+			beforeKey: "root-b",
 		});
 	});
 	test("returns a member to the end of the root", () => {
 		expect(
 			planProjectCollectionDrop(layout, "a", PROJECT_COLLECTION_ROOT_DROP),
-		).toEqual({ type: "move", projectIds: ["a"], tag: null, index: 4 });
+		).toEqual({
+			type: "move",
+			projectIds: ["a"],
+			tag: null,
+			index: 4,
+			beforeKey: null,
+		});
 	});
 	test("reorders a collection over a member of another collection", () => {
 		const two = {
@@ -102,4 +125,52 @@ describe("project collection drops", () => {
 			),
 		).toBeNull();
 	});
+});
+
+test("a root project can be reordered above a collection", () => {
+	expect(planProjectCollectionDrop(layout, "root-b", "projects:team")).toEqual({
+		type: "reorder",
+		keys: ["root-a", "root-b", "projects:team", "projects:personal"],
+	});
+});
+
+test("a member can return to root above a collection without entering it", () => {
+	expect(
+		planProjectCollectionDrop(layout, "a", "projects:personal"),
+	).toMatchObject({
+		type: "move",
+		projectIds: ["a"],
+		tag: null,
+		beforeKey: "projects:personal",
+	});
+});
+
+test("icon rail reorder cannot add or remove project membership", () => {
+	expect(
+		planProjectCollectionDrop(
+			{ ...layout, isRail: true } as ProjectCollectionDragLayout,
+			"a",
+			"root-b",
+		),
+	).toEqual({ type: "reorder", keys: ["root-a", "b", "c", "root-b", "a"] });
+	expect(
+		planProjectCollectionDrop(
+			{ ...layout, isRail: true } as ProjectCollectionDragLayout,
+			"root-a",
+			"a",
+		)?.type,
+	).toBe("reorder");
+});
+
+test("a root project on a legacy host cannot be dragged into a collection", () => {
+	expect(
+		planProjectCollectionDrop(
+			{
+				...layout,
+				immovableProjectIds: ["root-a"],
+			} as ProjectCollectionDragLayout,
+			"root-a",
+			collectionDropId("projects:team"),
+		),
+	).toBeNull();
 });

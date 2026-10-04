@@ -17,6 +17,7 @@ import { cn } from "@superset/ui/utils";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { HiEllipsisHorizontal } from "react-icons/hi2";
 import type { ProjectCollection } from "renderer/routes/_authenticated/utils/projectCollections/projectCollections";
+import { mintFolderTag } from "renderer/routes/_authenticated/utils/workspaceTagFolders";
 import { collectionDropId } from "../../hooks/useSidebarDnd/projectCollectionDrop";
 import { useSidebarProjectCollections } from "../../providers/DashboardSidebarProjectCollectionsProvider/DashboardSidebarProjectCollectionsProvider";
 import { DashboardSidebarGroupHeader } from "../DashboardSidebarGroupHeader";
@@ -67,9 +68,20 @@ export function DashboardSidebarCollection({
 					type: "rename",
 					tag: collection.tag,
 					name: name.trim(),
+					...(state?.newCollectionTag === collection.tag
+						? {
+								replacementTag: mintFolderTag(
+									name,
+									state.collections
+										.filter((row) => row.tag !== collection.tag)
+										.map((row) => row.tag),
+								),
+							}
+						: {}),
 				});
 				if (!saved) return;
 			}
+			state?.setNewCollectionTag(null);
 			state?.setEditingTag(null);
 		} finally {
 			submitting.current = false;
@@ -96,10 +108,7 @@ export function DashboardSidebarCollection({
 			<ContextMenu>
 				<ContextMenuTrigger asChild>
 					<DashboardSidebarGroupHeader
-						ref={(node) => {
-							setNodeRef(node);
-							setDropRef(node);
-						}}
+						ref={setNodeRef}
 						indentation="top-level"
 						isCollapsed={collection.isCollapsed}
 						isEditing={editing}
@@ -133,7 +142,10 @@ export function DashboardSidebarCollection({
 									}
 						}
 						label={
-							<>
+							<span
+								ref={setDropRef}
+								className="flex min-w-0 flex-1 items-center gap-2"
+							>
 								<span
 									className="size-2.5 shrink-0 rounded-full bg-muted-foreground"
 									style={
@@ -161,6 +173,7 @@ export function DashboardSidebarCollection({
 											}
 											if (event.key === "Escape") {
 												event.preventDefault();
+												state?.setNewCollectionTag(null);
 												state?.setEditingTag(null);
 											}
 										}}
@@ -173,7 +186,7 @@ export function DashboardSidebarCollection({
 										{formatNumber(collection.projects.length)}
 									</span>
 								)}
-							</>
+							</span>
 						}
 						actions={
 							<DropdownMenu>

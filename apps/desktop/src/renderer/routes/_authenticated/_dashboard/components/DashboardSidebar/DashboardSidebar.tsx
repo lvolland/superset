@@ -27,6 +27,7 @@ import { useDashboardSidebarState } from "renderer/routes/_authenticated/hooks/u
 import type { ProjectCollectionCommand } from "renderer/routes/_authenticated/hooks/useProjectCollections";
 import { useProjectCollections } from "renderer/routes/_authenticated/hooks/useProjectCollections";
 import { useLocalHostService } from "renderer/routes/_authenticated/providers/LocalHostServiceProvider";
+import { mintFolderTag } from "renderer/routes/_authenticated/utils/workspaceTagFolders";
 import { useSidebarSectionsCollapseStore } from "renderer/stores/sidebar-sections-collapse";
 import { useV2NotificationStore } from "renderer/stores/v2-notifications";
 import { DashboardSidebarBulkActions } from "./components/DashboardSidebarBulkActions";
@@ -65,7 +66,7 @@ import type {
 	DashboardSidebarProject,
 	DashboardSidebarWorkspace,
 } from "./types";
-import { buildSidebarCollectionView } from "./utils/buildSidebarCollectionView/buildSidebarCollectionView";
+import { buildSidebarCollectionView } from "./utils/buildSidebarCollectionView";
 import { getProjectChildrenWorkspaces } from "./utils/projectChildren";
 import { sortDashboardSidebarProjects } from "./utils/sortDashboardSidebarProjects";
 
@@ -186,6 +187,7 @@ export function DashboardSidebar({
 	const [projectFilterQuery, setProjectFilterQuery] = useState("");
 	const projectCollections = useProjectCollections();
 	const [editingTag, setEditingTag] = useState<string | null>(null);
+	const [newCollectionTag, setNewCollectionTag] = useState<string | null>(null);
 	const runCollectionCommand = useCallback(
 		async (command: ProjectCollectionCommand) => {
 			try {
@@ -204,17 +206,24 @@ export function DashboardSidebar({
 			setProjectFilterQuery("");
 			const sections = useSidebarSectionsCollapseStore.getState();
 			if (sections.collapsed.workspaces) sections.toggle("workspaces");
-			const tag = `collection-${crypto.randomUUID()}`;
+			const name = t({ message: "New collection" });
+			const tag = mintFolderTag(
+				name,
+				projectCollections.collections.map((row) => row.tag),
+			);
 			void runCollectionCommand({
 				type: "create",
 				tag,
-				name: t({ message: "New collection" }),
+				name,
 				projectIds,
 			}).then((saved) => {
-				if (saved) setEditingTag(tag);
+				if (saved) {
+					setNewCollectionTag(tag);
+					setEditingTag(tag);
+				}
 			});
 		},
-		[runCollectionCommand, t],
+		[runCollectionCommand, projectCollections.collections, t],
 	);
 	// The icon rail hides the Projects header (and its filter input); a
 	// filter left active there would invisibly hide projects.
@@ -290,6 +299,10 @@ export function DashboardSidebar({
 	);
 	const collectionDragLayout = useMemo(
 		() => ({
+			isRail: isCollapsed,
+			immovableProjectIds: displayedGroups
+				.filter((project) => !projectCollections.canMoveProject(project.id))
+				.map((project) => project.id),
 			rootKeys: unfilteredCollectionView.rootItems.map((item) =>
 				item.type === "project" ? item.project.id : item.collection.id,
 			),
@@ -309,7 +322,12 @@ export function DashboardSidebar({
 					: [],
 			),
 		}),
-		[unfilteredCollectionView],
+		[
+			unfilteredCollectionView,
+			isCollapsed,
+			displayedGroups,
+			projectCollections.canMoveProject,
+		],
 	);
 	const trimmedFilterQuery = projectFilterQuery.trim();
 	const isFilterActive = trimmedFilterQuery !== "";
@@ -500,8 +518,7 @@ export function DashboardSidebar({
 			isCollapsed={isCollapsed}
 			isDragDisabled={
 				isProjectDragDisabled ||
-				(!projectCollections.canMoveProject(project.id) &&
-					projectCollections.collectionByProjectId.has(project.id)) ||
+				!projectCollections.canMoveProject(project.id) ||
 				(sortMode !== "manual" &&
 					projectCollections.collectionByProjectId.has(project.id))
 			}
@@ -518,6 +535,8 @@ export function DashboardSidebar({
 				run: runCollectionCommand,
 				create: createCollection,
 				editingTag,
+				newCollectionTag,
+				setNewCollectionTag,
 				setEditingTag,
 			}}
 		>

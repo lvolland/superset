@@ -177,6 +177,11 @@ export function useHostProjects(): UseHostProjectsResult {
 								event,
 								projectId,
 								currentUserId,
+								() => {
+									void queryClient.invalidateQueries({
+										queryKey: getHostProjectsQueryKey(target),
+									});
+								},
 							);
 							if (next && next !== rows) {
 								saveHostProjectsSnapshot(

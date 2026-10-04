@@ -3,6 +3,7 @@ import { PROJECTS_TAG_SCOPE } from "@superset/shared/workspace-tags";
 import { normalizeHostProjectRow } from "renderer/hooks/host-projects/useHostProjects/useHostProjects.utils";
 import type { HostTagFolderSetting } from "renderer/hooks/host-projects/useHostTagFolders/useHostTagFolders.utils";
 import {
+	enqueueProjectCollectionMutation,
 	mutateProjectCollection,
 	type ProjectCollectionMutationAdapter,
 	type ProjectCollectionMutationState,
@@ -335,4 +336,322 @@ test("delete preserves mixed root position, member order and projects in another
 		h.state().projectHosts[0]?.rows?.find((row) => row.id === "secondary")
 			?.tags,
 	).toEqual(["other"]);
+});
+
+test("presentation writes ignore offline hosts", async () => {
+	const h = setup();
+	const remote = h.state().folderHosts[1];
+	if (!remote) throw new Error("Missing remote fixture");
+	remote.target.hostUrl = null;
+	remote.status = "offline";
+	expect(
+		await mutateProjectCollection(h.adapter, {
+			type: "create",
+			tag: "new",
+			name: "New",
+		}),
+	).toBe(true);
+	expect(h.settingCalls.map((call) => call.url)).toEqual(["local"]);
+});
+
+test("presentation writes skip hosts with the legacy projects scope schema", async () => {
+	const h = setup();
+	h.adapter.setSetting = async (url, tag, setting) => {
+		h.settingCalls.push({ url, tag, setting });
+		if (url === "remote")
+			throw Object.assign(
+				new Error("Invalid input: scope must be sessions or uuid"),
+				{ data: { code: "BAD_REQUEST" } },
+			);
+	};
+	expect(
+		await mutateProjectCollection(h.adapter, {
+			type: "rename",
+			tag: "team",
+			name: "Renamed",
+		}),
+	).toBe(true);
+	expect(
+		h.state().folderHosts[0]?.settings.find((row) => row.tag === "team")
+			?.displayName,
+	).toBe("Renamed");
+	expect(
+		h.state().folderHosts[1]?.settings.find((row) => row.tag === "team")
+			?.displayName,
+	).toBe("Team");
+});
+
+test("local collapse never invalidates host queries", async () => {
+	const h = setup();
+	await mutateProjectCollection(h.adapter, {
+		type: "collapse",
+		tag: "team",
+		isCollapsed: false,
+	});
+	expect(h.invalidations()).toBe(0);
+});
+
+test("a visible drop anchor preserves hidden root predecessors", async () => {
+	const h = setup();
+	for (const host of h.state().projectHosts)
+		host.rows?.push(
+			...["hidden", "root-a", "root-b"].map((id) =>
+				normalizeHostProjectRow({ id, repoPath: `/${id}`, tags: [] }),
+			),
+		);
+	h.state().placements.push(
+		...["hidden", "root-a", "root-b"].map((key, tabOrder) => ({
+			key,
+			tabOrder,
+			kind: "project" as const,
+			isCollapsed: false,
+		})),
+	);
+	await mutateProjectCollection(h.adapter, {
+		type: "move",
+		projectIds: ["a"],
+		tag: null,
+		index: 1,
+		beforeKey: "root-b",
+	});
+	const order = h
+		.state()
+		.placements.filter((row) =>
+			["hidden", "root-a", "a", "root-b"].includes(row.key),
+		)
+		.sort((a, b) => a.tabOrder - b.tabOrder)
+		.map((row) => row.key);
+	expect(order).toEqual(["hidden", "root-a", "a", "root-b"]);
+});
+
+test("a visible member anchor preserves hidden collection predecessors", async () => {
+	const h = setup();
+	for (const host of h.state().projectHosts)
+		host.rows?.push(
+			normalizeHostProjectRow({
+				id: "hidden",
+				repoPath: "/hidden",
+				tags: ["other"],
+			}),
+			normalizeHostProjectRow({
+				id: "target",
+				repoPath: "/target",
+				tags: ["other"],
+			}),
+		);
+	h.state().placements.push(
+		{ key: "hidden", kind: "project", tabOrder: 0, isCollapsed: false },
+		{ key: "target", kind: "project", tabOrder: 1, isCollapsed: false },
+	);
+	await mutateProjectCollection(h.adapter, {
+		type: "move",
+		projectIds: ["a"],
+		tag: "other",
+		index: 0,
+		beforeKey: "target",
+	});
+	const order = h
+		.state()
+		.placements.filter((row) => ["hidden", "a", "target"].includes(row.key))
+		.sort((a, b) => a.tabOrder - b.tabOrder)
+		.map((row) => row.key);
+	expect(order).toEqual(["hidden", "a", "target"]);
+});
+
+test("initial inline name gives a collection the same tag the CLI targets", async () => {
+	const h = setup();
+	await mutateProjectCollection(h.adapter, {
+		type: "create",
+		tag: "new collection",
+		name: "New collection",
+		projectIds: ["a"],
+	});
+	expect(
+		await mutateProjectCollection(h.adapter, {
+			type: "rename",
+			tag: "new collection",
+			name: "Dibsteur",
+			replacementTag: "dibsteur",
+		} as Parameters<typeof mutateProjectCollection>[1]),
+	).toBe(true);
+	expect(
+		h.state().projectHosts[0]?.rows?.find((row) => row.id === "a")?.tags,
+	).toEqual(["dibsteur"]);
+	expect(
+		h.state().folderHosts[0]?.settings.find((row) => row.tag === "dibsteur")
+			?.displayName,
+	).toBe("Dibsteur");
+	expect(
+		h.state().placements.some((row) => row.key === "projects:new collection"),
+	).toBe(false);
+});
+
+test("commands queue behind reconciliation and read the previous committed state", async () => {
+	const h = setup();
+	let release!: () => void;
+	const gate = new Promise<void>((resolve) => {
+		release = resolve;
+	});
+	const enqueue = enqueueProjectCollectionMutation;
+	const reconcile = enqueue("org/alice", async () => {
+		await gate;
+	});
+	const first = enqueue("org/alice", () =>
+		mutateProjectCollection(h.adapter, {
+			type: "collapse",
+			tag: "team",
+			isCollapsed: false,
+		}),
+	);
+	const second = enqueue("org/alice", () =>
+		mutateProjectCollection(h.adapter, {
+			type: "collapse",
+			tag: "other",
+			isCollapsed: true,
+		}),
+	);
+	release();
+	await reconcile;
+	expect(await first).toBe(true);
+	expect(await second).toBe(true);
+	expect(
+		h.state().placements.find((row) => row.key === "projects:team")
+			?.isCollapsed,
+	).toBe(false);
+	expect(
+		h.state().placements.find((row) => row.key === "projects:other")
+			?.isCollapsed,
+	).toBe(true);
+});
+
+test("a rejected queued write does not reject the next command", async () => {
+	const enqueue = enqueueProjectCollectionMutation;
+	const first = enqueue("org/bob", async () => {
+		throw new Error("failed");
+	});
+	const second = enqueue("org/bob", async () => "saved");
+	await expect(first).rejects.toThrow("failed");
+	expect(await second).toBe("saved");
+});
+
+test("reordering visible collection members keeps hidden members in their manual slots", async () => {
+	const h = setup();
+	for (const host of h.state().projectHosts)
+		host.rows?.push(
+			normalizeHostProjectRow({
+				id: "hidden",
+				repoPath: "/hidden",
+				tags: ["team"],
+			}),
+		);
+	h.state().placements.push({
+		key: "hidden",
+		kind: "project",
+		tabOrder: 1,
+		isCollapsed: false,
+	});
+	const a = h.state().placements.find((row) => row.key === "a");
+	if (a) a.tabOrder = 2;
+	const b = h.state().placements.find((row) => row.key === "b");
+	if (b) b.tabOrder = 0;
+	await mutateProjectCollection(h.adapter, {
+		type: "reorder",
+		keys: ["a", "b"],
+	});
+	expect(
+		h
+			.state()
+			.placements.filter((row) => ["hidden", "a", "b"].includes(row.key))
+			.sort((a, b) => a.tabOrder - b.tabOrder)
+			.map((row) => row.key),
+	).toEqual(["a", "hidden", "b"]);
+});
+
+test("reordering visible root items keeps hidden empty collections in their slots", async () => {
+	const h = setup();
+	for (const host of h.state().projectHosts)
+		host.rows?.push(
+			normalizeHostProjectRow({ id: "root", repoPath: "/root", tags: [] }),
+		);
+	h.state().placements.push({
+		key: "projects:hidden",
+		kind: "collection",
+		tabOrder: 1,
+		isCollapsed: false,
+	});
+	const team = h.state().placements.find((row) => row.key === "projects:team");
+	if (team) team.tabOrder = 2;
+	for (const host of h.state().folderHosts)
+		host.settings.push({
+			scope: "projects",
+			tag: "hidden",
+			displayName: "Hidden",
+			color: null,
+			tabOrder: 1,
+		});
+	await mutateProjectCollection(h.adapter, {
+		type: "reorder",
+		keys: ["projects:other", "root", "projects:team"],
+	});
+	expect(
+		h
+			.state()
+			.placements.filter((row) =>
+				["projects:hidden", "root", "projects:team", "projects:other"].includes(
+					row.key,
+				),
+			)
+			.sort((a, b) => a.tabOrder - b.tabOrder)
+			.map((row) => row.key),
+	).toEqual(["projects:other", "projects:hidden", "root", "projects:team"]);
+});
+
+test("end drops append after hidden root rows rather than a visible numeric index", async () => {
+	const h = setup();
+	for (const host of h.state().projectHosts)
+		host.rows?.push(
+			...["root", "hidden"].map((id) =>
+				normalizeHostProjectRow({ id, repoPath: `/${id}`, tags: [] }),
+			),
+		);
+	h.state().placements.push({
+		key: "hidden",
+		kind: "project",
+		tabOrder: 10,
+		isCollapsed: false,
+	});
+	await mutateProjectCollection(h.adapter, {
+		type: "move",
+		projectIds: ["a"],
+		tag: null,
+		index: 2,
+		beforeKey: null,
+	});
+	expect(
+		(h.state().placements.find((row) => row.key === "a")?.tabOrder ?? -1) >
+			(h.state().placements.find((row) => row.key === "hidden")?.tabOrder ?? 0),
+	).toBe(true);
+});
+
+test("collection header drops append after hidden members", async () => {
+	const h = setup();
+	for (const host of h.state().projectHosts)
+		host.rows?.push(
+			normalizeHostProjectRow({
+				id: "hidden",
+				repoPath: "/hidden",
+				tags: ["other"],
+			}),
+		);
+	await mutateProjectCollection(h.adapter, {
+		type: "move",
+		projectIds: ["a"],
+		tag: "other",
+		index: 0,
+		beforeKey: null,
+	});
+	expect(
+		(h.state().placements.find((row) => row.key === "a")?.tabOrder ?? -1) >
+			(h.state().placements.find((row) => row.key === "hidden")?.tabOrder ?? 0),
+	).toBe(true);
 });
