@@ -122,6 +122,7 @@ function fixture(
 				const meta = JSON.parse(files.get(path) as string);
 				meta.llmResult = "final text";
 				files.set(path, JSON.stringify(meta));
+				clipboard = "final text";
 			}
 		},
 		fs: {
@@ -490,16 +491,17 @@ describe("SuperwhisperAdapter", () => {
 	});
 	it("does not refresh the clipboard snapshot while waiting for LLM output", async () => {
 		const f = fixture({ llmMode: true, llmDelay: 500 });
-		const sleep = f.deps.sleep;
-		f.deps.sleep = async (ms) => {
-			await sleep(ms);
-			await f.deps.run("/usr/bin/pbcopy", [], {
-				timeoutMs: 1000,
-				input: "user copy",
-			});
-		};
-		await f.adapter.transcribe(audio, "audio/mp4");
-		expect(f.clipboard()).toBe("user copy");
+		expect(await f.adapter.transcribe(audio, "audio/mp4")).toEqual({
+			text: "final text",
+		});
+		expect(f.clipboard()).toBe("original clipboard\n");
+	});
+	it("restores the clipboard when the LLM result arrives after raw metadata", async () => {
+		const f = fixture({ llmMode: true, llmDelay: 500 });
+		expect(await f.adapter.transcribe(audio, "audio/mp4")).toEqual({
+			text: "final text",
+		});
+		expect(f.clipboard()).toBe("original clipboard\n");
 	});
 	it("preserves a copy made by the user during transcription", async () => {
 		const f = fixture({ userClipboard: "user copy" });

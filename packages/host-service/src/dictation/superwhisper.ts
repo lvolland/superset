@@ -521,14 +521,6 @@ export class SuperwhisperAdapter {
 					);
 				const meta = matches[0];
 				if (meta) {
-					if (clipboard !== undefined && !clipboardSnapshotTaken) {
-						clipboardSnapshotTaken = true;
-						try {
-							transcriptionClipboard = await command("/usr/bin/pbpaste", []);
-						} catch (error) {
-							if (error instanceof DictationError) throw error;
-						}
-					}
 					const llm =
 						typeof meta.llmResult === "string" ? meta.llmResult.trim() : "";
 					const raw = typeof meta.result === "string" ? meta.result.trim() : "";
@@ -547,6 +539,14 @@ export class SuperwhisperAdapter {
 					}
 				}
 				await pause();
+			}
+			if (hasResult && clipboard !== undefined && !clipboardSnapshotTaken) {
+				clipboardSnapshotTaken = true;
+				try {
+					transcriptionClipboard = await command("/usr/bin/pbpaste", []);
+				} catch (error) {
+					if (error instanceof DictationError) throw error;
+				}
 			}
 		} catch (error) {
 			if (
