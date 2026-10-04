@@ -371,6 +371,7 @@ test("presentation writes wait for offline hosts and converge when they return",
 	if (!returned) throw new Error("Missing remote fixture");
 	returned.target.hostUrl = "returned-remote";
 	returned.status = "ready";
+	returned.settings = returned.settings.filter((row) => row.tag !== "new");
 	await replayProjectCollectionPresentations({
 		hosts: h.state().folderHosts,
 		pending,
@@ -932,11 +933,13 @@ for (const status of ["error", "offline", "pending"] as const) {
 	});
 }
 
-test("rename and color do not create presentation on hosts without the setting", async () => {
+test("rename and color skip hosts without presentation or project tags", async () => {
 	const h = setup();
 	const remote = h.state().folderHosts[1];
 	if (!remote) throw new Error("Missing remote");
 	remote.settings = [];
+	const remoteProjects = h.state().projectHosts[1];
+	if (remoteProjects) remoteProjects.rows = [];
 	let pending: unknown;
 	h.adapter.writePlacements = async (
 		_rows,
@@ -965,4 +968,87 @@ test("rename and color do not create presentation on hosts without the setting",
 	).toBe(true);
 	expect(h.settingCalls.map((row) => row.url)).toEqual(["local", "local"]);
 	expect(pending).toEqual([]);
+});
+
+for (const type of ["rename", "color"] as const) {
+	test(`D1 ${type} writes hosts carrying project tags without settings`, async () => {
+		const h = setup();
+		for (const host of h.state().folderHosts) host.settings = [];
+		await mutateProjectCollection(
+			h.adapter,
+			type === "rename"
+				? { type, tag: "team", name: "Client" }
+				: { type, tag: "team", color: "blue" },
+		);
+		expect(h.settingCalls.map((row) => row.url)).toEqual(["local", "remote"]);
+	});
+}
+test("D2 an out-of-date device recolors the latest known name", async () => {
+	const h = setup();
+	const local = h.state().folderHosts[0]?.settings[0];
+	const remote = h.state().folderHosts[1]?.settings[0];
+	if (!local || !remote) throw new Error("Missing setting");
+	Object.assign(local, { displayName: "Old", updatedAt: 10 });
+	Object.assign(remote, { displayName: "Client X", updatedAt: 20 });
+	await mutateProjectCollection(h.adapter, {
+		type: "color",
+		tag: "team",
+		color: "blue",
+	});
+	expect(
+		h.settingCalls.every((row) => row.setting?.displayName === "Client X"),
+	).toBe(true);
+});
+test("D2 author queues a rename for a closed host discovered through project snapshots", async () => {
+	const h = setup();
+	const remote = h.state().folderHosts[1];
+	if (!remote) throw new Error("Missing host");
+	remote.status = "offline";
+	remote.target.hostUrl = null;
+	remote.settings = [];
+	const pending: ProjectCollectionPendingPresentation[] = [];
+	h.adapter.writePlacements = async (
+		_rows,
+		_keys,
+		_deletes,
+		_tags,
+		entries,
+	) => {
+		pending.push(...(entries ?? []));
+	};
+	await mutateProjectCollection(h.adapter, {
+		type: "rename",
+		tag: "team",
+		name: "Client X",
+	});
+	expect(pending).toHaveLength(1);
+	expect(pending[0]?.setting.displayName).toBe("Client X");
+});
+
+test("a closed host keeps create intent across author rename and color", async () => {
+	const h = setup();
+	const remote = h.state().folderHosts[1];
+	if (!remote) throw new Error("Missing host");
+	remote.status = "offline";
+	remote.target.hostUrl = null;
+	let pending: ProjectCollectionPendingPresentation[] = [];
+	h.adapter.writePlacements = async (_r, _k, _d, _t, rows) => {
+		pending = rows ?? [];
+	};
+	await mutateProjectCollection(h.adapter, {
+		type: "create",
+		tag: "client",
+		name: "Client",
+	});
+	await mutateProjectCollection(h.adapter, {
+		type: "rename",
+		tag: "client",
+		name: "Client X",
+	});
+	await mutateProjectCollection(h.adapter, {
+		type: "color",
+		tag: "client",
+		color: "blue",
+	});
+	expect(pending[0]?.setting.create).toBe(true);
 });

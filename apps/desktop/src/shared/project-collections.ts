@@ -29,6 +29,9 @@ export const projectCollectionPendingPresentationSchema =
 	projectCollectionPendingDeleteSchema.extend({
 		setting: z.object({
 			scope: z.literal("projects"),
+			updatedAt: z.number().optional(),
+			create: z.boolean().optional(),
+			createdAt: z.number().optional(),
 			tag: z.string().min(1),
 			displayName: z.string().nullable(),
 			color: z.string().nullable(),

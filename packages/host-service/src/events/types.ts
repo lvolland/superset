@@ -137,6 +137,7 @@ export interface WorkspaceChangedMessage {
 
 /** One tag folder's host-side presentation (see tag_folder_settings). */
 export interface TagSettingSnapshot {
+	updatedAt?: number;
 	tag: string;
 	displayName: string | null;
 	color: string | null;

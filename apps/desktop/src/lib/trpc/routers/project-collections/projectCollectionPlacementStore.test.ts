@@ -212,6 +212,9 @@ const presentation = {
 	tag: "team",
 	setting: {
 		scope: "projects" as const,
+		updatedAt: 200,
+		createdAt: 100,
+		create: true,
 		tag: "team",
 		displayName: "First",
 		color: null,

@@ -2,7 +2,10 @@ import { expect, test } from "bun:test";
 import type { HostTagFoldersResult } from "renderer/hooks/host-projects/useHostTagFolders/useHostTagFolders.utils";
 import type { ProjectCollectionPendingPresentation } from "shared/project-collections";
 import { enqueueProjectCollectionMutation } from "../../projectCollectionMutations";
-import { replayProjectCollectionPresentations } from "./replayProjectCollectionPresentations";
+import {
+	replayProjectCollectionPresentations,
+	withPendingProjectCollectionPresentations,
+} from "./replayProjectCollectionPresentations";
 
 const hosts: HostTagFoldersResult[] = [
 	"old",
@@ -27,6 +30,8 @@ const entry = (
 	tag,
 	setting: {
 		scope: "projects",
+		updatedAt: 100,
+		create: true,
 		tag,
 		displayName: "New",
 		color: null,
@@ -156,4 +161,138 @@ test("a missing router on an error host discards the author presentation", async
 		invalidate: () => {},
 	});
 	expect(acknowledged).toBe(true);
+});
+
+for (const current of ["newer", "deleted"] as const) {
+	test(`D3 replay does not overwrite a ${current} host presentation`, async () => {
+		const row = entry("ready");
+		Object.assign(row.setting, { updatedAt: 10, create: false });
+		if (!hosts[2]) throw new Error("Missing host");
+		const host = {
+			...hosts[2],
+			settings:
+				current === "deleted"
+					? []
+					: [{ ...row.setting, displayName: "Newer", updatedAt: 20 }],
+		};
+		let calls = 0;
+		let acknowledged = false;
+		await replayProjectCollectionPresentations({
+			hosts: [host],
+			pending: [row],
+			readPending: () => [row],
+			enqueue: (work) => work(),
+			upsert: async () => {
+				calls++;
+			},
+			acknowledge: async () => {
+				acknowledged = true;
+			},
+			invalidate: () => {},
+		});
+		expect(calls).toBe(0);
+		expect(acknowledged).toBe(true);
+	});
+}
+
+test("D4 acknowledgements cannot reset host retry backoff", async () => {
+	const retries = new Map<string, { attempts: number; retryAt: number }>();
+	const row = entry("failing");
+	let time = 0;
+	let calls = 0;
+	const replay = () =>
+		replayProjectCollectionPresentations({
+			hosts,
+			pending: [row],
+			readPending: () => [row],
+			enqueue: (work) => work(),
+			retries,
+			now: () => time,
+			upsert: async () => {
+				calls++;
+				throw new Error("Transient");
+			},
+			acknowledge: async () => {},
+			invalidate: () => {},
+		});
+	await replay();
+	await replay();
+	expect(calls).toBe(1);
+	expect(retries.get("failing")?.retryAt).toBe(1000);
+	time = 1000;
+	await replay();
+	expect(calls).toBe(2);
+	expect(retries.get("failing")?.retryAt).toBe(3000);
+	for (let index = 0; index < 10; index++) {
+		time = retries.get("failing")?.retryAt ?? -1;
+		await replay();
+	}
+	expect((retries.get("failing")?.retryAt ?? -1) - time).toBe(60_000);
+});
+
+test("pending presentation never hides a newer host or recreates its absent row", () => {
+	const row = entry("ready");
+	row.setting.create = false;
+	if (!hosts[2]) throw new Error("Missing host");
+	const empty = { ...hosts[2], settings: [] };
+	const newer = {
+		...empty,
+		settings: [{ ...row.setting, displayName: "Newer", updatedAt: 200 }],
+	};
+	expect(
+		withPendingProjectCollectionPresentations([empty], [row])[0]?.settings,
+	).toEqual([]);
+	expect(
+		withPendingProjectCollectionPresentations([newer], [row])[0]?.settings[0]
+			?.displayName,
+	).toBe("Newer");
+});
+test("an undated pre-upgrade queued edit is discarded rather than replayed destructively", async () => {
+	const row = entry("ready");
+	delete row.setting.updatedAt;
+	let calls = 0;
+	let acknowledgements = 0;
+	await replayProjectCollectionPresentations({
+		hosts,
+		pending: [row],
+		readPending: () => [row],
+		enqueue: (work) => work(),
+		upsert: async () => {
+			calls++;
+		},
+		acknowledge: async () => {
+			acknowledgements++;
+		},
+		invalidate: () => {},
+	});
+	expect(calls).toBe(0);
+	expect(acknowledgements).toBe(1);
+});
+
+test("an acknowledgement failure is retried with backoff instead of being forgotten", async () => {
+	const row = entry("ready");
+	const retries = new Map<string, { attempts: number; retryAt: number }>();
+	let time = 0;
+	let attempts = 0;
+	const replay = () =>
+		replayProjectCollectionPresentations({
+			hosts,
+			pending: [row],
+			readPending: () => [row],
+			enqueue: (work) => work(),
+			retries,
+			now: () => time,
+			upsert: async () => {},
+			acknowledge: async () => {
+				attempts++;
+				throw new Error("SQLite unavailable");
+			},
+			invalidate: () => {},
+		});
+	await replay();
+	await replay();
+	expect(attempts).toBe(1);
+	time = 1000;
+	await replay();
+	expect(attempts).toBe(2);
 });

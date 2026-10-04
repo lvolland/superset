@@ -1,7 +1,7 @@
 import { PROJECTS_TAG_SCOPE } from "@superset/shared/workspace-tags";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHostProjects } from "renderer/hooks/host-projects/useHostProjects";
 import {
 	getHostProjectsQueryKey,
@@ -87,13 +87,28 @@ export function useProjectCollectionsState() {
 	const pendingPresentations =
 		presentationsQuery.data ?? EMPTY_PENDING_PRESENTATIONS;
 	const pendingDeletes = pendingQuery.data ?? EMPTY_PENDING_DELETES;
+	const [optimisticFolders, setOptimisticFolders] = useState<{
+		scopeKey: string;
+		hosts: typeof folders.hostResults;
+	} | null>(null);
 	const folderHosts = useMemo(
 		() =>
 			withPendingProjectCollectionPresentations(
-				withoutPendingProjectCollections(folders.hostResults, pendingDeletes),
+				withoutPendingProjectCollections(
+					optimisticFolders?.scopeKey === scopeKey
+						? optimisticFolders.hosts
+						: folders.hostResults,
+					pendingDeletes,
+				),
 				pendingPresentations,
 			),
-		[folders.hostResults, pendingDeletes, pendingPresentations],
+		[
+			folders.hostResults,
+			pendingDeletes,
+			pendingPresentations,
+			optimisticFolders,
+			scopeKey,
+		],
 	);
 	const write = electronTrpc.projectCollections.write.useMutation();
 	const reconcile = electronTrpc.projectCollections.reconcile.useMutation();
@@ -204,10 +219,24 @@ export function useProjectCollectionsState() {
 		queryClient,
 		acknowledge,
 	]);
+	const presentationRetries = useRef(
+		new Map<string, { attempts: number; retryAt: number }>(),
+	);
+	const presentationReplayRunning = useRef(false);
+	const presentationReplaySeen = useRef(new Set<string>());
+	const [retryTick, setRetryTick] = useState(0);
+	const [replayCompletion, setReplayCompletion] = useState(0);
+	const presentationReplaySignals = useMemo(
+		() => ({
+			pending: pendingPresentations,
+			hosts: folders.hostResults,
+			revision: [retryTick, replayCompletion],
+		}),
+		[pendingPresentations, folders.hostResults, retryTick, replayCompletion],
+	);
 	const presentationReplayKey = JSON.stringify([
 		scopeKey,
-		presentationsQuery.dataUpdatedAt,
-		pendingPresentations,
+		retryTick,
 		folders.hostResults.map(({ target, status }) => [
 			target.machineId,
 			target.hostUrl,
@@ -216,24 +245,51 @@ export function useProjectCollectionsState() {
 	]);
 	const lastPresentationReplay = useRef("");
 	useEffect(() => {
+		const { pending: pendingPresentations, hosts } = presentationReplaySignals;
 		if (
 			!enabled ||
 			!presentationsQuery.isSuccess ||
 			!pendingPresentations.length ||
-			lastPresentationReplay.current === presentationReplayKey
+			presentationReplayRunning.current ||
+			(lastPresentationReplay.current === presentationReplayKey &&
+				pendingPresentations.every((row) =>
+					presentationReplaySeen.current.has(JSON.stringify(row)),
+				))
 		)
 			return;
+		if (lastPresentationReplay.current !== presentationReplayKey)
+			presentationReplaySeen.current.clear();
 		lastPresentationReplay.current = presentationReplayKey;
+		presentationReplayRunning.current = true;
+		presentationReplaySeen.current = new Set(
+			pendingPresentations.map((row) => JSON.stringify(row)),
+		);
 		void replayProjectCollectionPresentations({
-			hosts: folders.hostResults,
+			hosts,
+			retries: presentationRetries.current,
+			readHost: (host) => ({
+				...host,
+				settings:
+					queryClient.getQueryData<HostTagFolderSetting[]>([
+						"host-tag-folders",
+						host.target.organizationId,
+						host.target.machineId,
+					]) ?? host.settings,
+			}),
 			pending: pendingPresentations,
 			readPending: () =>
 				utils.projectCollections.pendingPresentations.getData(scope) ?? [],
 			enqueue: (work) => enqueueProjectCollectionMutation(scopeKey, work),
 			upsert: async (host, row) => {
-				await getHostServiceClientByUrl(
+				const response = await getHostServiceClientByUrl(
 					host.target.hostUrl as string,
-				).tagFolders.upsert.mutate(row.setting);
+				)
+					.tagFolders.replayPresentation.mutate(row.setting)
+					.catch((error) => {
+						if (!isMissingProcedureError(error)) throw error;
+						return null;
+					});
+				if (!response) return;
 				const queryKey = [
 					"host-tag-folders",
 					host.target.organizationId,
@@ -246,7 +302,9 @@ export function useProjectCollectionsState() {
 							(setting) =>
 								setting.scope !== PROJECTS_TAG_SCOPE || setting.tag !== row.tag,
 						),
-						row.setting,
+						...(response.tagSettings ?? [])
+							.filter((setting) => setting.tag === row.tag)
+							.map((setting) => ({ scope: PROJECTS_TAG_SCOPE, ...setting })),
 					],
 				);
 			},
@@ -270,19 +328,46 @@ export function useProjectCollectionsState() {
 					],
 				});
 			},
-		}).catch(() => undefined);
+		})
+			.catch(() => undefined)
+			.finally(() => {
+				presentationReplayRunning.current = false;
+				setReplayCompletion((value) => value + 1);
+			});
 	}, [
 		enabled,
 		presentationsQuery.isSuccess,
-		pendingPresentations,
+		presentationReplaySignals,
 		presentationReplayKey,
-		folders.hostResults,
 		scope,
 		scopeKey,
 		utils,
 		queryClient,
 		acknowledgePresentation,
 	]);
+	useEffect(() => {
+		const { pending: pendingPresentations, hosts } = presentationReplaySignals;
+		const retryAt = Math.min(
+			...[...presentationRetries.current.entries()]
+				.filter(
+					([machineId]) =>
+						pendingPresentations.some((row) => row.machineId === machineId) &&
+						hosts.some(
+							(host) =>
+								host.target.machineId === machineId &&
+								host.target.hostUrl &&
+								(host.status === "ready" || host.status === "error"),
+						),
+				)
+				.map(([, row]) => row.retryAt),
+		);
+		if (!Number.isFinite(retryAt) || !pendingPresentations.length) return;
+		const timer = setTimeout(
+			() => setRetryTick((tick) => tick + 1),
+			Math.max(1000, retryAt - Date.now()),
+		);
+		return () => clearTimeout(timer);
+	}, [presentationReplaySignals]);
 	const knownKeys = [
 		...projects.projects.map((project) => project.id),
 		...view.collections.map((collection) => collection.id),
@@ -384,7 +469,7 @@ export function useProjectCollectionsState() {
 						utils.projectCollections.list.getData(scope) ??
 						current.current.placements,
 				};
-				return await mutateProjectCollection(
+				return mutateProjectCollection(
 					{
 						read: () => ({
 							...baseline,
@@ -402,6 +487,8 @@ export function useProjectCollectionsState() {
 						}),
 						publish: (state) => {
 							current.current = state;
+							if (!localOnly)
+								setOptimisticFolders({ scopeKey, hosts: state.folderHosts });
 							for (const host of localOnly ? [] : state.projectHosts)
 								queryClient.setQueryData<HostProjectRow[]>(
 									getHostProjectsQueryKey(host.target, userId),
@@ -575,7 +662,7 @@ export function useProjectCollectionsState() {
 						},
 					},
 					command,
-				);
+				).finally(() => setOptimisticFolders(null));
 			});
 		},
 		[

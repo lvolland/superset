@@ -3,9 +3,10 @@ import {
 	PROJECTS_TAG_SCOPE,
 } from "@superset/shared/workspace-tags";
 import type { HostProjectRowsResult } from "renderer/hooks/host-projects/useHostProjects/useHostProjects.utils";
-import type {
-	HostTagFolderSetting,
-	HostTagFoldersResult,
+import {
+	type HostTagFolderSetting,
+	type HostTagFoldersResult,
+	mergeHostTagFolders,
 } from "renderer/hooks/host-projects/useHostTagFolders/useHostTagFolders.utils";
 import { isMissingProcedureError } from "renderer/lib/isMissingProcedureError";
 import type {
@@ -153,6 +154,9 @@ export async function mutateProjectCollection(
 	const collection = tag
 		? view.collections.find((row) => row.tag === tag)
 		: undefined;
+	const latestSetting = mergeHostTagFolders(before.folderHosts).find(
+		(row) => row.scope === PROJECTS_TAG_SCOPE && row.tag === tag,
+	);
 	const replacementTag =
 		command.type === "rename" && command.replacementTag
 			? requiredTag(command.replacementTag)
@@ -253,6 +257,14 @@ export async function mutateProjectCollection(
 				(row) => row.scope !== PROJECTS_TAG_SCOPE || row.tag !== tag,
 			);
 		}
+	const updatedAt = Math.max(
+		Date.now(),
+		...before.folderHosts.flatMap((host) =>
+			host.settings
+				.filter((row) => row.scope === PROJECTS_TAG_SCOPE)
+				.map((row) => (row.updatedAt ?? 0) + 1),
+		),
+	);
 	const pendingPresentations: ProjectCollectionPendingPresentation[] = [];
 	const clearPendingSettings: ProjectCollectionPendingDelete[] = [];
 	const settingWrites: Array<{
@@ -268,7 +280,13 @@ export async function mutateProjectCollection(
 				host.settings.find(
 					(row) => row.scope === PROJECTS_TAG_SCOPE && row.tag === tag,
 				) ?? null;
-			const carriedCollection = prior !== null;
+			const carriedCollection =
+				prior !== null ||
+				before.projectHosts.some(
+					(projects) =>
+						projects.target.machineId === host.target.machineId &&
+						projects.rows?.some((row) => row.tags?.includes(tag)),
+				);
 			if (
 				command.type !== "create" &&
 				command.type !== "delete" &&
@@ -290,6 +308,13 @@ export async function mutateProjectCollection(
 					: {
 							scope: PROJECTS_TAG_SCOPE,
 							tag: replacementTag ?? tag,
+							updatedAt,
+							...(command.type === "create" ||
+							(replacementTag !== null && replacementTag !== tag)
+								? { create: true, createdAt: updatedAt }
+								: prior?.create
+									? { create: true, createdAt: prior.createdAt }
+									: {}),
 							displayName:
 								command.type === "rename" || command.type === "create"
 									? command.name.trim()
@@ -299,6 +324,7 @@ export async function mutateProjectCollection(
 									? command.color
 									: (collection?.color ?? null),
 							tabOrder:
+								latestSetting?.tabOrder ??
 								prior?.tabOrder ??
 								collection?.tabOrder ??
 								Math.max(0, ...view.rootItems.map((row) => row.tabOrder)) + 1,
@@ -312,7 +338,11 @@ export async function mutateProjectCollection(
 					pendingPresentations.push({
 						machineId: host.target.machineId,
 						tag: setting.tag,
-						setting: { ...setting, scope: PROJECTS_TAG_SCOPE },
+						setting: {
+							...setting,
+							scope: PROJECTS_TAG_SCOPE,
+							create: setting.create === true,
+						},
 					});
 				if (replacementTag && replacementTag !== tag)
 					pendingDeletes.push({ machineId: host.target.machineId, tag });
@@ -476,7 +506,16 @@ export async function mutateProjectCollection(
 					tag: write.tag,
 				});
 				undo.push(() =>
-					adapter.setSetting(write.url, write.tag, write.rollback),
+					adapter.setSetting(
+						write.url,
+						write.tag,
+						write.rollback
+							? {
+									...write.rollback,
+									updatedAt: Math.max(Date.now(), updatedAt + 1),
+								}
+							: null,
+					),
 				);
 				return true;
 			}),

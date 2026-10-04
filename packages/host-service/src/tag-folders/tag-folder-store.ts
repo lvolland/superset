@@ -6,7 +6,11 @@ import {
 } from "@superset/shared/workspace-tags";
 import { and, eq, inArray } from "drizzle-orm";
 import type { HostDb } from "../db";
-import { projects, tagFolderSettings } from "../db/schema";
+import {
+	projectCollectionDeletions,
+	projects,
+	tagFolderSettings,
+} from "../db/schema";
 import type { EventBus } from "../events";
 import type {
 	TagFolderSettingSnapshot,
@@ -21,6 +25,10 @@ export interface TagFolderStoreContext {
 }
 
 export interface UpsertTagSettingPatch {
+	updatedAt?: number;
+	replay?: boolean;
+	create?: boolean;
+	createdAt?: number;
 	displayName?: string | null;
 	color?: string | null;
 	tabOrder?: number | null;
@@ -66,6 +74,7 @@ function visibleRows(
 function toSnapshot(row: TagFolderSettingRow): TagSettingSnapshot {
 	return {
 		tag: row.tag,
+		...(row.scope === PROJECTS_TAG_SCOPE ? { updatedAt: row.updatedAt } : {}),
 		displayName: row.displayName,
 		color: row.color,
 		tabOrder: row.tabOrder,
@@ -180,6 +189,39 @@ export function upsertTagFolderSetting(
 		const existing =
 			candidates.find((row) => row.createdByUserId === createdByUserId) ??
 			candidates[0];
+		const deletion =
+			scope === PROJECTS_TAG_SCOPE
+				? tx
+						.select()
+						.from(projectCollectionDeletions)
+						.where(
+							and(
+								eq(projectCollectionDeletions.tag, tag),
+								inArray(projectCollectionDeletions.createdByUserId, [
+									createdByUserId,
+									UNKNOWN_FOLDER_CREATOR,
+								]),
+							),
+						)
+						.all()
+						.reduce((latest, row) => Math.max(latest, row.deletedAt), 0)
+				: 0;
+		if (
+			scope === PROJECTS_TAG_SCOPE &&
+			patch.replay &&
+			(patch.updatedAt === undefined ||
+				(existing ? patch.updatedAt <= existing.updatedAt : !patch.create) ||
+				patch.updatedAt <= deletion ||
+				(!existing && (patch.createdAt ?? patch.updatedAt) <= deletion))
+		)
+			return;
+		if (
+			scope === PROJECTS_TAG_SCOPE &&
+			patch.updatedAt !== undefined &&
+			existing &&
+			patch.updatedAt < existing.updatedAt
+		)
+			return;
 		if (candidates.length > 0) {
 			tx.delete(tagFolderSettings).where(ownOrUnclaimed).run();
 		}
@@ -198,7 +240,15 @@ export function upsertTagFolderSetting(
 					patch.tabOrder !== undefined
 						? patch.tabOrder
 						: (existing?.tabOrder ?? null),
-				updatedAt: Date.now(),
+				updatedAt:
+					scope === PROJECTS_TAG_SCOPE
+						? (patch.updatedAt ??
+							Math.max(
+								Date.now(),
+								(existing?.updatedAt ?? 0) + 1,
+								deletion + 1,
+							))
+						: Date.now(),
 			})
 			.run();
 	});
@@ -218,20 +268,75 @@ export function deleteTagFolderSetting(
 ): TagSettingSnapshot[] | undefined {
 	const tag = normalizeWorkspaceTag(rawTag);
 	if (tag == null) return undefined;
-	ctx.db
-		.delete(tagFolderSettings)
-		.where(
-			and(
-				eq(tagFolderSettings.scope, scope),
-				eq(tagFolderSettings.tag, tag),
+	ctx.db.transaction((tx) => {
+		if (scope === PROJECTS_TAG_SCOPE) {
+			const creators =
 				ctx.userId == null
 					? undefined
 					: inArray(tagFolderSettings.createdByUserId, [
 							ctx.userId,
 							UNKNOWN_FOLDER_CREATOR,
-						]),
-			),
-		)
-		.run();
+						]);
+			const existing = tx
+				.select()
+				.from(tagFolderSettings)
+				.where(
+					and(
+						eq(tagFolderSettings.scope, scope),
+						eq(tagFolderSettings.tag, tag),
+						creators,
+					),
+				)
+				.all();
+			const priorDeletions = tx
+				.select()
+				.from(projectCollectionDeletions)
+				.where(
+					and(
+						eq(projectCollectionDeletions.tag, tag),
+						ctx.userId == null
+							? undefined
+							: inArray(projectCollectionDeletions.createdByUserId, [
+									ctx.userId,
+									UNKNOWN_FOLDER_CREATOR,
+								]),
+					),
+				)
+				.all();
+			const deletedAt = Math.max(
+				Date.now(),
+				...existing.map((row) => row.updatedAt + 1),
+				...priorDeletions.map((row) => row.deletedAt),
+			);
+			for (const creator of new Set([
+				toStoredCreator(ctx.userId),
+				...existing.map((row) => row.createdByUserId),
+			]))
+				tx.insert(projectCollectionDeletions)
+					.values({ tag, createdByUserId: creator, deletedAt })
+					.onConflictDoUpdate({
+						target: [
+							projectCollectionDeletions.tag,
+							projectCollectionDeletions.createdByUserId,
+						],
+						set: { deletedAt },
+					})
+					.run();
+		}
+		tx.delete(tagFolderSettings)
+			.where(
+				and(
+					eq(tagFolderSettings.scope, scope),
+					eq(tagFolderSettings.tag, tag),
+					ctx.userId == null
+						? undefined
+						: inArray(tagFolderSettings.createdByUserId, [
+								ctx.userId,
+								UNKNOWN_FOLDER_CREATOR,
+							]),
+				),
+			)
+			.run();
+	});
 	return broadcast(ctx, scope);
 }

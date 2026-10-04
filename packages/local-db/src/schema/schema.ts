@@ -563,6 +563,9 @@ export const projectCollectionPendingPresentations = sqliteTable(
 		setting: text("setting", { mode: "json" })
 			.$type<{
 				scope: "projects";
+				updatedAt?: number;
+				create?: boolean;
+				createdAt?: number;
 				tag: string;
 				displayName: string | null;
 				color: string | null;

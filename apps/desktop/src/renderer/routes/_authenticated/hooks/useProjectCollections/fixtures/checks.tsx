@@ -231,13 +231,28 @@ mock.module(
 		useLocalHostService: () => ({ activeOrganizationId: organizationId }),
 	}),
 );
+let settingGate: Promise<void> | null = null;
 mock.module("renderer/lib/host-service-client", () => ({
 	getHostServiceClientByUrl: (url: string) => ({
 		tagFolders: {
+			replayPresentation: {
+				mutate: async (
+					setting: (typeof folderHosts)[number]["settings"][number],
+				) => {
+					const host = folderHosts.find((host) => host.target.hostUrl === url);
+					if (!host || host.status !== "ready") throw new Error("Offline host");
+					host.settings = [
+						...host.settings.filter((row) => row.tag !== setting.tag),
+						setting,
+					];
+					return { tagSettings: host.settings };
+				},
+			},
 			upsert: {
 				mutate: async (
 					setting: (typeof folderHosts)[number]["settings"][number],
 				) => {
+					if (settingGate) await settingGate;
 					const host = folderHosts.find((host) => host.target.hostUrl === url);
 					if (!host || host.status !== "ready") throw new Error("Offline host");
 					host.settings = [
@@ -809,6 +824,7 @@ test("author rename and color survive remount and reach returning hosts", async 
 	expect(remote.settings[0]?.displayName).toBe("Client");
 	remote.target.hostUrl = "remote";
 	remote.status = "ready";
+	client.setQueryData(["host-tag-folders", "org", "remote"], remote.settings);
 	folderHosts = [...folderHosts];
 	rerender();
 	await waitFor(() =>
@@ -953,3 +969,64 @@ for (const deleted of [false, true]) {
 		},
 	);
 }
+
+test("D5 optimistic rename is visible while the local host is closed and remote write waits", async () => {
+	const local = localFolderHost();
+	local.settings = [
+		{
+			scope: "projects",
+			tag: "team",
+			displayName: "Old",
+			color: null,
+			tabOrder: 0,
+			updatedAt: 10,
+		},
+	];
+	local.status = "offline";
+	const remote = {
+		target: {
+			...target,
+			machineId: "remote",
+			hostUrl: "remote",
+			isLocal: false,
+		},
+		status: "ready" as const,
+		settings: local.settings.map((row) => ({ ...row, updatedAt: 20 })),
+	};
+	folderHosts.push(remote);
+	const client = new QueryClient();
+	const wrapper = ({ children }: { children: React.ReactNode }) => (
+		<QueryClientProvider client={client}>
+			<ProjectCollectionsProvider>{children}</ProjectCollectionsProvider>
+		</QueryClientProvider>
+	);
+	const { result, unmount } = renderHook(() => useProjectCollections(), {
+		wrapper,
+	});
+	let release!: () => void;
+	settingGate = new Promise((resolve) => {
+		release = resolve;
+	});
+	let mutation!: Promise<boolean>;
+	act(() => {
+		mutation = result.current.mutate({
+			type: "rename",
+			tag: "team",
+			name: "Client X",
+		});
+	});
+	await waitFor(() =>
+		expect(
+			result.current.collections.find((row) => row.tag === "team")?.name,
+		).toBe("Client X"),
+	);
+	await act(async () => {
+		release();
+		expect(await mutation).toBe(true);
+	});
+	settingGate = null;
+	unmount();
+	client.clear();
+	local.status = "ready";
+	folderHosts.splice(1);
+});
