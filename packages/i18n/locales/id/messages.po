@@ -2014,6 +2014,9 @@ msgstr "Semua paket"
 msgid "All posts"
 msgstr "Semua tulisan"
 
+msgid "All project hosts must be online and support collections"
+msgstr "Semua host proyek harus online dan mendukung koleksi"
+
 msgid "All projects"
 msgstr "Semua proyek"
 

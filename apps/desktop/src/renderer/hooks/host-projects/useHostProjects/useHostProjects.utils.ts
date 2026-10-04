@@ -89,6 +89,7 @@ export interface HostRowForTargets {
 
 export function getHostProjectsQueryKey(
 	target: Pick<HostProjectsQueryTarget, "machineId" | "organizationId">,
+	userId: string,
 ) {
 	// Host identity, never hostUrl — see getHostWorkspacesQueryKey.
 	return [
@@ -96,6 +97,7 @@ export function getHostProjectsQueryKey(
 		"projects",
 		"list",
 		target.organizationId,
+		userId,
 		target.machineId,
 	] as const;
 }
@@ -177,21 +179,26 @@ export function normalizeHostProjectRow(
 	};
 }
 
-const SNAPSHOT_KEY_PREFIX = "host-projects:v1";
+const SNAPSHOT_KEY_PREFIX = "host-projects:v2";
 
-function snapshotKey(organizationId: string, machineId: string): string {
-	return `${SNAPSHOT_KEY_PREFIX}:${organizationId}:${machineId}`;
+export function getHostProjectsSnapshotKey(
+	organizationId: string,
+	machineId: string,
+	userId: string,
+): string {
+	return `${SNAPSHOT_KEY_PREFIX}:${organizationId}:${userId}:${machineId}`;
 }
 
 /** Last-seen per-host snapshots in IndexedDB (remote hosts only, like workspaces). */
 export async function loadHostProjectsSnapshot(
 	organizationId: string,
 	machineId: string,
+	userId: string,
 ): Promise<HostProjectRow[] | undefined> {
-	if (!organizationId) return undefined;
+	if (!organizationId || !userId) return undefined;
 	try {
 		const rows = await idbGet<HostProjectRow[]>(
-			snapshotKey(organizationId, machineId),
+			getHostProjectsSnapshotKey(organizationId, machineId, userId),
 		);
 		return rows?.map(normalizeHostProjectRow);
 	} catch {
@@ -202,18 +209,25 @@ export async function loadHostProjectsSnapshot(
 export function saveHostProjectsSnapshot(
 	organizationId: string,
 	machineId: string,
+	userId: string,
 	rows: HostProjectRow[],
 ): void {
-	if (!organizationId) return;
-	void idbSet(snapshotKey(organizationId, machineId), rows).catch(() => {});
+	if (!organizationId || !userId) return;
+	void idbSet(
+		getHostProjectsSnapshotKey(organizationId, machineId, userId),
+		rows,
+	).catch(() => {});
 }
 
 export function clearHostProjectsSnapshot(
 	organizationId: string,
 	machineId: string,
+	userId: string,
 ): void {
-	if (!organizationId) return;
-	void idbDel(snapshotKey(organizationId, machineId)).catch(() => {});
+	if (!organizationId || !userId) return;
+	void idbDel(
+		getHostProjectsSnapshotKey(organizationId, machineId, userId),
+	).catch(() => {});
 }
 
 // Serialize read-modify-write per snapshot key so rapid deletes can't
@@ -228,16 +242,21 @@ const snapshotWriteChains = new Map<string, Promise<void>>();
 export function removeFromHostProjectsSnapshot(
 	organizationId: string,
 	machineId: string,
+	userId: string,
 	projectId: string,
 ): Promise<void> {
-	const key = snapshotKey(organizationId, machineId);
+	const key = getHostProjectsSnapshotKey(organizationId, machineId, userId);
 	const chained = (snapshotWriteChains.get(key) ?? Promise.resolve()).then(
 		async () => {
-			const rows = await loadHostProjectsSnapshot(organizationId, machineId);
+			const rows = await loadHostProjectsSnapshot(
+				organizationId,
+				machineId,
+				userId,
+			);
 			if (!Array.isArray(rows)) return;
 			const next = rows.filter((row) => row.id !== projectId);
 			if (next.length !== rows.length) {
-				saveHostProjectsSnapshot(organizationId, machineId, next);
+				saveHostProjectsSnapshot(organizationId, machineId, userId, next);
 			}
 		},
 	);

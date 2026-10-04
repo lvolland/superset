@@ -2014,6 +2014,9 @@ msgstr "Tous les forfaits"
 msgid "All posts"
 msgstr "Tous les articles"
 
+msgid "All project hosts must be online and support collections"
+msgstr "Tous les hôtes des projets doivent être en ligne et prendre en charge les collections"
+
 msgid "All projects"
 msgstr "Tous les projets"
 

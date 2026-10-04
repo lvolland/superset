@@ -2014,6 +2014,9 @@ msgstr "Todos los planes"
 msgid "All posts"
 msgstr "Todas las publicaciones"
 
+msgid "All project hosts must be online and support collections"
+msgstr "Todos los hosts de proyectos deben estar en línea y admitir colecciones"
+
 msgid "All projects"
 msgstr "Todos los proyectos"
 

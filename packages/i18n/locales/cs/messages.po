@@ -2014,6 +2014,9 @@ msgstr "Všechny tarify"
 msgid "All posts"
 msgstr "Všechny články"
 
+msgid "All project hosts must be online and support collections"
+msgstr "Všichni hostitelé projektů musí být online a podporovat kolekce"
+
 msgid "All projects"
 msgstr "Všechny projekty"
 

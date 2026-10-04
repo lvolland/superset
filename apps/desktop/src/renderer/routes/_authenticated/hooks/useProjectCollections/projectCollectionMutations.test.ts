@@ -11,6 +11,7 @@ import {
 	type ProjectCollectionMutationAdapter,
 	type ProjectCollectionMutationState,
 } from "./projectCollectionMutations";
+import { syncProjectCollectionSettings } from "./syncProjectCollectionSettings";
 
 function setup() {
 	let state: ProjectCollectionMutationState = {
@@ -341,7 +342,7 @@ test("delete preserves mixed root position, member order and projects in another
 	).toEqual(["other"]);
 });
 
-test("presentation writes ignore offline hosts", async () => {
+test("presentation writes wait for offline hosts and converge when they return", async () => {
 	const h = setup();
 	const remote = h.state().folderHosts[1];
 	if (!remote) throw new Error("Missing remote fixture");
@@ -355,6 +356,20 @@ test("presentation writes ignore offline hosts", async () => {
 		}),
 	).toBe(true);
 	expect(h.settingCalls.map((call) => call.url)).toEqual(["local"]);
+	const returned = h.state().folderHosts[1];
+	if (!returned) throw new Error("Missing remote fixture");
+	returned.target.hostUrl = "returned-remote";
+	returned.status = "ready";
+	await syncProjectCollectionSettings({
+		hosts: h.state().folderHosts,
+		upsert: (host, setting) =>
+			h.adapter.setSetting(host.target.hostUrl as string, setting.tag, setting),
+	});
+	expect(h.settingCalls.at(-1)).toMatchObject({
+		url: "returned-remote",
+		tag: "new",
+		setting: { displayName: "New" },
+	});
 });
 
 test("presentation writes skip hosts with the legacy projects scope schema", async () => {

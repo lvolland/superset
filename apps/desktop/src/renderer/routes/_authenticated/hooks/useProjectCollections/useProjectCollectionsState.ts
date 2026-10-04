@@ -37,6 +37,8 @@ import {
 	withoutPendingProjectCollections,
 } from "./replayProjectCollectionDeletes";
 
+import { syncProjectCollectionSettings } from "./syncProjectCollectionSettings";
+
 const EMPTY_PENDING_DELETES: ProjectCollectionPendingDelete[] = [];
 
 export function useProjectCollectionsState() {
@@ -176,6 +178,68 @@ export function useProjectCollectionsState() {
 		queryClient,
 		acknowledge,
 	]);
+	const settingsSyncKey = JSON.stringify([
+		scopeKey,
+		enabled,
+		pendingQuery.isSuccess,
+		pendingDeletes,
+		folderHosts,
+	]);
+	const lastSettingsSync = useRef("");
+	useEffect(() => {
+		if (
+			!enabled ||
+			!pendingQuery.isSuccess ||
+			lastSettingsSync.current === settingsSyncKey
+		)
+			return;
+		lastSettingsSync.current = settingsSyncKey;
+		const hosts = folderHosts;
+		void enqueueProjectCollectionMutation(scopeKey, async () => {
+			await syncProjectCollectionSettings({
+				hosts: withoutPendingProjectCollections(
+					hosts.map((host) => ({
+						...host,
+						settings:
+							queryClient.getQueryData<HostTagFolderSetting[]>([
+								"host-tag-folders",
+								host.target.organizationId,
+								host.target.machineId,
+							]) ?? host.settings,
+					})),
+					utils.projectCollections.pendingDeletes.getData(scope) ?? [],
+				),
+				upsert: async (host, setting) => {
+					await getHostServiceClientByUrl(
+						host.target.hostUrl as string,
+					).tagFolders.upsert.mutate(setting);
+					const queryKey = [
+						"host-tag-folders",
+						host.target.organizationId,
+						host.target.machineId,
+					];
+					queryClient.setQueryData<HostTagFolderSetting[]>(queryKey, (rows) => [
+						...(rows ?? host.settings).filter(
+							(row) => row.scope !== setting.scope || row.tag !== setting.tag,
+						),
+						setting,
+					]);
+					await queryClient.invalidateQueries({ queryKey });
+				},
+			});
+		}).catch(() => {
+			lastSettingsSync.current = "";
+		});
+	}, [
+		enabled,
+		pendingQuery.isSuccess,
+		settingsSyncKey,
+		folderHosts,
+		scopeKey,
+		scope,
+		queryClient,
+		utils,
+	]);
 	const knownKeys = [
 		...projects.projects.map((project) => project.id),
 		...view.collections.map((collection) => collection.id),
@@ -194,27 +258,26 @@ export function useProjectCollectionsState() {
 		const identity = `${scope.organizationId}\u0000${scope.userId}\u0000${knownKeys}`;
 		if (!canReconcile || lastReconciled.current === identity) return;
 		lastReconciled.current = identity;
+		const keys = [
+			...new Set([
+				...current.current.projectHosts.flatMap((host) =>
+					(host.rows ?? []).map((row) => row.id),
+				),
+				...current.current.projectHosts.flatMap((host) =>
+					(host.rows ?? []).flatMap((row) =>
+						(row.tags ?? []).map((tag) => `${PROJECTS_TAG_SCOPE}:${tag}`),
+					),
+				),
+				...current.current.folderHosts.flatMap((host) =>
+					host.settings
+						.filter((row) => row.scope === PROJECTS_TAG_SCOPE)
+						.map((row) => `${PROJECTS_TAG_SCOPE}:${row.tag}`),
+				),
+			]),
+		];
+		if (!keys.length) return;
 		void enqueueProjectCollectionMutation(scopeKey, async () => {
-			await reconcile.mutateAsync({
-				...scope,
-				keys: [
-					...new Set([
-						...current.current.projectHosts.flatMap((host) =>
-							(host.rows ?? []).map((row) => row.id),
-						),
-						...current.current.projectHosts.flatMap((host) =>
-							(host.rows ?? []).flatMap((row) =>
-								(row.tags ?? []).map((tag) => `${PROJECTS_TAG_SCOPE}:${tag}`),
-							),
-						),
-						...current.current.folderHosts.flatMap((host) =>
-							host.settings
-								.filter((row) => row.scope === PROJECTS_TAG_SCOPE)
-								.map((row) => `${PROJECTS_TAG_SCOPE}:${row.tag}`),
-						),
-					]),
-				],
-			});
+			await reconcile.mutateAsync({ ...scope, keys });
 			await utils.projectCollections.list.invalidate(scope);
 		}).catch(() => {
 			lastReconciled.current = "";
@@ -231,7 +294,7 @@ export function useProjectCollectionsState() {
 				await Promise.all([
 					...(localOnly ? [] : current.current.projectHosts).map((host) =>
 						queryClient.cancelQueries({
-							queryKey: getHostProjectsQueryKey(host.target),
+							queryKey: getHostProjectsQueryKey(host.target, userId),
 						}),
 					),
 					...(localOnly ? [] : current.current.folderHosts).map((host) =>
@@ -250,7 +313,7 @@ export function useProjectCollectionsState() {
 						...host,
 						rows:
 							queryClient.getQueryData<HostProjectRow[]>(
-								getHostProjectsQueryKey(host.target),
+								getHostProjectsQueryKey(host.target, userId),
 							) ?? host.rows,
 					})),
 					folderHosts: withoutPendingProjectCollections(
@@ -289,7 +352,7 @@ export function useProjectCollectionsState() {
 							current.current = state;
 							for (const host of localOnly ? [] : state.projectHosts)
 								queryClient.setQueryData<HostProjectRow[]>(
-									getHostProjectsQueryKey(host.target),
+									getHostProjectsQueryKey(host.target, userId),
 									host.rows,
 								);
 							for (const host of localOnly ? [] : state.folderHosts)
@@ -400,7 +463,7 @@ export function useProjectCollectionsState() {
 								: [])
 								refreshes.push(
 									queryClient.invalidateQueries({
-										queryKey: getHostProjectsQueryKey(host.target),
+										queryKey: getHostProjectsQueryKey(host.target, userId),
 									}),
 								);
 							for (const host of command.type === "move"
@@ -433,30 +496,56 @@ export function useProjectCollectionsState() {
 			utils,
 			write,
 			sidebarProjects,
+			userId,
 		],
 	);
 	const projectOrder = useMemo(
 		() => getProjectCollectionOrder(view.rootItems),
 		[view.rootItems],
 	);
-	return {
-		...view,
-		projectOrder,
-		railProjectOrder: projectOrder,
-		isReady:
-			projects.isReady &&
-			folders.isReady &&
-			workspacesReady &&
-			placementsQuery.isSuccess &&
-			pendingQuery.isSuccess,
-		canMoveProject: (projectId: string) =>
+	const canMoveProject = useCallback(
+		(projectId: string) =>
 			projects.projects.find((project) => project.id === projectId)
 				?.supportsProjectTags === true &&
 			projects.hostResults
 				.filter((host) => host.rows?.some((row) => row.id === projectId))
 				.every((host) => host.reachable && host.target.hostUrl !== null),
-		mutate,
-		hideEmptyCollections: preferences.hideEmptyProjectCollections,
-		setHideEmptyCollections: setHideEmptyProjectCollections,
-	};
+		[projects.projects, projects.hostResults],
+	);
+	const canDeleteCollection = useCallback(
+		(tag: string) =>
+			projects.projects
+				.filter((project) => project.tags?.includes(tag))
+				.every((project) => canMoveProject(project.id)),
+		[projects.projects, canMoveProject],
+	);
+	const isReady =
+		projects.isReady &&
+		folders.isReady &&
+		workspacesReady &&
+		placementsQuery.isSuccess &&
+		pendingQuery.isSuccess;
+	return useMemo(
+		() => ({
+			...view,
+			projectOrder,
+			railProjectOrder: projectOrder,
+			isReady,
+			canMoveProject,
+			canDeleteCollection,
+			mutate,
+			hideEmptyCollections: preferences.hideEmptyProjectCollections,
+			setHideEmptyCollections: setHideEmptyProjectCollections,
+		}),
+		[
+			view,
+			projectOrder,
+			isReady,
+			canMoveProject,
+			canDeleteCollection,
+			mutate,
+			preferences.hideEmptyProjectCollections,
+			setHideEmptyProjectCollections,
+		],
+	);
 }

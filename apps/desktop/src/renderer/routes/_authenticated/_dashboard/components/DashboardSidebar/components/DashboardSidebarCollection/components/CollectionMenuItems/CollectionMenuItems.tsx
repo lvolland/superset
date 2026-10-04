@@ -23,6 +23,7 @@ import {
 interface CollectionMenuItemsProps {
 	kind: "context" | "dropdown";
 	color: string | null;
+	canDelete: boolean;
 	onRename: () => void;
 	onColor: (color: string | null) => void;
 	onDelete: () => void;
@@ -31,6 +32,7 @@ interface CollectionMenuItemsProps {
 export function CollectionMenuItems({
 	kind,
 	color,
+	canDelete,
 	onRename,
 	onColor,
 	onDelete,
@@ -81,12 +83,20 @@ export function CollectionMenuItems({
 				</SubContent>
 			</Sub>
 			<Item
+				disabled={!canDelete}
 				variant="destructive"
 				onSelect={onDelete}
 				aria-label={t({ message: "Delete collection" })}
 			>
 				<Trans>Delete collection</Trans>
 			</Item>
+			{!canDelete && (
+				<p className="max-w-56 px-2 py-1 text-xs text-muted-foreground">
+					<Trans>
+						All project hosts must be online and support collections
+					</Trans>
+				</p>
+			)}
 		</>
 	);
 }

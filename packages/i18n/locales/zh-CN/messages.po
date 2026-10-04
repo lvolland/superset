@@ -2014,6 +2014,9 @@ msgstr "全部方案"
 msgid "All posts"
 msgstr "全部文章"
 
+msgid "All project hosts must be online and support collections"
+msgstr "所有项目主机必须在线并支持集合"
+
 msgid "All projects"
 msgstr "所有项目"
 

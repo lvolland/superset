@@ -96,13 +96,18 @@ export function DashboardSidebarCollection({
 	};
 
 	const menuProps = {
+		canDelete: state?.canDeleteCollection(collection.tag) ?? false,
 		color: collection.color,
 		onRename: () => runAfterClose(() => state?.setEditingTag(collection.tag)),
 		onColor: (color: string | null) => {
 			void state?.run({ type: "color", tag: collection.tag, color });
 		},
-		onDelete: () => {
-			void state?.run({ type: "delete", tag: collection.tag });
+		onDelete: async () => {
+			const saved = await state?.run({ type: "delete", tag: collection.tag });
+			if (!saved) return;
+			if (state?.editingTag === collection.tag) state.setEditingTag(null);
+			if (state?.newCollectionTag === collection.tag)
+				state.setNewCollectionTag(null);
 		},
 	};
 	return (

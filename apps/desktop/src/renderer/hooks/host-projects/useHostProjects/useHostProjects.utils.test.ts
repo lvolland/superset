@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
 	applyProjectChangedEvent,
+	getHostProjectsQueryKey,
 	mergeHostProjects,
 	normalizeHostProjectRow,
 } from "./useHostProjects.utils";
@@ -189,4 +190,26 @@ test("a newly created or restored project requests tags immediately when its sna
 		);
 		expect(reads).toEqual(["list"]);
 	}
+});
+
+test("project query caches are isolated between users on the same host", () => {
+	const target = { organizationId: "org", machineId: "remote" };
+	expect(getHostProjectsQueryKey(target, "alice")).not.toEqual(
+		getHostProjectsQueryKey(target, "bob"),
+	);
+});
+
+test("project snapshots isolate users", () => {
+	const result = Bun.spawnSync({
+		cmd: [
+			process.execPath,
+			"test",
+			`${import.meta.dir}/fixtures/snapshot-checks.ts`,
+		],
+		env: { ...process.env, NODE_ENV: "test" },
+	});
+	expect(
+		result.exitCode,
+		result.stdout.toString() + result.stderr.toString(),
+	).toBe(0);
 });

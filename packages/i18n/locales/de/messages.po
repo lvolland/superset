@@ -2014,6 +2014,9 @@ msgstr "Alle Tarife"
 msgid "All posts"
 msgstr "Alle Beiträge"
 
+msgid "All project hosts must be online and support collections"
+msgstr "Alle Projekt-Hosts müssen online sein und Sammlungen unterstützen"
+
 msgid "All projects"
 msgstr "Alle Projekte"
 

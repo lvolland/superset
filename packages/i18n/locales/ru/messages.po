@@ -2014,6 +2014,9 @@ msgstr "Все тарифы"
 msgid "All posts"
 msgstr "Все посты"
 
+msgid "All project hosts must be online and support collections"
+msgstr "Все хосты проектов должны быть в сети и поддерживать коллекции"
+
 msgid "All projects"
 msgstr "Все проекты"
 

@@ -43,12 +43,14 @@ function mount(
 	editingTag: string | null = null,
 	isCollapsed = true,
 	newCollectionTag: string | null = null,
+	canDelete = true,
 ) {
 	const value = {
 		editingTag,
 		newCollectionTag,
 		setNewCollectionTag,
 		collections: [collection],
+		canDeleteCollection: () => canDelete,
 		setEditingTag,
 		run,
 	} as unknown as SidebarProjectCollectionsValue;
@@ -282,6 +284,7 @@ test("dragging a collection hides the members of every collection", async () => 
 		newCollectionTag: null,
 		setNewCollectionTag,
 		collections: [collection],
+		canDeleteCollection: () => true,
 		setEditingTag,
 		run,
 	} as unknown as SidebarProjectCollectionsValue;
@@ -323,3 +326,58 @@ test("dragging a collection hides the members of every collection", async () => 
 	expect(page.getByText("Member project")).toBeTruthy();
 	expect(page.getByText("Other member")).toBeTruthy();
 });
+
+for (const kind of ["context", "dropdown"] as const) {
+	test(`${kind} menu explains why an offline member blocks deletion`, async () => {
+		mount(null, true, null, false);
+		await act(async () => {
+			if (kind === "context")
+				fireEvent.contextMenu(within(document.body).getByText("Dibsteur"), {
+					clientX: 10,
+					clientY: 10,
+				});
+			else
+				fireEvent.pointerDown(
+					within(document.body).getByRole("button", {
+						name: "Collection actions",
+					}),
+					{ button: 0, ctrlKey: false },
+				);
+		});
+		const page = within(document.body);
+		expect(
+			page
+				.getByRole("menuitem", { name: "Delete collection" })
+				.getAttribute("aria-disabled"),
+		).toBe("true");
+		expect(
+			page.getByText(
+				"All project hosts must be online and support collections",
+			),
+		).toBeTruthy();
+		expect(run).not.toHaveBeenCalled();
+	});
+}
+
+for (const saved of [false, true]) {
+	test(`deletion clears the draft only when the command returns ${saved}`, async () => {
+		run.mockResolvedValueOnce(saved);
+		mount(null, true, "team");
+		await act(async () => {
+			fireEvent.contextMenu(within(document.body).getByText("Dibsteur"), {
+				clientX: 10,
+				clientY: 10,
+			});
+		});
+		await act(async () => {
+			fireEvent.click(
+				within(document.body).getByRole("menuitem", {
+					name: "Delete collection",
+				}),
+			);
+		});
+		expect(run).toHaveBeenCalledWith({ type: "delete", tag: "team" });
+		if (saved) expect(setNewCollectionTag).toHaveBeenCalledWith(null);
+		else expect(setNewCollectionTag).not.toHaveBeenCalled();
+	});
+}

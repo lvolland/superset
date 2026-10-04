@@ -2,19 +2,13 @@ import type { WorkspaceState } from "@superset/panes";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useEffect, useMemo } from "react";
 import { useHostProjects } from "renderer/hooks/host-projects/useHostProjects";
-import { useHostTagFolders } from "renderer/hooks/host-projects/useHostTagFolders";
 import { useActiveOrganizationId } from "renderer/hooks/useActiveOrganizationId";
-import { useV2UserPreferences } from "renderer/hooks/useV2UserPreferences";
-import { authClient } from "renderer/lib/auth-client";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { logStressEvent } from "renderer/lib/performance/stress-instrumentation";
+import { useProjectCollections } from "renderer/routes/_authenticated/hooks/useProjectCollections";
 import { useCollections } from "renderer/routes/_authenticated/providers/CollectionsProvider";
 import { getVisibleSidebarWorkspaces } from "renderer/routes/_authenticated/providers/CollectionsProvider/dashboardSidebarLocal";
 import { useHostWorkspaces } from "renderer/routes/_authenticated/providers/HostWorkspacesProvider";
-import {
-	derivePlacedProjectCollections,
-	getProjectCollectionOrder,
-} from "renderer/routes/_authenticated/utils/projectCollections/projectCollectionOrder";
 import {
 	getResourceMonitorRefetchInterval,
 	shouldQueryResourceMonitor,
@@ -123,36 +117,12 @@ export function useResourceSnapshot(
 	);
 
 	const { workspaces: rawV2Workspaces } = useHostWorkspaces();
-	const folders = useHostTagFolders();
-	const { preferences } = useV2UserPreferences();
-	const { data: session } = authClient.useSession();
-	const { data: placements = [] } =
-		electronTrpc.projectCollections.list.useQuery(
-			{ organizationId: organizationId ?? "", userId: session?.user.id ?? "" },
-			{ enabled: isV2 && !!organizationId && !!session?.user.id },
-		);
-	const sidebarProjectOrder = useMemo(() => {
-		if (!isV2) return rawSidebarProjects.map((row) => row.projectId);
-		const view = derivePlacedProjectCollections({
-			projects: hostProjects,
-			hostResults: folders.hostResults,
-			placements,
-			sidebarProjects: rawSidebarProjects,
-			workspaces: rawV2Workspaces,
-			sortMode: preferences.sidebarProjectSortMode,
-			hideEmpty: preferences.hideEmptyProjectCollections,
-		});
-		return getProjectCollectionOrder(view.rootItems);
-	}, [
-		isV2,
-		rawSidebarProjects,
-		hostProjects,
-		folders.hostResults,
-		placements,
-		rawV2Workspaces,
-		preferences.sidebarProjectSortMode,
-		preferences.hideEmptyProjectCollections,
-	]);
+	const { projectOrder } = useProjectCollections();
+	const sidebarProjectOrder = useMemo(
+		() =>
+			isV2 ? projectOrder : rawSidebarProjects.map((row) => row.projectId),
+		[isV2, projectOrder, rawSidebarProjects],
+	);
 
 	const shouldQueryMetrics = shouldQueryResourceMonitor({
 		enabled: true,

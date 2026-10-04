@@ -2014,6 +2014,9 @@ msgstr "Tüm planlar"
 msgid "All posts"
 msgstr "Tüm yazılar"
 
+msgid "All project hosts must be online and support collections"
+msgstr "Tüm proje ana makineleri çevrimiçi olmalı ve koleksiyonları desteklemelidir"
+
 msgid "All projects"
 msgstr "Tüm projeler"
 

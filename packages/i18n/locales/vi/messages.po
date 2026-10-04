@@ -2014,6 +2014,9 @@ msgstr "Tất cả các gói"
 msgid "All posts"
 msgstr "Tất cả bài viết"
 
+msgid "All project hosts must be online and support collections"
+msgstr "Tất cả máy chủ dự án phải trực tuyến và hỗ trợ bộ sưu tập"
+
 msgid "All projects"
 msgstr "Tất cả dự án"
 
