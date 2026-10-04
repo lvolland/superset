@@ -18,6 +18,7 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { HiEllipsisHorizontal } from "react-icons/hi2";
 import type { ProjectCollection } from "renderer/routes/_authenticated/utils/projectCollections/projectCollections";
 import { mintFolderTag } from "renderer/routes/_authenticated/utils/workspaceTagFolders";
+import { useRunAfterMenuClose } from "../../hooks/useRunAfterMenuClose";
 import { collectionDropId } from "../../hooks/useSidebarDnd/projectCollectionDrop";
 import { useSidebarProjectCollections } from "../../providers/DashboardSidebarProjectCollectionsProvider/DashboardSidebarProjectCollectionsProvider";
 import { DashboardSidebarGroupHeader } from "../DashboardSidebarGroupHeader";
@@ -35,6 +36,7 @@ export function DashboardSidebarCollection({
 	children,
 }: DashboardSidebarCollectionProps) {
 	const { t } = useLingui();
+	const { runAfterClose, onCloseAutoFocus } = useRunAfterMenuClose();
 	const state = useSidebarProjectCollections();
 	const editing = state?.editingTag === collection.tag;
 	const [name, setName] = useState(collection.name);
@@ -87,9 +89,10 @@ export function DashboardSidebarCollection({
 			submitting.current = false;
 		}
 	};
+
 	const menuProps = {
 		color: collection.color,
-		onRename: () => state?.setEditingTag(collection.tag),
+		onRename: () => runAfterClose(() => state?.setEditingTag(collection.tag)),
 		onColor: (color: string | null) => {
 			void state?.run({ type: "color", tag: collection.tag, color });
 		},
@@ -121,7 +124,7 @@ export function DashboardSidebarCollection({
 							});
 						}}
 						className={cn(
-							"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+							"-ml-1 pl-1 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
 							isOver && "bg-fill-selected",
 						)}
 						{...(editing ? {} : attributes)}
@@ -179,7 +182,9 @@ export function DashboardSidebarCollection({
 										}}
 									/>
 								) : (
-									<span className="truncate">{collection.name}</span>
+									<span className="truncate" title={collection.name}>
+										{collection.name}
+									</span>
 								)}
 								{collection.isCollapsed && (
 									<span className="ml-auto text-xs tabular-nums">
@@ -199,18 +204,14 @@ export function DashboardSidebarCollection({
 										<HiEllipsisHorizontal className="size-4" />
 									</button>
 								</DropdownMenuTrigger>
-								<DropdownMenuContent
-									onCloseAutoFocus={(event) => event.preventDefault()}
-								>
+								<DropdownMenuContent onCloseAutoFocus={onCloseAutoFocus}>
 									<CollectionMenuItems kind="dropdown" {...menuProps} />
 								</DropdownMenuContent>
 							</DropdownMenu>
 						}
 					/>
 				</ContextMenuTrigger>
-				<ContextMenuContent
-					onCloseAutoFocus={(event) => event.preventDefault()}
-				>
+				<ContextMenuContent onCloseAutoFocus={onCloseAutoFocus}>
 					<CollectionMenuItems kind="context" {...menuProps} />
 				</ContextMenuContent>
 			</ContextMenu>

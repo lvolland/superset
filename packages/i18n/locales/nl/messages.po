@@ -9904,6 +9904,9 @@ msgstr "Nieuwe cloudwerkruimte"
 msgid "New collection"
 msgstr "Nieuwe collectie"
 
+msgid "New collection…"
+msgstr "Nieuwe collectie…"
+
 msgid "New environment"
 msgstr "Nieuwe omgeving"
 

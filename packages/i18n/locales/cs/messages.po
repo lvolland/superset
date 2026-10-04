@@ -9904,6 +9904,9 @@ msgstr "Nový cloudový pracovní prostor"
 msgid "New collection"
 msgstr "Nová kolekce"
 
+msgid "New collection…"
+msgstr "Nová kolekce…"
+
 msgid "New environment"
 msgstr "Nové prostředí"
 

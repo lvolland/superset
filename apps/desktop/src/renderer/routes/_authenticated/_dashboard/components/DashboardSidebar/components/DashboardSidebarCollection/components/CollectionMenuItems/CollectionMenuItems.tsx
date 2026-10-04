@@ -63,6 +63,9 @@ export function CollectionMenuItems({
 						}
 					>
 						<RadioItem value={PROJECT_COLOR_DEFAULT}>
+							<span className="relative inline-flex size-3 shrink-0 items-center justify-center rounded-full border border-border/50">
+								<span className="size-1.5 rounded-full bg-muted-foreground/35" />
+							</span>
 							<Trans>Default</Trans>
 						</RadioItem>
 						{PROJECT_COLORS.map((option) => (

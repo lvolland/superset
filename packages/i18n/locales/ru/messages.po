@@ -9904,6 +9904,9 @@ msgstr "Новая облачная рабочая область"
 msgid "New collection"
 msgstr "Новая коллекция"
 
+msgid "New collection…"
+msgstr "Новая коллекция…"
+
 msgid "New environment"
 msgstr "Новое окружение"
 

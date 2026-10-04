@@ -9904,6 +9904,9 @@ msgstr "新建雲端工作區"
 msgid "New collection"
 msgstr "新增集合"
 
+msgid "New collection…"
+msgstr "新增集合…"
+
 msgid "New environment"
 msgstr "新增環境"
 

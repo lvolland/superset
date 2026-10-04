@@ -1,6 +1,7 @@
 import { Trans } from "@lingui/react/macro";
 import {
 	ContextMenu,
+	ContextMenuCheckboxItem,
 	ContextMenuContent,
 	ContextMenuItem,
 	ContextMenuSeparator,
@@ -10,6 +11,7 @@ import {
 	ContextMenuTrigger,
 } from "@superset/ui/context-menu";
 import {
+	LuArrowRightLeft,
 	LuEye,
 	LuEyeOff,
 	LuFolderInput,
@@ -61,13 +63,14 @@ export function DashboardSidebarProjectContextMenu({
 				</ContextMenuItem>
 				<ContextMenuSub>
 					<ContextMenuSubTrigger disabled={!canMove}>
+						<LuArrowRightLeft className="size-4 mr-2" />
 						<Trans>Move to collection</Trans>
 					</ContextMenuSubTrigger>
 					<ContextMenuSubContent>
 						{collections?.collections.map((collection) => (
-							<ContextMenuItem
+							<ContextMenuCheckboxItem
 								key={collection.id}
-								disabled={currentCollection?.id === collection.id}
+								checked={currentCollection?.id === collection.id}
 								onSelect={() => {
 									void collections.run({
 										type: "move",
@@ -85,11 +88,11 @@ export function DashboardSidebarProjectContextMenu({
 									}
 								/>
 								{collection.name}
-							</ContextMenuItem>
+							</ContextMenuCheckboxItem>
 						))}
 						<ContextMenuSeparator />
 						<ContextMenuItem onSelect={() => collections?.create([projectId])}>
-							<Trans>New collection</Trans>
+							<Trans>New collection…</Trans>
 						</ContextMenuItem>
 						{currentCollection && (
 							<ContextMenuItem

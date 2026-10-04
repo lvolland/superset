@@ -9904,6 +9904,9 @@ msgstr "Workspace cloud baru"
 msgid "New collection"
 msgstr "Koleksi baru"
 
+msgid "New collection…"
+msgstr "Koleksi baru…"
+
 msgid "New environment"
 msgstr "Environment baru"
 

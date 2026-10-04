@@ -9904,6 +9904,9 @@ msgstr "Workspace cloud mới"
 msgid "New collection"
 msgstr "Bộ sưu tập mới"
 
+msgid "New collection…"
+msgstr "Bộ sưu tập mới…"
+
 msgid "New environment"
 msgstr "Environment mới"
 

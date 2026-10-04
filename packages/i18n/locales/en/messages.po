@@ -9904,6 +9904,9 @@ msgstr "New cloud workspace"
 msgid "New collection"
 msgstr "New collection"
 
+msgid "New collection…"
+msgstr "New collection…"
+
 msgid "New environment"
 msgstr "New environment"
 

@@ -9904,6 +9904,9 @@ msgstr "Nova área de trabalho na nuvem"
 msgid "New collection"
 msgstr "Nova coleção"
 
+msgid "New collection…"
+msgstr "Nova coleção…"
+
 msgid "New environment"
 msgstr "Novo ambiente"
 

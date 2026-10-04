@@ -9904,6 +9904,9 @@ msgstr "Yeni bulut çalışma alanı"
 msgid "New collection"
 msgstr "Yeni koleksiyon"
 
+msgid "New collection…"
+msgstr "Yeni koleksiyon…"
+
 msgid "New environment"
 msgstr "Yeni ortam"
 
