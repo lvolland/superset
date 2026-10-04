@@ -24,3 +24,18 @@ export const projectCollectionPendingDeleteSchema = z.object({
 export type ProjectCollectionPendingDelete = z.infer<
 	typeof projectCollectionPendingDeleteSchema
 >;
+
+export const projectCollectionPendingPresentationSchema =
+	projectCollectionPendingDeleteSchema.extend({
+		setting: z.object({
+			scope: z.literal("projects"),
+			tag: z.string().min(1),
+			displayName: z.string().nullable(),
+			color: z.string().nullable(),
+			tabOrder: z.number().nullable(),
+		}),
+	});
+
+export type ProjectCollectionPendingPresentation = z.infer<
+	typeof projectCollectionPendingPresentationSchema
+>;

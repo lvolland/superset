@@ -1,5 +1,9 @@
-import { useQueries, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+	type UseQueryResult,
+	useQueries,
+	useQueryClient,
+} from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { env } from "renderer/env.renderer";
 import { useKnownHosts } from "renderer/hooks/known-hosts/useKnownHosts";
 import { useRelayUrl } from "renderer/hooks/useRelayUrl";
@@ -51,7 +55,8 @@ export interface UseHostProjectsResult {
 export function useHostProjects(): UseHostProjectsResult {
 	const queryClient = useQueryClient();
 	const { data: session } = authClient.useSession();
-	const currentUserId = session?.user?.id ?? "";
+	const currentUserId =
+		session?.user?.id ?? (env.SKIP_ENV_VALIDATION ? "mock-user" : "");
 	const { activeHostUrl, machineId, activeOrganizationId } =
 		useLocalHostService();
 	const relayUrl = useRelayUrl();
@@ -132,7 +137,17 @@ export function useHostProjects(): UseHostProjectsResult {
 		};
 	}, [targets, snapshots, currentUserId]);
 
+	const combine = useCallback(
+		(results: UseQueryResult<HostProjectRow[]>[]) =>
+			results.map((query) => ({
+				data: query.data,
+				isSuccess: query.isSuccess,
+				isError: query.isError,
+			})),
+		[],
+	);
 	const queries = useQueries({
+		combine,
 		queries: targets.map((target) => ({
 			queryKey: getHostProjectsQueryKey(target, currentUserId),
 			enabled: target.hostUrl !== null && !!currentUserId,

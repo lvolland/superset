@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { PROJECTS_TAG_SCOPE } from "@superset/shared/workspace-tags";
 import { normalizeHostProjectRow } from "renderer/hooks/host-projects/useHostProjects/useHostProjects.utils";
 import type { HostTagFolderSetting } from "renderer/hooks/host-projects/useHostTagFolders/useHostTagFolders.utils";
+import type { ProjectCollectionPendingPresentation } from "shared/project-collections";
 import { planProjectCollectionDrop } from "../../_dashboard/components/DashboardSidebar/hooks/useSidebarDnd/projectCollectionDrop";
 import { getProjectCollectionOrder } from "../../utils/projectCollections/projectCollectionOrder";
 import { deriveProjectCollections } from "../../utils/projectCollections/projectCollections";
@@ -11,7 +12,7 @@ import {
 	type ProjectCollectionMutationAdapter,
 	type ProjectCollectionMutationState,
 } from "./projectCollectionMutations";
-import { syncProjectCollectionSettings } from "./syncProjectCollectionSettings";
+import { replayProjectCollectionPresentations } from "./utils/replayProjectCollectionPresentations";
 
 function setup() {
 	let state: ProjectCollectionMutationState = {
@@ -344,6 +345,16 @@ test("delete preserves mixed root position, member order and projects in another
 
 test("presentation writes wait for offline hosts and converge when they return", async () => {
 	const h = setup();
+	let pending: ProjectCollectionPendingPresentation[] = [];
+	h.adapter.writePlacements = async (
+		_rows,
+		_keys,
+		_deletes,
+		_tags,
+		presentations,
+	) => {
+		pending = presentations ?? [];
+	};
 	const remote = h.state().folderHosts[1];
 	if (!remote) throw new Error("Missing remote fixture");
 	remote.target.hostUrl = null;
@@ -360,10 +371,17 @@ test("presentation writes wait for offline hosts and converge when they return",
 	if (!returned) throw new Error("Missing remote fixture");
 	returned.target.hostUrl = "returned-remote";
 	returned.status = "ready";
-	await syncProjectCollectionSettings({
+	await replayProjectCollectionPresentations({
 		hosts: h.state().folderHosts,
-		upsert: (host, setting) =>
-			h.adapter.setSetting(host.target.hostUrl as string, setting.tag, setting),
+		pending,
+		readPending: () => pending,
+		enqueue: (work) => enqueueProjectCollectionMutation("test", work),
+		upsert: (host, row) =>
+			h.adapter.setSetting(host.target.hostUrl as string, row.tag, row.setting),
+		acknowledge: async () => {
+			pending = [];
+		},
+		invalidate: () => {},
 	});
 	expect(h.settingCalls.at(-1)).toMatchObject({
 		url: "returned-remote",
@@ -913,3 +931,38 @@ for (const status of ["error", "offline", "pending"] as const) {
 		);
 	});
 }
+
+test("rename and color do not create presentation on hosts without the setting", async () => {
+	const h = setup();
+	const remote = h.state().folderHosts[1];
+	if (!remote) throw new Error("Missing remote");
+	remote.settings = [];
+	let pending: unknown;
+	h.adapter.writePlacements = async (
+		_rows,
+		_keys,
+		_deletes,
+		_tags,
+		presentations,
+	) => {
+		pending = presentations;
+	};
+	expect(
+		await mutateProjectCollection(h.adapter, {
+			type: "rename",
+			tag: "team",
+			name: "New",
+		}),
+	).toBe(true);
+	expect(h.settingCalls.map((row) => row.url)).toEqual(["local"]);
+	remote.status = "offline";
+	expect(
+		await mutateProjectCollection(h.adapter, {
+			type: "color",
+			tag: "team",
+			color: "red",
+		}),
+	).toBe(true);
+	expect(h.settingCalls.map((row) => row.url)).toEqual(["local", "local"]);
+	expect(pending).toEqual([]);
+});

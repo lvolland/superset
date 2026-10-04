@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import type {
 	ProjectCollectionPendingDelete,
+	ProjectCollectionPendingPresentation,
 	ProjectCollectionPlacement,
 } from "shared/project-collections";
 
@@ -77,12 +78,36 @@ const reconcileGate = new Promise<void>((resolve) => {
 });
 const localInvalidations: string[] = [];
 let pending: ProjectCollectionPendingDelete[] = [];
+let presentations: ProjectCollectionPendingPresentation[] = [];
+let presentationsUpdate: (rows: ProjectCollectionPendingPresentation[]) => void;
+const presentationUtils = {
+	getData: () => presentations,
+	setData: (
+		_scope: unknown,
+		value:
+			| ProjectCollectionPendingPresentation[]
+			| ((
+					rows: ProjectCollectionPendingPresentation[],
+			  ) => ProjectCollectionPendingPresentation[]),
+	) => {
+		presentations = typeof value === "function" ? value(presentations) : value;
+		presentationsUpdate([...presentations]);
+	},
+	invalidate: async () => presentationsUpdate([...presentations]),
+};
 let pendingUpdate: (rows: ProjectCollectionPendingDelete[]) => void;
 const pendingUtils = {
 	getData: () => pending,
-	setData: (_scope: unknown, rows: ProjectCollectionPendingDelete[]) => {
-		pending = rows;
-		pendingUpdate([...rows]);
+	setData: (
+		_scope: unknown,
+		value:
+			| ProjectCollectionPendingDelete[]
+			| ((
+					rows: ProjectCollectionPendingDelete[],
+			  ) => ProjectCollectionPendingDelete[]),
+	) => {
+		pending = typeof value === "function" ? value(pending) : value;
+		pendingUpdate([...pending]);
 	},
 	invalidate: async () => pendingUpdate([...pending]),
 };
@@ -91,14 +116,41 @@ const write = {
 		rows,
 		pendingDeletes = [],
 		removePendingDeleteTags = [],
+		pendingPresentations = [],
+		clearPendingSettings = [],
 	}: {
 		rows: ProjectCollectionPlacement[];
 		pendingDeletes?: ProjectCollectionPendingDelete[];
 		removePendingDeleteTags?: string[];
+		pendingPresentations?: ProjectCollectionPendingPresentation[];
+		clearPendingSettings?: ProjectCollectionPendingDelete[];
 	}) => {
+		const matches = (
+			row: ProjectCollectionPendingDelete,
+			changes: ProjectCollectionPendingDelete[],
+		) =>
+			changes.some(
+				(change) =>
+					change.machineId === row.machineId && change.tag === row.tag,
+			);
+		presentations = [
+			...presentations.filter(
+				(row) =>
+					!matches(row, clearPendingSettings) &&
+					!matches(row, pendingDeletes) &&
+					!matches(row, pendingPresentations),
+			),
+			...pendingPresentations,
+		];
 		placements = rows;
 		pending = [
-			...pending.filter((row) => !removePendingDeleteTags.includes(row.tag)),
+			...pending.filter(
+				(row) =>
+					!removePendingDeleteTags.includes(row.tag) &&
+					!matches(row, clearPendingSettings) &&
+					!matches(row, pendingPresentations) &&
+					!matches(row, pendingDeletes),
+			),
 			...pendingDeletes,
 		];
 	},
@@ -126,6 +178,7 @@ const utils = {
 	projectCollections: {
 		list: listUtils,
 		pendingDeletes: pendingUtils,
+		pendingPresentations: presentationUtils,
 	},
 };
 mock.module("@tanstack/react-db", () => ({
@@ -208,6 +261,30 @@ mock.module("renderer/lib/host-service-client", () => ({
 mock.module("renderer/lib/electron-trpc", () => ({
 	electronTrpc: {
 		projectCollections: {
+			pendingPresentations: {
+				useQuery: () => {
+					const [data, setData] = useState(presentations);
+					presentationsUpdate = setData;
+					return { data, isSuccess: true };
+				},
+			},
+			acknowledgePresentations: {
+				useMutation: () => ({
+					mutateAsync: async ({
+						rows,
+					}: {
+						rows: ProjectCollectionPendingPresentation[];
+					}) => {
+						presentations = presentations.filter(
+							(entry) =>
+								!rows.some(
+									(row) =>
+										row.machineId === entry.machineId && row.tag === entry.tag,
+								),
+						);
+					},
+				}),
+			},
 			pendingDeletes: {
 				useQuery: () => {
 					const [data, setData] = useState(pending);
@@ -656,13 +733,13 @@ test("collection move eligibility is stable across unrelated renders", () => {
 	client.clear();
 });
 
-test("renamed and recolored collections reach returning hosts", async () => {
+test("author rename and color survive remount and reach returning hosts", async () => {
 	localFolderHost().settings = [
 		{
 			scope: "projects",
 			tag: "team",
-			displayName: "Client X",
-			color: "#123456",
+			displayName: "Client",
+			color: null,
 			tabOrder: 0,
 		},
 	];
@@ -692,6 +769,40 @@ test("renamed and recolored collections reach returning hosts", async () => {
 			<ProjectCollectionsProvider>{children}</ProjectCollectionsProvider>
 		</QueryClientProvider>
 	);
+	const first = renderHook(() => useProjectCollections(), { wrapper });
+	await act(async () => {
+		expect(
+			await first.result.current.mutate({
+				type: "rename",
+				tag: "team",
+				name: "Client X",
+			}),
+		).toBe(true);
+	});
+	await act(async () => {
+		expect(
+			await first.result.current.mutate({
+				type: "color",
+				tag: "team",
+				color: "#123456",
+			}),
+		).toBe(true);
+	});
+	expect(presentations).toHaveLength(1);
+	expect(presentations[0]?.setting).toMatchObject({
+		displayName: "Client X",
+		color: "#123456",
+	});
+	first.unmount();
+	remote.settings = [
+		{
+			scope: "projects",
+			tag: "team",
+			displayName: "Client",
+			color: null,
+			tabOrder: 0,
+		},
+	];
 	const { rerender, unmount } = renderHook(() => useProjectCollections(), {
 		wrapper,
 	});
@@ -777,3 +888,68 @@ test("deletion eligibility includes every replica of a tagged project", () => {
 	projectHosts.splice(1);
 	client.clear();
 });
+
+for (const deleted of [false, true]) {
+	test(
+		deleted
+			? "a returning stale local host does not resurrect a collection deleted elsewhere"
+			: "a returning stale local host does not overwrite newer remote presentation",
+		async () => {
+			localProjectHost().rows = [];
+			const local = localFolderHost();
+			local.settings = [
+				{
+					scope: "projects",
+					tag: "team",
+					displayName: "Old",
+					color: null,
+					tabOrder: 0,
+				},
+			];
+			const remote = {
+				target: {
+					...target,
+					machineId: "remote",
+					hostUrl: "remote",
+					isLocal: false,
+				},
+				status: "ready" as const,
+				settings: deleted
+					? []
+					: [{ ...local.settings[0], displayName: "New", color: "#ff0000" }],
+			};
+			folderHosts.splice(1, folderHosts.length, remote);
+			pending = [];
+			const client = new QueryClient();
+			const wrapper = ({ children }: { children: React.ReactNode }) => (
+				<QueryClientProvider client={client}>
+					<ProjectCollectionsProvider>{children}</ProjectCollectionsProvider>
+				</QueryClientProvider>
+			);
+			const { unmount } = renderHook(() => useProjectCollections(), {
+				wrapper,
+			});
+			await act(async () => {
+				await enqueueProjectCollectionMutation(
+					"org\u0000alice",
+					async () => {},
+				);
+			});
+			expect(remote.settings).toEqual(
+				deleted
+					? []
+					: [
+							{
+								scope: "projects",
+								tag: "team",
+								displayName: "New",
+								color: "#ff0000",
+								tabOrder: 0,
+							},
+						],
+			);
+			unmount();
+			client.clear();
+		},
+	);
+}

@@ -10,6 +10,7 @@ import type {
 import { isMissingProcedureError } from "renderer/lib/isMissingProcedureError";
 import type {
 	ProjectCollectionPendingDelete,
+	ProjectCollectionPendingPresentation,
 	ProjectCollectionPlacement,
 } from "shared/project-collections";
 import {
@@ -55,6 +56,8 @@ export interface ProjectCollectionMutationAdapter {
 		removeKeys: string[],
 		pendingDeletes?: ProjectCollectionPendingDelete[],
 		removePendingDeleteTags?: string[],
+		pendingPresentations?: ProjectCollectionPendingPresentation[],
+		clearPendingSettings?: ProjectCollectionPendingDelete[],
 	): Promise<unknown>;
 	invalidate(): void | Promise<void>;
 }
@@ -77,7 +80,7 @@ export function enqueueProjectCollectionMutation<T>(
 	return result;
 }
 
-function isUnsupportedProjectScope(error: unknown): boolean {
+export function isUnsupportedProjectScope(error: unknown): boolean {
 	if (isMissingProcedureError(error)) return true;
 	if (!error || typeof error !== "object") return false;
 	const { data, message } = error as {
@@ -250,18 +253,37 @@ export async function mutateProjectCollection(
 				(row) => row.scope !== PROJECTS_TAG_SCOPE || row.tag !== tag,
 			);
 		}
+	const pendingPresentations: ProjectCollectionPendingPresentation[] = [];
+	const clearPendingSettings: ProjectCollectionPendingDelete[] = [];
 	const settingWrites: Array<{
 		url: string;
+		machineId: string;
 		tag: string;
 		setting: HostTagFolderSetting | null;
 		rollback: HostTagFolderSetting | null;
 	}> = [];
 	if (settingWrite && tag)
-		for (const host of writableFolderHosts) {
+		for (const host of next.folderHosts) {
 			const prior =
 				host.settings.find(
 					(row) => row.scope === PROJECTS_TAG_SCOPE && row.tag === tag,
 				) ?? null;
+			const carriedCollection = prior !== null;
+			if (
+				command.type !== "create" &&
+				command.type !== "delete" &&
+				!carriedCollection
+			)
+				continue;
+			const writable = host.target.hostUrl && host.status === "ready";
+			if (command.type === "delete" && !writable) continue;
+			if (
+				!writable &&
+				host.status === "error" &&
+				!carriedCollection &&
+				command.type !== "create"
+			)
+				continue;
 			const setting: HostTagFolderSetting | null =
 				command.type === "delete"
 					? null
@@ -285,8 +307,20 @@ export async function mutateProjectCollection(
 				(row) => row.scope !== PROJECTS_TAG_SCOPE || row.tag !== tag,
 			);
 			if (setting) host.settings.push(setting);
+			if (!writable) {
+				if (setting)
+					pendingPresentations.push({
+						machineId: host.target.machineId,
+						tag: setting.tag,
+						setting: { ...setting, scope: PROJECTS_TAG_SCOPE },
+					});
+				if (replacementTag && replacementTag !== tag)
+					pendingDeletes.push({ machineId: host.target.machineId, tag });
+				continue;
+			}
 			settingWrites.push({
 				url: host.target.hostUrl as string,
+				machineId: host.target.machineId,
 				tag: replacementTag ?? tag,
 				setting,
 				rollback: replacementTag && replacementTag !== tag ? null : prior,
@@ -294,6 +328,7 @@ export async function mutateProjectCollection(
 			if (replacementTag && replacementTag !== tag)
 				settingWrites.push({
 					url: host.target.hostUrl as string,
+					machineId: host.target.machineId,
 					tag,
 					setting: null,
 					rollback: prior,
@@ -423,6 +458,10 @@ export async function mutateProjectCollection(
 					await adapter.setSetting(write.url, write.tag, write.setting);
 				} catch (error) {
 					if (!isUnsupportedProjectScope(error)) throw error;
+					clearPendingSettings.push({
+						machineId: write.machineId,
+						tag: write.tag,
+					});
 					const host = next.folderHosts.find(
 						(host) => host.target.hostUrl === write.url,
 					);
@@ -432,6 +471,10 @@ export async function mutateProjectCollection(
 					if (host && prior) host.settings = structuredClone(prior.settings);
 					return false;
 				}
+				clearPendingSettings.push({
+					machineId: write.machineId,
+					tag: write.tag,
+				});
 				undo.push(() =>
 					adapter.setSetting(write.url, write.tag, write.rollback),
 				);
@@ -460,6 +503,8 @@ export async function mutateProjectCollection(
 				.map((row) => row.key),
 			pendingDeletes,
 			command.type === "create" && tag ? [tag] : [],
+			pendingPresentations,
+			clearPendingSettings,
 		);
 		return true;
 	} catch (error) {

@@ -32,6 +32,15 @@ function setup() {
 			"utf8",
 		),
 	);
+	sqlite.run(
+		readFileSync(
+			resolve(
+				import.meta.dir,
+				"../../../../../../../packages/local-db/drizzle/0060_project_collection_pending_presentations.sql",
+			),
+			"utf8",
+		),
+	);
 	const db = drizzle(sqlite, {
 		schema: { projectCollectionPlacements },
 	}) as unknown as LocalDb;
@@ -196,4 +205,71 @@ test("the per-host deletion cap evicts the oldest deletion without blocking the 
 	).toBe(true);
 	h.store().write([], [], [{ machineId: "another", tag: "team" }]);
 	expect(h.store().pendingDeletes()).toHaveLength(129);
+});
+
+const presentation = {
+	machineId: "remote",
+	tag: "team",
+	setting: {
+		scope: "projects" as const,
+		tag: "team",
+		displayName: "First",
+		color: null,
+		tabOrder: 0,
+	},
+};
+test("pending presentations replace prior values and cancel deletions in mutation order", () => {
+	const h = setup();
+	h.store().write([], [], [presentation]);
+	h.store().write([], [], [], [], [presentation]);
+	expect(h.store().pendingDeletes()).toEqual([]);
+	expect(h.store().pendingPresentations()).toMatchObject([presentation]);
+	h.store("org", "bob").write([], [], [], [], [presentation]);
+	const newer = {
+		...presentation,
+		setting: { ...presentation.setting, displayName: "Second" },
+	};
+	h.store().write([], [], [], [], [newer]);
+	h.store().acknowledgePresentations([presentation]);
+	expect(h.store().pendingPresentations()).toMatchObject([newer]);
+	h.store().write([], [], [presentation]);
+	expect(h.store().pendingPresentations()).toEqual([]);
+	expect(h.store().pendingDeletes()).toHaveLength(1);
+	expect(h.store("org", "bob").pendingPresentations()).toHaveLength(1);
+	h.store().write([], [], [], [], [newer]);
+	h.store().acknowledgePresentations([newer]);
+	expect(h.store().pendingPresentations()).toEqual([]);
+	expect(h.store().pendingDeletes()).toEqual([]);
+});
+test("pending presentations are capped at 128 per host and refreshed entries are retained", () => {
+	const h = setup();
+	const rows = Array.from({ length: 128 }, (_, index) => ({
+		...presentation,
+		tag: `tag-${index}`,
+		setting: { ...presentation.setting, tag: `tag-${index}` },
+	}));
+	h.store().write([], [], [], [], rows);
+	const first = rows[0];
+	if (!first) throw new Error("Missing first entry");
+	h.store().write(
+		[],
+		[],
+		[],
+		[],
+		[{ ...first, setting: { ...first.setting, color: "red" } }],
+	);
+	h.store().write([], [], [], [], [presentation]);
+	expect(h.store().pendingPresentations()).toHaveLength(128);
+	expect(
+		h
+			.store()
+			.pendingPresentations()
+			.some((row) => row.tag === "tag-0"),
+	).toBe(true);
+	expect(
+		h
+			.store()
+			.pendingPresentations()
+			.some((row) => row.tag === "tag-1"),
+	).toBe(false);
 });

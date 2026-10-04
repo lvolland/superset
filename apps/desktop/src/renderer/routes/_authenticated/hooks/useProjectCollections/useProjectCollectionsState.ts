@@ -19,6 +19,7 @@ import { useHostWorkspaces } from "renderer/routes/_authenticated/providers/Host
 import { useLocalHostService } from "renderer/routes/_authenticated/providers/LocalHostServiceProvider";
 import type {
 	ProjectCollectionPendingDelete,
+	ProjectCollectionPendingPresentation,
 	ProjectCollectionPlacement,
 } from "shared/project-collections";
 import {
@@ -36,10 +37,13 @@ import {
 	replayProjectCollectionDeletes,
 	withoutPendingProjectCollections,
 } from "./replayProjectCollectionDeletes";
-
-import { syncProjectCollectionSettings } from "./syncProjectCollectionSettings";
+import {
+	replayProjectCollectionPresentations,
+	withPendingProjectCollectionPresentations,
+} from "./utils/replayProjectCollectionPresentations";
 
 const EMPTY_PENDING_DELETES: ProjectCollectionPendingDelete[] = [];
+const EMPTY_PENDING_PRESENTATIONS: ProjectCollectionPendingPresentation[] = [];
 
 export function useProjectCollectionsState() {
 	const projects = useHostProjects();
@@ -73,10 +77,23 @@ export function useProjectCollectionsState() {
 	);
 	const acknowledge =
 		electronTrpc.projectCollections.acknowledgeDeletes.useMutation();
+	const presentationsQuery =
+		electronTrpc.projectCollections.pendingPresentations.useQuery(scope, {
+			enabled,
+			refetchInterval: 60_000,
+		});
+	const acknowledgePresentation =
+		electronTrpc.projectCollections.acknowledgePresentations.useMutation();
+	const pendingPresentations =
+		presentationsQuery.data ?? EMPTY_PENDING_PRESENTATIONS;
 	const pendingDeletes = pendingQuery.data ?? EMPTY_PENDING_DELETES;
 	const folderHosts = useMemo(
-		() => withoutPendingProjectCollections(folders.hostResults, pendingDeletes),
-		[folders.hostResults, pendingDeletes],
+		() =>
+			withPendingProjectCollectionPresentations(
+				withoutPendingProjectCollections(folders.hostResults, pendingDeletes),
+				pendingPresentations,
+			),
+		[folders.hostResults, pendingDeletes, pendingPresentations],
 	);
 	const write = electronTrpc.projectCollections.write.useMutation();
 	const reconcile = electronTrpc.projectCollections.reconcile.useMutation();
@@ -134,37 +151,46 @@ export function useProjectCollectionsState() {
 		)
 			return;
 		lastReplay.current = replayKey;
-		void enqueueProjectCollectionMutation(scopeKey, async () => {
-			await replayProjectCollectionDeletes({
-				hosts: folders.hostResults,
-				pending: utils.projectCollections.pendingDeletes.getData(scope) ?? [],
-				remove: (url, tag) =>
-					getHostServiceClientByUrl(url).tagFolders.delete.mutate({
-						scope: PROJECTS_TAG_SCOPE,
-						tag,
-					}),
-				acknowledge: async (row) => {
-					const queryKey = [
+		void replayProjectCollectionDeletes({
+			hosts: folders.hostResults,
+			enqueue: (work) => enqueueProjectCollectionMutation(scopeKey, work),
+			readPending: () =>
+				utils.projectCollections.pendingDeletes.getData(scope) ?? [],
+			invalidate: (host) => {
+				void queryClient.invalidateQueries({
+					queryKey: [
 						"host-tag-folders",
-						scope.organizationId,
-						row.machineId,
-					];
-					queryClient.setQueryData<HostTagFolderSetting[]>(
-						queryKey,
-						(settings) =>
-							settings?.filter(
-								(setting) =>
-									setting.scope !== PROJECTS_TAG_SCOPE ||
-									setting.tag !== row.tag,
-							),
-					);
-					await queryClient.invalidateQueries({
-						queryKey: ["host-tag-folders", scope.organizationId, row.machineId],
-					});
-					await acknowledge.mutateAsync({ ...scope, rows: [row] });
-					await utils.projectCollections.pendingDeletes.invalidate(scope);
-				},
-			});
+						host.target.organizationId,
+						host.target.machineId,
+					],
+				});
+			},
+			pending: utils.projectCollections.pendingDeletes.getData(scope) ?? [],
+			remove: (url, tag) =>
+				getHostServiceClientByUrl(url).tagFolders.delete.mutate({
+					scope: PROJECTS_TAG_SCOPE,
+					tag,
+				}),
+			acknowledge: async (row) => {
+				const queryKey = [
+					"host-tag-folders",
+					scope.organizationId,
+					row.machineId,
+				];
+				queryClient.setQueryData<HostTagFolderSetting[]>(queryKey, (settings) =>
+					settings?.filter(
+						(setting) =>
+							setting.scope !== PROJECTS_TAG_SCOPE || setting.tag !== row.tag,
+					),
+				);
+				await acknowledge.mutateAsync({ ...scope, rows: [row] });
+				utils.projectCollections.pendingDeletes.setData(scope, (rows) =>
+					rows?.filter(
+						(entry) =>
+							entry.machineId !== row.machineId || entry.tag !== row.tag,
+					),
+				);
+			},
 		}).catch(() => undefined);
 	}, [
 		enabled,
@@ -178,67 +204,84 @@ export function useProjectCollectionsState() {
 		queryClient,
 		acknowledge,
 	]);
-	const settingsSyncKey = JSON.stringify([
+	const presentationReplayKey = JSON.stringify([
 		scopeKey,
-		enabled,
-		pendingQuery.isSuccess,
-		pendingDeletes,
-		folderHosts,
+		presentationsQuery.dataUpdatedAt,
+		pendingPresentations,
+		folders.hostResults.map(({ target, status }) => [
+			target.machineId,
+			target.hostUrl,
+			status,
+		]),
 	]);
-	const lastSettingsSync = useRef("");
+	const lastPresentationReplay = useRef("");
 	useEffect(() => {
 		if (
 			!enabled ||
-			!pendingQuery.isSuccess ||
-			lastSettingsSync.current === settingsSyncKey
+			!presentationsQuery.isSuccess ||
+			!pendingPresentations.length ||
+			lastPresentationReplay.current === presentationReplayKey
 		)
 			return;
-		lastSettingsSync.current = settingsSyncKey;
-		const hosts = folderHosts;
-		void enqueueProjectCollectionMutation(scopeKey, async () => {
-			await syncProjectCollectionSettings({
-				hosts: withoutPendingProjectCollections(
-					hosts.map((host) => ({
-						...host,
-						settings:
-							queryClient.getQueryData<HostTagFolderSetting[]>([
-								"host-tag-folders",
-								host.target.organizationId,
-								host.target.machineId,
-							]) ?? host.settings,
-					})),
-					utils.projectCollections.pendingDeletes.getData(scope) ?? [],
-				),
-				upsert: async (host, setting) => {
-					await getHostServiceClientByUrl(
-						host.target.hostUrl as string,
-					).tagFolders.upsert.mutate(setting);
-					const queryKey = [
+		lastPresentationReplay.current = presentationReplayKey;
+		void replayProjectCollectionPresentations({
+			hosts: folders.hostResults,
+			pending: pendingPresentations,
+			readPending: () =>
+				utils.projectCollections.pendingPresentations.getData(scope) ?? [],
+			enqueue: (work) => enqueueProjectCollectionMutation(scopeKey, work),
+			upsert: async (host, row) => {
+				await getHostServiceClientByUrl(
+					host.target.hostUrl as string,
+				).tagFolders.upsert.mutate(row.setting);
+				const queryKey = [
+					"host-tag-folders",
+					host.target.organizationId,
+					host.target.machineId,
+				];
+				queryClient.setQueryData<HostTagFolderSetting[]>(
+					queryKey,
+					(settings) => [
+						...(settings ?? host.settings).filter(
+							(setting) =>
+								setting.scope !== PROJECTS_TAG_SCOPE || setting.tag !== row.tag,
+						),
+						row.setting,
+					],
+				);
+			},
+			acknowledge: async (row) => {
+				await acknowledgePresentation.mutateAsync({ ...scope, rows: [row] });
+				utils.projectCollections.pendingPresentations.setData(scope, (rows) =>
+					rows?.filter(
+						(entry) =>
+							entry.machineId !== row.machineId ||
+							entry.tag !== row.tag ||
+							JSON.stringify(entry.setting) !== JSON.stringify(row.setting),
+					),
+				);
+			},
+			invalidate: (host) => {
+				void queryClient.invalidateQueries({
+					queryKey: [
 						"host-tag-folders",
 						host.target.organizationId,
 						host.target.machineId,
-					];
-					queryClient.setQueryData<HostTagFolderSetting[]>(queryKey, (rows) => [
-						...(rows ?? host.settings).filter(
-							(row) => row.scope !== setting.scope || row.tag !== setting.tag,
-						),
-						setting,
-					]);
-					await queryClient.invalidateQueries({ queryKey });
-				},
-			});
-		}).catch(() => {
-			lastSettingsSync.current = "";
-		});
+					],
+				});
+			},
+		}).catch(() => undefined);
 	}, [
 		enabled,
-		pendingQuery.isSuccess,
-		settingsSyncKey,
-		folderHosts,
-		scopeKey,
+		presentationsQuery.isSuccess,
+		pendingPresentations,
+		presentationReplayKey,
+		folders.hostResults,
 		scope,
-		queryClient,
+		scopeKey,
 		utils,
+		queryClient,
+		acknowledgePresentation,
 	]);
 	const knownKeys = [
 		...projects.projects.map((project) => project.id),
@@ -249,6 +292,7 @@ export function useProjectCollectionsState() {
 	const canReconcile =
 		enabled &&
 		pendingQuery.isSuccess &&
+		presentationsQuery.isSuccess &&
 		projects.isReady &&
 		folders.isReady &&
 		projects.hostResults.every((host) => host.reachable) &&
@@ -285,7 +329,12 @@ export function useProjectCollectionsState() {
 	}, [canReconcile, knownKeys, scope, scopeKey, reconcile, utils]);
 	const mutate = useCallback(
 		async (command: ProjectCollectionCommand) => {
-			if (!enabled || !placementsQuery.isSuccess || !pendingQuery.isSuccess)
+			if (
+				!enabled ||
+				!placementsQuery.isSuccess ||
+				!pendingQuery.isSuccess ||
+				!presentationsQuery.isSuccess
+			)
 				return false;
 			return enqueueProjectCollectionMutation(scopeKey, async () => {
 				const localOnly =
@@ -316,17 +365,20 @@ export function useProjectCollectionsState() {
 								getHostProjectsQueryKey(host.target, userId),
 							) ?? host.rows,
 					})),
-					folderHosts: withoutPendingProjectCollections(
-						current.current.folderHosts.map((host) => ({
-							...host,
-							settings:
-								queryClient.getQueryData<HostTagFolderSetting[]>([
-									"host-tag-folders",
-									host.target.organizationId,
-									host.target.machineId,
-								]) ?? host.settings,
-						})),
-						utils.projectCollections.pendingDeletes.getData(scope) ?? [],
+					folderHosts: withPendingProjectCollectionPresentations(
+						withoutPendingProjectCollections(
+							current.current.folderHosts.map((host) => ({
+								...host,
+								settings:
+									queryClient.getQueryData<HostTagFolderSetting[]>([
+										"host-tag-folders",
+										host.target.organizationId,
+										host.target.machineId,
+									]) ?? host.settings,
+							})),
+							utils.projectCollections.pendingDeletes.getData(scope) ?? [],
+						),
+						utils.projectCollections.pendingPresentations.getData(scope) ?? [],
 					),
 					placements:
 						utils.projectCollections.list.getData(scope) ??
@@ -355,7 +407,9 @@ export function useProjectCollectionsState() {
 									getHostProjectsQueryKey(host.target, userId),
 									host.rows,
 								);
-							for (const host of localOnly ? [] : state.folderHosts)
+							for (const host of localOnly
+								? []
+								: state.folderHosts.filter((host) => host.status === "ready"))
 								queryClient.setQueryData<HostTagFolderSetting[]>(
 									[
 										"host-tag-folders",
@@ -425,6 +479,8 @@ export function useProjectCollectionsState() {
 							removeKeys,
 							pendingDeletes,
 							removePendingDeleteTags,
+							pendingPresentations,
+							clearPendingSettings,
 						) => {
 							await write.mutateAsync({
 								...scope,
@@ -432,26 +488,62 @@ export function useProjectCollectionsState() {
 								removeKeys,
 								pendingDeletes,
 								removePendingDeleteTags,
+								pendingPresentations,
+								clearPendingSettings,
 							});
-							if (!pendingDeletes?.length && !removePendingDeleteTags?.length)
-								return;
-							const previous =
-								utils.projectCollections.pendingDeletes.getData(scope) ?? [];
-							utils.projectCollections.pendingDeletes.setData(scope, [
-								...previous.filter(
-									(row) =>
-										!removePendingDeleteTags?.includes(row.tag) &&
-										!pendingDeletes?.some(
-											(added) =>
-												added.machineId === row.machineId &&
-												added.tag === row.tag,
-										),
-								),
-								...(pendingDeletes ?? []).map((row) => ({ ...scope, ...row })),
-							]);
-							await utils.projectCollections.pendingDeletes
-								.invalidate(scope)
-								.catch(() => undefined);
+							const matches = (
+								row: ProjectCollectionPendingDelete,
+								changes: ProjectCollectionPendingDelete[] | undefined,
+							) =>
+								changes?.some(
+									(change) =>
+										change.machineId === row.machineId &&
+										change.tag === row.tag,
+								);
+							if (
+								pendingDeletes?.length ||
+								pendingPresentations?.length ||
+								removePendingDeleteTags?.length ||
+								clearPendingSettings?.length
+							) {
+								utils.projectCollections.pendingDeletes.setData(scope, [
+									...(
+										utils.projectCollections.pendingDeletes.getData(scope) ?? []
+									).filter(
+										(row) =>
+											!removePendingDeleteTags?.includes(row.tag) &&
+											!matches(row, clearPendingSettings) &&
+											!matches(row, pendingDeletes) &&
+											!matches(row, pendingPresentations),
+									),
+									...(pendingDeletes ?? []).map((row) => ({
+										...scope,
+										...row,
+									})),
+								]);
+								utils.projectCollections.pendingPresentations.setData(scope, [
+									...(
+										utils.projectCollections.pendingPresentations.getData(
+											scope,
+										) ?? []
+									).filter(
+										(row) =>
+											!matches(row, clearPendingSettings) &&
+											!matches(row, pendingDeletes) &&
+											!matches(row, pendingPresentations),
+									),
+									...(pendingPresentations ?? []).map((row) => ({
+										...scope,
+										...row,
+									})),
+								]);
+								await Promise.allSettled([
+									utils.projectCollections.pendingDeletes.invalidate(scope),
+									utils.projectCollections.pendingPresentations.invalidate(
+										scope,
+									),
+								]);
+							}
 						},
 						invalidate: async () => {
 							const refreshes: Promise<unknown>[] = [];
@@ -490,6 +582,7 @@ export function useProjectCollectionsState() {
 			enabled,
 			placementsQuery.isSuccess,
 			pendingQuery.isSuccess,
+			presentationsQuery.isSuccess,
 			scope,
 			scopeKey,
 			queryClient,
@@ -524,7 +617,8 @@ export function useProjectCollectionsState() {
 		folders.isReady &&
 		workspacesReady &&
 		placementsQuery.isSuccess &&
-		pendingQuery.isSuccess;
+		pendingQuery.isSuccess &&
+		presentationsQuery.isSuccess;
 	return useMemo(
 		() => ({
 			...view,

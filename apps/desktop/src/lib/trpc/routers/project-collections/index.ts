@@ -1,6 +1,7 @@
 import { localDb } from "main/lib/local-db";
 import {
 	projectCollectionPendingDeleteSchema,
+	projectCollectionPendingPresentationSchema,
 	projectCollectionPlacementSchema,
 	projectCollectionPlacementScopeSchema,
 } from "shared/project-collections";
@@ -14,6 +15,23 @@ export const createProjectCollectionsRouter = () =>
 			.input(projectCollectionPlacementScopeSchema)
 			.query(({ input }) =>
 				projectCollectionPlacementStore(localDb, input).list(),
+			),
+		pendingPresentations: publicProcedure
+			.input(projectCollectionPlacementScopeSchema)
+			.query(({ input }) =>
+				projectCollectionPlacementStore(localDb, input).pendingPresentations(),
+			),
+		acknowledgePresentations: publicProcedure
+			.input(
+				projectCollectionPlacementScopeSchema.extend({
+					rows: z.array(projectCollectionPendingPresentationSchema),
+				}),
+			)
+			.mutation(({ input }) =>
+				projectCollectionPlacementStore(
+					localDb,
+					input,
+				).acknowledgePresentations(input.rows),
 			),
 		pendingDeletes: publicProcedure
 			.input(projectCollectionPlacementScopeSchema)
@@ -40,6 +58,12 @@ export const createProjectCollectionsRouter = () =>
 						.array(projectCollectionPendingDeleteSchema)
 						.optional(),
 					removePendingDeleteTags: z.array(z.string()).optional(),
+					pendingPresentations: z
+						.array(projectCollectionPendingPresentationSchema)
+						.optional(),
+					clearPendingSettings: z
+						.array(projectCollectionPendingDeleteSchema)
+						.optional(),
 				}),
 			)
 			.mutation(({ input }) => {
@@ -48,6 +72,8 @@ export const createProjectCollectionsRouter = () =>
 					input.removeKeys,
 					input.pendingDeletes,
 					input.removePendingDeleteTags,
+					input.pendingPresentations,
+					input.clearPendingSettings,
 				);
 			}),
 		reconcile: publicProcedure

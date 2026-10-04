@@ -197,6 +197,9 @@ export async function loadHostProjectsSnapshot(
 ): Promise<HostProjectRow[] | undefined> {
 	if (!organizationId || !userId) return undefined;
 	try {
+		await idbDel(`host-projects:v1:${organizationId}:${machineId}`).catch(
+			() => undefined,
+		);
 		const rows = await idbGet<HostProjectRow[]>(
 			getHostProjectsSnapshotKey(organizationId, machineId, userId),
 		);

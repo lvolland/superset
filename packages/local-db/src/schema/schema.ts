@@ -552,3 +552,27 @@ export const projectCollectionPendingDeletes = sqliteTable(
 		}),
 	],
 );
+
+export const projectCollectionPendingPresentations = sqliteTable(
+	"project_collection_pending_presentations",
+	{
+		organizationId: text("organization_id").notNull(),
+		userId: text("user_id").notNull(),
+		machineId: text("machine_id").notNull(),
+		tag: text("tag").notNull(),
+		setting: text("setting", { mode: "json" })
+			.$type<{
+				scope: "projects";
+				tag: string;
+				displayName: string | null;
+				color: string | null;
+				tabOrder: number | null;
+			}>()
+			.notNull(),
+	},
+	(table) => [
+		primaryKey({
+			columns: [table.organizationId, table.userId, table.machineId, table.tag],
+		}),
+	],
+);

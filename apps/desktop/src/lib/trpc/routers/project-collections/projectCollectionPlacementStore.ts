@@ -1,11 +1,13 @@
 import {
 	projectCollectionPendingDeletes,
+	projectCollectionPendingPresentations,
 	projectCollectionPlacements,
 } from "@superset/local-db";
 import { and, eq, inArray, like, notInArray, sql } from "drizzle-orm";
 import type { LocalDb } from "main/lib/local-db";
 import type {
 	ProjectCollectionPendingDelete,
+	ProjectCollectionPendingPresentation,
 	ProjectCollectionPlacement,
 } from "shared/project-collections";
 
@@ -23,7 +25,38 @@ export function projectCollectionPlacementStore(
 			eq(projectCollectionPendingDeletes.organizationId, scope.organizationId),
 			eq(projectCollectionPendingDeletes.userId, scope.userId),
 		);
+	const presentationScope = () =>
+		and(
+			eq(
+				projectCollectionPendingPresentations.organizationId,
+				scope.organizationId,
+			),
+			eq(projectCollectionPendingPresentations.userId, scope.userId),
+		);
 	return {
+		pendingPresentations: () =>
+			db
+				.select()
+				.from(projectCollectionPendingPresentations)
+				.where(presentationScope())
+				.all(),
+		acknowledgePresentations: (rows: ProjectCollectionPendingPresentation[]) =>
+			db.transaction((tx) => {
+				for (const row of rows)
+					tx.delete(projectCollectionPendingPresentations)
+						.where(
+							and(
+								presentationScope(),
+								eq(
+									projectCollectionPendingPresentations.machineId,
+									row.machineId,
+								),
+								eq(projectCollectionPendingPresentations.tag, row.tag),
+								eq(projectCollectionPendingPresentations.setting, row.setting),
+							),
+						)
+						.run();
+			}),
 		pendingDeletes: () =>
 			db
 				.select()
@@ -54,6 +87,8 @@ export function projectCollectionPlacementStore(
 			removeKeys: string[],
 			pendingDeletes: ProjectCollectionPendingDelete[] = [],
 			removePendingDeleteTags: string[] = [],
+			pendingPresentations: ProjectCollectionPendingPresentation[] = [],
+			clearPendingSettings: ProjectCollectionPendingDelete[] = [],
 		) =>
 			db.transaction((tx) => {
 				tx.delete(projectCollectionPlacements)
@@ -76,34 +111,60 @@ export function projectCollectionPlacementStore(
 							),
 						)
 						.run();
-				for (const row of pendingDeletes)
+				const deletePending = (
+					table:
+						| typeof projectCollectionPendingDeletes
+						| typeof projectCollectionPendingPresentations,
+					row: ProjectCollectionPendingDelete,
+				) =>
+					tx
+						.delete(table)
+						.where(
+							and(
+								eq(table.organizationId, scope.organizationId),
+								eq(table.userId, scope.userId),
+								eq(table.machineId, row.machineId),
+								eq(table.tag, row.tag),
+							),
+						)
+						.run();
+				for (const row of clearPendingSettings) {
+					deletePending(projectCollectionPendingDeletes, row);
+					deletePending(projectCollectionPendingPresentations, row);
+				}
+				for (const row of pendingDeletes) {
+					deletePending(projectCollectionPendingPresentations, row);
 					tx.insert(projectCollectionPendingDeletes)
 						.values({ ...scope, ...row })
 						.onConflictDoNothing()
 						.run();
-				if (pendingDeletes.length) {
+				}
+				for (const row of pendingPresentations) {
+					deletePending(projectCollectionPendingDeletes, row);
+					deletePending(projectCollectionPendingPresentations, row);
+					tx.insert(projectCollectionPendingPresentations)
+						.values({ ...scope, ...row })
+						.run();
+				}
+				for (const table of [
+					projectCollectionPendingDeletes,
+					projectCollectionPendingPresentations,
+				]) {
 					const pending = tx
 						.select()
-						.from(projectCollectionPendingDeletes)
-						.where(pendingScope())
+						.from(table)
+						.where(
+							and(
+								eq(table.organizationId, scope.organizationId),
+								eq(table.userId, scope.userId),
+							),
+						)
 						.orderBy(sql`rowid DESC`)
 						.all();
 					const counts = new Map<string, number>();
 					for (const row of pending) {
 						const count = (counts.get(row.machineId) ?? 0) + 1;
-						if (count > 128)
-							tx.delete(projectCollectionPendingDeletes)
-								.where(
-									and(
-										pendingScope(),
-										eq(
-											projectCollectionPendingDeletes.machineId,
-											row.machineId,
-										),
-										eq(projectCollectionPendingDeletes.tag, row.tag),
-									),
-								)
-								.run();
+						if (count > 128) deletePending(table, row);
 						counts.set(row.machineId, count);
 					}
 				}
